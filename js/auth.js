@@ -8,7 +8,7 @@ const ThanziAuth = (() => {
   const register = async (name, email, password) => {
     try {
       await account.create(Appwrite.ID.unique(), email, password, name);
-      await account.createEmailPasswordSession(email, password);
+      await account.createEmailSession(email, password);
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -17,7 +17,7 @@ const ThanziAuth = (() => {
 
   const login = async (email, password) => {
     try {
-      await account.createEmailPasswordSession(email, password);
+      await account.createEmailSession(email, password);
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
