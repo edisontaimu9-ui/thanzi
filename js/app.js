@@ -9,42 +9,45 @@ const ThanziApp = (() => {
     protein: 0,
     fat: 0,
     water: 0,
-    waterGoal: 2000
+    waterGoal: 2000,
   };
 
   let selections = { gender: null, activity: null, goal: null };
+  let _currentUser = null;
+  let _logInited = false;
 
-  const init = async () => {
-    const user = await ThanziAuth.getUser();
-    if (user) {
-      const profile = localStorage.getItem('thanzi_profile_' + user.$id);
-      if (profile) {
-        const plan = JSON.parse(profile);
-        applyPlan(plan);
-        showScreen('dashboard-screen');
-        updateGreeting(user.name);
-        updateRing();
-        updateWater();
-      } else {
-        showScreen('profile-screen');
-      }
-    } else {
-      showScreen('auth-screen');
-    }
-    bindEvents();
-  };
-
-  const applyPlan = (plan) => {
-    state.caloriesGoal = plan.energy.target_kcal;
-    state.carbsGoal = plan.macros.carbs.g;
-    state.proteinGoal = plan.macros.protein.g;
-    state.fatGoal = plan.macros.fat.g;
-    state.waterGoal = Math.round(plan.micronutrients.fluid_L * 1000);
-  };
+  // ── Screen / panel helpers ───────────────────────────────────────────────
 
   const showScreen = (screenId) => {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById(screenId).style.display = 'block';
+  };
+
+  const showPanel = (panelId) => {
+    document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+    document.getElementById(panelId).style.display = 'block';
+  };
+
+  // ── Nutrition & UI updates ───────────────────────────────────────────────
+
+  const applyPlan = (plan) => {
+    state.caloriesGoal = plan.energy.target_kcal;
+    state.carbsGoal    = plan.macros.carbs.g;
+    state.proteinGoal  = plan.macros.protein.g;
+    state.fatGoal      = plan.macros.fat.g;
+    state.waterGoal    = Math.round(plan.micronutrients.fluid_L * 1000);
+  };
+
+  /**
+   * Called by ThanziLog whenever the food log changes.
+   * Updates the dashboard calorie ring and macros display.
+   */
+  const updateNutrition = ({ kcal, carbs, protein, fat }) => {
+    state.caloriesConsumed = Math.round(kcal);
+    state.carbs   = Math.round(carbs   * 10) / 10;
+    state.protein = Math.round(protein * 10) / 10;
+    state.fat     = Math.round(fat     * 10) / 10;
+    updateRing();
   };
 
   const updateGreeting = (name) => {
@@ -52,26 +55,29 @@ const ThanziApp = (() => {
     let greeting = 'Good morning';
     if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
     else if (hour >= 17) greeting = 'Good evening';
-    document.getElementById('greeting').textContent = `${greeting}, ${name.split(' ')[0]}`;
+    document.getElementById('greeting').textContent =
+      `${greeting}, ${name.split(' ')[0]}`;
   };
 
   const updateRing = () => {
-    const consumed = state.caloriesConsumed;
-    const goal = state.caloriesGoal;
+    const consumed     = state.caloriesConsumed;
+    const goal         = state.caloriesGoal;
     const circumference = 314;
     const offset = circumference - (Math.min(consumed / goal, 1) * circumference);
+
     document.getElementById('calorie-ring').style.strokeDashoffset = offset;
     document.getElementById('calories-consumed').textContent = consumed;
-    document.getElementById('calories-goal').textContent = goal;
-    document.getElementById('carbs-val').textContent = state.carbs + 'g';
-    document.getElementById('protein-val').textContent = state.protein + 'g';
-    document.getElementById('fat-val').textContent = state.fat + 'g';
+    document.getElementById('calories-goal').textContent     = goal;
+    document.getElementById('carbs-val').textContent         = state.carbs + 'g';
+    document.getElementById('protein-val').textContent       = state.protein + 'g';
+    document.getElementById('fat-val').textContent           = state.fat + 'g';
   };
 
   const updateWater = () => {
     const pct = Math.min((state.water / state.waterGoal) * 100, 100);
     document.getElementById('water-fill').style.width = pct + '%';
-    document.getElementById('water-amount').textContent = `${state.water} / ${state.waterGoal}ml`;
+    document.getElementById('water-amount').textContent =
+      `${state.water} / ${state.waterGoal}ml`;
   };
 
   const addWater = (ml) => {
@@ -79,12 +85,65 @@ const ThanziApp = (() => {
     updateWater();
   };
 
+  // ── Dashboard init ───────────────────────────────────────────────────────
+
+  const initDashboard = async (user) => {
+    _currentUser = user;
+    updateGreeting(user.name);
+    updateRing();
+    updateWater();
+
+    // Init the log module — also loads today's logs and syncs the ring
+    if (typeof ThanziLog !== 'undefined') {
+      await ThanziLog.init(user);
+      _logInited = true;
+    }
+  };
+
+  // ── Nav panel switching ──────────────────────────────────────────────────
+
+  const bindNav = () => {
+    // home → home-panel
+    document.getElementById('nav-home').addEventListener('click', () => {
+      _setActiveNav('nav-home');
+      showPanel('home-panel');
+    });
+
+    // log → log-panel; refresh entries each time the tab is opened
+    document.getElementById('nav-log').addEventListener('click', async () => {
+      _setActiveNav('nav-log');
+      showPanel('log-panel');
+      if (_logInited && typeof ThanziLog !== 'undefined') {
+        await ThanziLog.refresh();
+      }
+    });
+
+    // progress / profile — panels not built yet; swap in later
+    document.getElementById('nav-progress').addEventListener('click', () => {
+      _setActiveNav('nav-progress');
+      showPanel('home-panel'); // placeholder
+    });
+
+    document.getElementById('nav-profile').addEventListener('click', () => {
+      _setActiveNav('nav-profile');
+      showPanel('home-panel'); // placeholder
+    });
+  };
+
+  const _setActiveNav = (activeId) => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(activeId).classList.add('active');
+  };
+
+  // ── Event binding ────────────────────────────────────────────────────────
+
   const bindEvents = () => {
-    // Option buttons
+    // Profile option buttons
     document.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const group = btn.dataset.group;
-        document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll(`[data-group="${group}"]`)
+          .forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         selections[group] = btn.dataset.val;
       });
@@ -92,7 +151,7 @@ const ThanziApp = (() => {
 
     // Save profile
     document.getElementById('save-profile-btn').addEventListener('click', async () => {
-      const age = parseInt(document.getElementById('p-age').value);
+      const age    = parseInt(document.getElementById('p-age').value);
       const weight = parseFloat(document.getElementById('p-weight').value);
       const height = parseFloat(document.getElementById('p-height').value);
       const { gender, activity, goal } = selections;
@@ -104,11 +163,11 @@ const ThanziApp = (() => {
 
       const plan = ThanziNutrition.generate({
         age,
-        sex: gender,
-        weight_kg: weight,
-        height_m: height / 100,
+        sex:            gender,
+        weight_kg:      weight,
+        height_m:       height / 100,
         activity_level: activity,
-        goal
+        goal,
       });
 
       if (plan.error) {
@@ -120,9 +179,8 @@ const ThanziApp = (() => {
       localStorage.setItem('thanzi_profile_' + user.$id, JSON.stringify(plan));
       applyPlan(plan);
       showScreen('dashboard-screen');
-      updateGreeting(user.name);
-      updateRing();
-      updateWater();
+      await initDashboard(user);
+      bindNav();
     });
 
     // Auth tabs
@@ -140,19 +198,21 @@ const ThanziApp = (() => {
       document.getElementById('login-tab').classList.remove('active');
     });
 
+    // Login
     document.getElementById('login-btn').addEventListener('click', async () => {
-      const email = document.getElementById('login-email').value;
+      const email    = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
-      const result = await ThanziAuth.login(email, password);
+      const result   = await ThanziAuth.login(email, password);
+
       if (result.success) {
-        const user = await ThanziAuth.getUser();
+        const user    = await ThanziAuth.getUser();
         const profile = localStorage.getItem('thanzi_profile_' + user.$id);
+
         if (profile) {
           applyPlan(JSON.parse(profile));
           showScreen('dashboard-screen');
-          updateGreeting(user.name);
-          updateRing();
-          updateWater();
+          await initDashboard(user);
+          bindNav();
         } else {
           showScreen('profile-screen');
         }
@@ -161,11 +221,13 @@ const ThanziApp = (() => {
       }
     });
 
+    // Register
     document.getElementById('register-btn').addEventListener('click', async () => {
-      const name = document.getElementById('reg-name').value;
-      const email = document.getElementById('reg-email').value;
+      const name     = document.getElementById('reg-name').value;
+      const email    = document.getElementById('reg-email').value;
       const password = document.getElementById('reg-password').value;
-      const result = await ThanziAuth.register(name, email, password);
+      const result   = await ThanziAuth.register(name, email, password);
+
       if (result.success) {
         showScreen('profile-screen');
       } else {
@@ -173,13 +235,39 @@ const ThanziApp = (() => {
       }
     });
 
+    // Logout
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await ThanziAuth.logout();
+      _logInited = false;
+      _currentUser = null;
       showScreen('auth-screen');
     });
   };
 
-  return { init, addWater };
+  // ── App init ─────────────────────────────────────────────────────────────
+
+  const init = async () => {
+    const user = await ThanziAuth.getUser();
+
+    if (user) {
+      const profile = localStorage.getItem('thanzi_profile_' + user.$id);
+
+      if (profile) {
+        applyPlan(JSON.parse(profile));
+        showScreen('dashboard-screen');
+        await initDashboard(user);
+        bindNav();
+      } else {
+        showScreen('profile-screen');
+      }
+    } else {
+      showScreen('auth-screen');
+    }
+
+    bindEvents();
+  };
+
+  return { init, addWater, updateNutrition };
 })();
 
 document.addEventListener('DOMContentLoaded', ThanziApp.init);

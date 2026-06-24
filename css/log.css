@@ -1,0 +1,307 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   log.css — Thanzi Log Screen Styles
+   Drop this file into css/ and add <link rel="stylesheet" href="css/log.css">
+   to index.html AFTER style.css.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel system ─────────────────────────────────────────────────────────── */
+
+.dash-panel {
+  padding: 16px;
+  padding-bottom: 88px; /* clear bottom nav */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Meal selector ────────────────────────────────────────────────────────── */
+
+.meal-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.meal-selector::-webkit-scrollbar { display: none; }
+
+.meal-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  color: #888;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.meal-btn.active {
+  background: #2d9e6b;
+  border-color: #2d9e6b;
+  color: #fff;
+}
+
+/* ── Food search ──────────────────────────────────────────────────────────── */
+
+.food-search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+#food-search-input {
+  width: 100%;
+  padding: 13px 16px 13px 40px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#food-search-input::placeholder { color: #555; }
+#food-search-input:focus { border-color: #2d9e6b; }
+
+/* Search icon */
+.food-search-wrap::before {
+  content: '🔍';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+/* Dropdown */
+#food-search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #1a1a2e;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.sr-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #23233a;
+  transition: background 0.1s;
+}
+.sr-item:last-child { border-bottom: none; }
+.sr-item:active { background: #23233a; }
+
+.sr-item-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sr-name { font-size: 0.9rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-sub  { font-size: 0.75rem; color: #666; }
+
+.sr-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sr-kcal { font-size: 0.8rem; color: #aaa; }
+
+.sr-source {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #888;
+}
+.sr-source.local    { background: rgba(45,158,107,0.2); color: #2d9e6b; }
+.sr-source.regional { background: rgba(52,152,219,0.2); color: #3498db; }
+.sr-source.fdc, .sr-source.combined { background: rgba(155,89,182,0.2); color: #9b59b6; }
+.sr-source.off      { background: rgba(230,126,34,0.2); color: #e67e22; }
+
+.sr-empty {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+.sr-online-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #3498db;
+  color: #3498db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.sr-loading {
+  padding: 10px 14px;
+  color: #555;
+  font-size: 0.8rem;
+  border-top: 1px solid #23233a;
+}
+
+/* ── Selected food card ───────────────────────────────────────────────────── */
+
+#selected-food-card {
+  background: #1a1a2e;
+  border: 1px solid #2d9e6b;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+#selected-food-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+#selected-food-per100 {
+  font-size: 0.78rem;
+  color: #666;
+  margin-bottom: 14px;
+}
+
+/* Portion row */
+.portion-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.portion-label { font-size: 0.85rem; color: #aaa; }
+#portion-input {
+  width: 90px;
+  padding: 9px 12px;
+  background: #0f1117;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+  outline: none;
+  margin-bottom: 0;
+}
+#portion-input:focus { border-color: #2d9e6b; }
+.portion-unit { font-size: 0.9rem; color: #888; }
+
+/* Scaled nutrition display */
+#portion-calc {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  background: #0f1117;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.pc-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.pc-val { font-size: 0.95rem; font-weight: 600; color: #2d9e6b; }
+.pc-lbl { font-size: 0.7rem; color: #666; margin-top: 2px; }
+
+/* Log button */
+#log-food-btn {
+  width: 100%;
+  padding: 13px;
+  background: #2d9e6b;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+#log-food-btn:disabled { opacity: 0.6; cursor: default; }
+#log-food-btn:active:not(:disabled) { background: #249059; }
+
+#log-error {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #e74c3c;
+  display: none;
+}
+
+/* ── Today's log section ──────────────────────────────────────────────────── */
+
+.todays-log { margin-top: 8px; }
+
+.log-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+#log-date-label {
+  font-size: 0.82rem;
+  color: #666;
+  font-weight: 500;
+}
+#log-total-kcal {
+  font-size: 0.82rem;
+  color: #2d9e6b;
+  font-weight: 600;
+}
+
+/* Empty state */
+.log-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: #555;
+}
+.log-empty-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+.log-empty p { font-size: 0.875rem; line-height: 1.6; }
+
+/* Meal group */
+.log-meal-group { margin-bottom: 8px; }
+
+.log-meal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0 6px 2px;
+  margin-bottom: 4px;
+}
+.log-meal-label { font-size: 0.82rem; color: #888; font-weight: 600; letter-spacing: 0.02em; }
+.log-meal-kcal  { font-size: 0.78rem; color: #666; }
+
+/* Log entry row */
+.log-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1a2e;
+  border-radius: 10px;
+  padding: 11px 12px;
+  margin-bottom: 6px;
+}
+.log-entry-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.log-entry-name {
+  font-size: 0.9rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.log-entry-detail { font-size: 0.75rem; color: #666; }
+
+.log-entry-delete {
+  background: transparent;
+  border: none;
+  color: #444;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.log-entry-delete:hover { color: #e74c3c; background: rgba(231,76,60,0.1); }
