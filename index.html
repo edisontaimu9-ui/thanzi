@@ -32,6 +32,49 @@
     </div>
   </div>
 
+  <!-- Profile Setup Screen -->
+  <div id="profile-screen" class="screen" style="display:none">
+    <div class="profile-container">
+      <h2>Set up your profile</h2>
+      <p class="profile-sub">Help Thanzi personalise your nutrition plan</p>
+
+      <div class="step" id="step-1">
+        <label>Age</label>
+        <input type="number" id="p-age" placeholder="e.g. 25" min="18" max="60">
+
+        <label>Gender</label>
+        <div class="option-group">
+          <button class="option-btn" data-val="M" data-group="gender">Male</button>
+          <button class="option-btn" data-val="F" data-group="gender">Female</button>
+        </div>
+
+        <label>Weight (kg)</label>
+        <input type="number" id="p-weight" placeholder="e.g. 70" min="30" max="300">
+
+        <label>Height (cm)</label>
+        <input type="number" id="p-height" placeholder="e.g. 170" min="100" max="250">
+
+        <label>Activity Level</label>
+        <div class="option-group vertical">
+          <button class="option-btn" data-val="sedentary" data-group="activity">Sedentary (desk job, no exercise)</button>
+          <button class="option-btn" data-val="low_active" data-group="activity">Low active (light exercise 1-3x/week)</button>
+          <button class="option-btn" data-val="active" data-group="activity">Active (moderate exercise 3-5x/week)</button>
+          <button class="option-btn" data-val="very_active" data-group="activity">Very active (hard exercise 6-7x/week)</button>
+        </div>
+
+        <label>Goal</label>
+        <div class="option-group">
+          <button class="option-btn" data-val="lose" data-group="goal">Lose weight</button>
+          <button class="option-btn" data-val="maintain" data-group="goal">Maintain</button>
+          <button class="option-btn" data-val="gain" data-group="goal">Gain muscle</button>
+        </div>
+
+        <button id="save-profile-btn">Generate my plan</button>
+        <p id="profile-error" class="error"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Dashboard Screen -->
   <div id="dashboard-screen" class="screen" style="display:none">
     <header class="dash-header">
