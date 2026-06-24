@@ -34,16 +34,70 @@
 
   <!-- Dashboard Screen -->
   <div id="dashboard-screen" class="screen" style="display:none">
-    <header>
-      <h2>Thanzi</h2>
+    <header class="dash-header">
+      <span id="greeting">Good morning</span>
       <button id="logout-btn">Logout</button>
     </header>
-    <main>
-      <p>Welcome to Thanzi!</p>
+
+    <main class="dash-main">
+
+      <!-- Calorie Ring -->
+      <div class="calorie-card">
+        <div class="ring-container">
+          <svg class="ring" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="50"/>
+            <circle class="ring-fill" id="calorie-ring" cx="60" cy="60" r="50"/>
+          </svg>
+          <div class="ring-text">
+            <span id="calories-consumed">0</span>
+            <small>of <span id="calories-goal">2000</span> kcal</small>
+          </div>
+        </div>
+        <div class="macros">
+          <div class="macro">
+            <span class="macro-val" id="carbs-val">0g</span>
+            <span class="macro-label">Carbs</span>
+          </div>
+          <div class="macro">
+            <span class="macro-val" id="protein-val">0g</span>
+            <span class="macro-label">Protein</span>
+          </div>
+          <div class="macro">
+            <span class="macro-val" id="fat-val">0g</span>
+            <span class="macro-label">Fat</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Water Tracker -->
+      <div class="water-card">
+        <div class="water-header">
+          <span>💧 Water</span>
+          <span id="water-amount">0 / 2000ml</span>
+        </div>
+        <div class="water-bar">
+          <div class="water-fill" id="water-fill"></div>
+        </div>
+        <div class="water-btns">
+          <button class="water-btn" onclick="ThanziApp.addWater(250)">+250ml</button>
+          <button class="water-btn" onclick="ThanziApp.addWater(500)">+500ml</button>
+          <button class="water-btn" onclick="ThanziApp.addWater(750)">+750ml</button>
+        </div>
+      </div>
+
     </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" id="nav-home">🏠<span>Home</span></button>
+      <button class="nav-btn" id="nav-log">➕<span>Log</span></button>
+      <button class="nav-btn" id="nav-progress">📈<span>Progress</span></button>
+      <button class="nav-btn" id="nav-profile">👤<span>Profile</span></button>
+    </nav>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13/dist/iife/sdk.min.js"></script>
+  <script src="js/thanzi-nutrition.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
