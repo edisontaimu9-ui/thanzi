@@ -26,7 +26,23 @@
 </head>
 <body>
 
-  <!-- theme toggle lives inside .dash-header — see dashboard screen below -->
+  <!-- ── Theme toggle (visible on every screen) ───────────────────────────── -->
+  <button id="theme-toggle-btn" class="theme-toggle-btn" type="button" aria-label="Switch to light mode" title="Switch to light mode">
+    <svg class="theme-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="theme-icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  </button>
 
 
   <!-- ── Auth Screen ──────────────────────────────────────────────────────── -->
@@ -93,25 +109,6 @@
   <div id="dashboard-screen" class="screen" style="display:none">
     <header class="dash-header">
       <span id="greeting">Good morning</span>
-      <div class="dash-header-actions">
-        <button id="theme-toggle-btn" class="theme-toggle-btn" type="button" aria-label="Switch to light mode" title="Switch to light mode">
-          <svg class="theme-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <svg class="theme-icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-          </svg>
-        </button>
-        <button id="logout-btn">Logout</button>
-      </div>
     </header>
 
     <!-- Home Panel -->
@@ -296,6 +293,8 @@
 
         <button id="profile-save-btn" class="profile-save-btn">Save Changes</button>
         <p id="profile-save-msg" class="profile-save-msg"></p>
+
+        <button id="logout-btn" class="profile-logout-btn">Sign Out</button>
       </div>
 
       <!-- Shared placeholder for not-yet-built tabs -->
