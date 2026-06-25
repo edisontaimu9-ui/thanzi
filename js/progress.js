@@ -1,18 +1,14 @@
 /**
- * progress.js — Thanzi Progress Panel
+ * progress.js — Thanzi Progress Panel (Chart.js 4.5.1)
  * ─────────────────────────────────────────────────────────────────────────────
  * Three sections:
- *   1. Weight tracker  — log / view / delete weight entries (weight_logs)
- *   2. Calorie history — 7-day bar chart from food_logs
- *   3. Water history   — 7-day bar chart from water_logs
+ *   1. Weight tracker  — line chart + log / view / delete (weight_logs)
+ *   2. Calorie history — 7-day bar chart + goal line (food_logs)
+ *   3. Water history   — 7-day bar chart + goal line (water_logs)
  *
  * Public API: init(user), refresh(), saveWater(ml)
- * saveWater is called by ThanziApp.addWater() to persist each addition.
  *
- * NOTE: Range queries on the `date` field require a string index on that
- * column in Appwrite Console → Database → Collection → Indexes.
- * Add a key index on `date` for food_logs and water_logs.
- *
+ * Requires: Chart.js 4.5.1 (loaded before this file)
  * Author: Edison Taimu — Thanzi
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -20,27 +16,30 @@
 const ThanziProgress = (() => {
   'use strict';
 
-  // ── Appwrite ──────────────────────────────────────────────────────────────
+  // ── Appwrite ───────────────────────────────────────────────────────────────
   const _client = new Appwrite.Client()
     .setEndpoint(THANZI_CONFIG.endpoint)
     .setProject(THANZI_CONFIG.projectId);
   const _db = new Appwrite.Databases(_client);
 
-  // ── State ─────────────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   let _user    = null;
-  let _inited  = false;
   let _loading = false;
 
-  // ── DOM helper ────────────────────────────────────────────────────────────
+  // Chart.js instances — destroyed before each re-render
+  let _weightChart = null;
+  let _calChart    = null;
+  let _waterChart  = null;
+
+  // ── DOM helper ─────────────────────────────────────────────────────────────
   const _el = id => document.getElementById(id);
 
-  // ── Date helpers ──────────────────────────────────────────────────────────
+  // ── Date helpers ───────────────────────────────────────────────────────────
 
   function _today() {
     return new Date().toISOString().split('T')[0];
   }
 
-  /** Returns ISO date strings for the last N days, oldest first. */
   function _lastNDays(n = 7) {
     const days = [];
     for (let i = n - 1; i >= 0; i--) {
@@ -51,17 +50,21 @@ const ThanziProgress = (() => {
     return days;
   }
 
-  /** 'Mon', 'Tue' … from ISO date string. */
   function _shortDay(iso) {
     return new Date(iso + 'T00:00:00').toLocaleDateString('en-MW', { weekday: 'short' });
   }
 
-  /** 'MM-DD' display from ISO date string. */
   function _mmdd(iso) {
     return iso.slice(5);   // '2025-06-25' → '06-25'
   }
 
-  // ── Nutrition plan helper ─────────────────────────────────────────────────
+  // ── CSS variable reader ────────────────────────────────────────────────────
+
+  function _cssVar(name, fallback = '') {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  }
+
+  // ── Nutrition plan ─────────────────────────────────────────────────────────
 
   function _getPlan() {
     try {
@@ -69,126 +72,61 @@ const ThanziProgress = (() => {
     } catch { return null; }
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // SVG Charts
-  // ═════════════════════════════════════════════════════════════════════════
+  // ── Chart helpers ──────────────────────────────────────────────────────────
 
-  /**
-   * Bar chart.
-   * items: [{ label: string, value: number }]
-   * goalLine: optional number — draws a dashed horizontal line
-   */
-  function _svgBars(items, { goalLine = null } = {}) {
-    if (!items || !items.length) {
-      return '<p class="prog-chart-empty">No data yet.</p>';
-    }
-
-    const W = 320, H = 130;
-    const PL = 34, PR = 8, PT = 12, PB = 26;
-    const plotW = W - PL - PR;
-    const plotH = H - PT - PB;
-
-    const maxVal = Math.max(...items.map(d => d.value), goalLine || 0, 1) * 1.18;
-    const gap    = plotW / items.length;
-    const barW   = Math.max(4, Math.floor(gap * 0.55));
-
-    const yS = v => PT + plotH - (v / maxVal) * plotH;
-    const xC = i => PL + gap * i + gap / 2;
-
-    const bars = items.map((d, i) => {
-      const bx = (xC(i) - barW / 2).toFixed(1);
-      const by = yS(d.value).toFixed(1);
-      const bh = Math.max(2, plotH - (yS(d.value) - PT)).toFixed(1);
-      const over = goalLine && d.value > goalLine * 1.02;
-      const fill = over ? 'var(--progress-over, #ef4444)' : 'var(--accent)';
-      return `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="0.88"/>`;
-    }).join('');
-
-    const xlabels = items.map((d, i) =>
-      `<text x="${xC(i).toFixed(1)}" y="${H - 7}" text-anchor="middle" class="pcc-lbl">${d.label}</text>`
-    ).join('');
-
-    const yMax = maxVal > 1200
-      ? `${(maxVal / 1000).toFixed(1)}k`
-      : Math.round(maxVal).toString();
-
-    const yLabels = `
-      <text x="${PL - 4}" y="${PT + 5}" text-anchor="end" class="pcc-lbl">${yMax}</text>
-      <text x="${PL - 4}" y="${PT + plotH + 1}" text-anchor="end" class="pcc-lbl">0</text>`;
-
-    const goalSvg = goalLine != null
-      ? `<line x1="${PL}" y1="${yS(goalLine).toFixed(1)}" x2="${W - PR}" y2="${yS(goalLine).toFixed(1)}"
-           stroke="var(--text-muted,#888)" stroke-dasharray="4 3" stroke-width="1.2" opacity="0.7"/>`
-      : '';
-
-    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible;display:block">
-      ${goalSvg}${bars}${xlabels}${yLabels}
-    </svg>`;
+  /** Safely destroy a Chart.js instance and return null. */
+  function _destroy(chart) {
+    if (chart) { try { chart.destroy(); } catch (_) {} }
+    return null;
   }
 
-  /**
-   * Line chart (for weight trend).
-   * items: [{ label: string, value: number }]
-   */
-  function _svgLine(items, { unit = '' } = {}) {
-    if (!items || items.length === 0) {
-      return '<p class="prog-chart-empty">Log your weight to see trends.</p>';
-    }
-    if (items.length === 1) {
-      return `<p class="prog-chart-empty">⚖️ ${items[0].value}${unit} on ${items[0].label}<br>Log more entries to see a trend.</p>`;
-    }
+  /** Shared Chart.js options, reading theme CSS vars at call time. */
+  function _baseOpts() {
+    const muted   = _cssVar('--text-muted',    '#888');
+    const border  = _cssVar('--border',        'rgba(255,255,255,.08)');
+    const bgCard  = _cssVar('--bg-card',       '#1e1e2e');
+    const primary = _cssVar('--text-primary',  '#fff');
 
-    const W = 320, H = 130;
-    const PL = 40, PR = 8, PT = 12, PB = 26;
-    const plotW = W - PL - PR;
-    const plotH = H - PT - PB;
-
-    const vals = items.map(d => d.value);
-    const minV = Math.min(...vals);
-    const maxV = Math.max(...vals);
-    const range = maxV - minV || 1;
-    const pad = range * 0.25;
-    const lo = minV - pad;
-    const hi = maxV + pad;
-
-    const xS = i => PL + (i / (items.length - 1)) * plotW;
-    const yS = v => PT + plotH - ((v - lo) / (hi - lo)) * plotH;
-
-    const pts = items.map((d, i) => `${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ');
-
-    // Gradient fill under line
-    const fillPts = pts
-      + ` ${(PL + plotW).toFixed(1)},${(PT + plotH).toFixed(1)}`
-      + ` ${PL.toFixed(1)},${(PT + plotH).toFixed(1)}`;
-
-    const dots = items.map((d, i) =>
-      `<circle cx="${xS(i).toFixed(1)}" cy="${yS(d.value).toFixed(1)}" r="3.5"
-        fill="var(--accent)" stroke="var(--bg-card,#1e1e2e)" stroke-width="1.5"/>`
-    ).join('');
-
-    const xlabels = items.map((d, i) =>
-      `<text x="${xS(i).toFixed(1)}" y="${H - 7}" text-anchor="middle" class="pcc-lbl">${d.label}</text>`
-    ).join('');
-
-    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible;display:block">
-      <defs>
-        <linearGradient id="line-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="var(--accent)" stop-opacity="0.25"/>
-          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
-      <polygon points="${fillPts}" fill="url(#line-grad)"/>
-      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dots}
-      ${xlabels}
-      <text x="${PL - 4}" y="${PT + 5}" text-anchor="end" class="pcc-lbl">${maxV.toFixed(1)}${unit}</text>
-      <text x="${PL - 4}" y="${PT + plotH + 1}" text-anchor="end" class="pcc-lbl">${minV.toFixed(1)}${unit}</text>
-    </svg>`;
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 500 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: bgCard,
+          titleColor:  primary,
+          bodyColor:   primary,
+          borderColor: border,
+          borderWidth: 1,
+          padding: 8,
+        },
+      },
+      scales: {
+        x: {
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: muted, font: { size: 11 } },
+        },
+        y: {
+          grid:   { color: border },
+          border: { display: false },
+          ticks:  { color: muted, font: { size: 11 }, maxTicksLimit: 4 },
+        },
+      },
+    };
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
+  /** Create a canvas inside a container div and return its 2D context. */
+  function _makeCanvas(containerId, canvasId) {
+    const wrap = _el(containerId);
+    wrap.innerHTML = `<div style="position:relative;height:140px"><canvas id="${canvasId}"></canvas></div>`;
+    return _el(canvasId).getContext('2d');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Weight Section
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
 
   async function _loadWeightLogs() {
     try {
@@ -214,30 +152,74 @@ const ThanziProgress = (() => {
     const latestEl = _el('prog-weight-latest');
 
     chartEl.innerHTML = '<p class="prog-chart-loading">Loading…</p>';
+    _weightChart = _destroy(_weightChart);
 
     const logs = await _loadWeightLogs();
 
-    // Latest reading badge
-    if (logs.length > 0) {
-      const latest = logs[0];
-      latestEl.textContent = `${latest.weight} kg`;
-      latestEl.style.display = 'inline-block';
+    // Latest badge
+    if (logs.length) {
+      latestEl.textContent    = `${logs[0].weight} kg`;
+      latestEl.style.display  = 'inline-block';
     } else {
       latestEl.style.display = 'none';
     }
 
-    // Line chart (up to last 10, chronological)
-    const chartData = logs.slice(0, 10).reverse().map(l => ({
-      label: _mmdd(l.date),
-      value: l.weight,
-    }));
-    chartEl.innerHTML = _svgLine(chartData, { unit: 'kg' });
+    // Chart
+    if (!logs.length) {
+      chartEl.innerHTML = '<p class="prog-chart-empty">Log your weight to see trends.</p>';
+    } else if (logs.length === 1) {
+      chartEl.innerHTML = `<p class="prog-chart-empty">⚖️ ${logs[0].weight} kg on ${logs[0].date}<br>Log more entries to see a trend.</p>`;
+    } else {
+      const data   = logs.slice(0, 10).reverse();
+      const accent = _cssVar('--accent', '#6c63ff');
+      const ctx    = _makeCanvas('prog-weight-chart', 'prog-weight-canvas');
+
+      _weightChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(l => _mmdd(l.date)),
+          datasets: [{
+            label: 'Weight (kg)',
+            data:  data.map(l => l.weight),
+            borderColor:            accent,
+            backgroundColor:        accent + '28',
+            fill:                   true,
+            tension:                0.35,
+            pointRadius:            5,
+            pointHoverRadius:       7,
+            pointBackgroundColor:   accent,
+            pointBorderColor:       _cssVar('--bg-card', '#1e1e2e'),
+            pointBorderWidth:       2,
+          }],
+        },
+        options: {
+          ..._baseOpts(),
+          scales: {
+            ..._baseOpts().scales,
+            y: {
+              ..._baseOpts().scales.y,
+              ticks: {
+                ..._baseOpts().scales.y.ticks,
+                callback: v => v + ' kg',
+              },
+            },
+          },
+          plugins: {
+            ..._baseOpts().plugins,
+            tooltip: {
+              ..._baseOpts().plugins.tooltip,
+              callbacks: {
+                label: ctx => `${ctx.parsed.y} kg`,
+              },
+            },
+          },
+        },
+      });
+    }
 
     // Recent list (last 5)
-    if (!logs.length) {
-      listEl.innerHTML = '';
-      return;
-    }
+    if (!logs.length) { listEl.innerHTML = ''; return; }
+
     listEl.innerHTML = logs.slice(0, 5).map(l => `
       <div class="prog-list-row">
         <span class="prog-list-val">${l.weight} kg</span>
@@ -265,14 +247,13 @@ const ThanziProgress = (() => {
   }
 
   function _bindWeightForm() {
-    const toggleBtn  = _el('prog-log-weight-btn');
-    const form       = _el('prog-weight-form');
-    const saveBtn    = _el('prog-weight-save-btn');
-    const cancelBtn  = _el('prog-weight-cancel-btn');
-    const dateInput  = _el('prog-weight-date');
-    const errorEl    = _el('prog-weight-error');
+    const toggleBtn = _el('prog-log-weight-btn');
+    const form      = _el('prog-weight-form');
+    const saveBtn   = _el('prog-weight-save-btn');
+    const cancelBtn = _el('prog-weight-cancel-btn');
+    const dateInput = _el('prog-weight-date');
+    const errorEl   = _el('prog-weight-error');
 
-    // Default date
     dateInput.value = _today();
     dateInput.max   = _today();
 
@@ -286,9 +267,7 @@ const ThanziProgress = (() => {
       }
     });
 
-    cancelBtn.addEventListener('click', () => {
-      form.style.display = 'none';
-    });
+    cancelBtn.addEventListener('click', () => { form.style.display = 'none'; });
 
     saveBtn.addEventListener('click', async () => {
       const weight = parseFloat(_el('prog-weight-input').value);
@@ -309,9 +288,9 @@ const ThanziProgress = (() => {
           Appwrite.ID.unique(),
           { userId: _user.$id, weight, date }
         );
-        form.style.display = 'none';
+        form.style.display          = 'none';
         _el('prog-weight-input').value = '';
-        saveBtn.textContent = '✓ Saved!';
+        saveBtn.textContent         = '✓ Saved!';
         setTimeout(() => {
           saveBtn.textContent = 'Save';
           saveBtn.disabled    = false;
@@ -326,14 +305,15 @@ const ThanziProgress = (() => {
     });
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
   // Calorie History Section
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
 
   async function _renderCalories() {
-    const chartEl  = _el('prog-cal-chart');
-    const goalEl   = _el('prog-cal-goal-label');
+    const chartEl = _el('prog-cal-chart');
+    const goalEl  = _el('prog-cal-goal-label');
     chartEl.innerHTML = '<p class="prog-chart-loading">Loading…</p>';
+    _calChart = _destroy(_calChart);
 
     const days      = _lastNDays(7);
     const startDate = days[0];
@@ -354,31 +334,75 @@ const ThanziProgress = (() => {
       console.error('ThanziProgress[calories]:', e.message);
     }
 
-    // Sum per day
     const byDate = {};
     docs.forEach(d => { byDate[d.date] = (byDate[d.date] || 0) + (d.calories || 0); });
 
-    // Calorie goal
-    const plan = _getPlan();
-    const goal = plan?.energy?.target_kcal || 2000;
-    goalEl.textContent = `Goal: ${goal} kcal/day  ·  Dashed line`;
+    const plan   = _getPlan();
+    const goal   = plan?.energy?.target_kcal || 2000;
+    goalEl.textContent = `Goal: ${goal} kcal/day`;
 
-    const items = days.map(d => ({
-      label: _shortDay(d),
-      value: byDate[d] || 0,
-    }));
+    const labels = days.map(d => _shortDay(d));
+    const values = days.map(d => Math.round(byDate[d] || 0));
 
-    chartEl.innerHTML = _svgBars(items, { goalLine: goal });
+    const accent = _cssVar('--accent', '#6c63ff');
+    const ctx    = _makeCanvas('prog-cal-chart', 'prog-cal-canvas');
+
+    _calChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Calories',
+            data: values,
+            backgroundColor: values.map(v =>
+              v > goal * 1.02 ? '#ef4444cc' : accent + 'cc'
+            ),
+            borderRadius: 5,
+            borderSkipped: false,
+            order: 2,
+          },
+          {
+            type: 'line',
+            label: 'Goal',
+            data: Array(7).fill(goal),
+            borderColor:  _cssVar('--text-muted', '#888') + 'bb',
+            borderDash:   [6, 4],
+            borderWidth:  1.8,
+            pointRadius:  0,
+            fill:         false,
+            tension:      0,
+            order:        1,
+          },
+        ],
+      },
+      options: {
+        ..._baseOpts(),
+        plugins: {
+          ..._baseOpts().plugins,
+          tooltip: {
+            ..._baseOpts().plugins.tooltip,
+            callbacks: {
+              label: ctx => ctx.datasetIndex === 0
+                ? `${ctx.parsed.y} kcal`
+                : `Goal: ${goal} kcal`,
+            },
+          },
+        },
+      },
+    });
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
   // Water History Section
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
 
   async function _renderWater() {
     const chartEl = _el('prog-water-chart');
     const goalEl  = _el('prog-water-goal-label');
     chartEl.innerHTML = '<p class="prog-chart-loading">Loading…</p>';
+    _waterChart = _destroy(_waterChart);
 
     const days      = _lastNDays(7);
     const startDate = days[0];
@@ -402,28 +426,79 @@ const ThanziProgress = (() => {
     const byDate = {};
     docs.forEach(d => { byDate[d.date] = (byDate[d.date] || 0) + (d.amount || 0); });
 
-    const plan = _getPlan();
+    const plan      = _getPlan();
     const waterGoal = plan?.micronutrients?.fluid_L
       ? Math.round(plan.micronutrients.fluid_L * 1000)
       : 2000;
-    goalEl.textContent = `Goal: ${waterGoal} ml/day  ·  Dashed line`;
+    goalEl.textContent = `Goal: ${waterGoal} ml/day`;
 
-    const items = days.map(d => ({
-      label: _shortDay(d),
-      value: Math.round(byDate[d] || 0),
-    }));
+    const labels = days.map(d => _shortDay(d));
+    const values = days.map(d => Math.round(byDate[d] || 0));
 
-    chartEl.innerHTML = _svgBars(items, { goalLine: waterGoal });
+    const ctx = _makeCanvas('prog-water-chart', 'prog-water-canvas');
+
+    _waterChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Water',
+            data: values,
+            backgroundColor: values.map(v =>
+              v > waterGoal * 1.02 ? '#ef4444cc' : '#3b82f6cc'
+            ),
+            borderRadius: 5,
+            borderSkipped: false,
+            order: 2,
+          },
+          {
+            type: 'line',
+            label: 'Goal',
+            data: Array(7).fill(waterGoal),
+            borderColor:  _cssVar('--text-muted', '#888') + 'bb',
+            borderDash:   [6, 4],
+            borderWidth:  1.8,
+            pointRadius:  0,
+            fill:         false,
+            tension:      0,
+            order:        1,
+          },
+        ],
+      },
+      options: {
+        ..._baseOpts(),
+        plugins: {
+          ..._baseOpts().plugins,
+          tooltip: {
+            ..._baseOpts().plugins.tooltip,
+            callbacks: {
+              label: ctx => ctx.datasetIndex === 0
+                ? `${ctx.parsed.y} ml`
+                : `Goal: ${waterGoal} ml`,
+            },
+          },
+        },
+        scales: {
+          ..._baseOpts().scales,
+          y: {
+            ..._baseOpts().scales.y,
+            ticks: {
+              ..._baseOpts().scales.y.ticks,
+              callback: v => v >= 1000 ? (v / 1000).toFixed(1) + 'L' : v + 'ml',
+            },
+          },
+        },
+      },
+    });
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
   // Public API
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Persist a water addition.
-   * Called by ThanziApp.addWater() each time the user taps a water button.
-   */
+  /** Persist a water addition. Called by ThanziApp.addWater(). */
   async function saveWater(amount) {
     if (!_user) return;
     try {
@@ -434,22 +509,20 @@ const ThanziProgress = (() => {
         { userId: _user.$id, amount, date: _today() }
       );
     } catch (e) {
-      // Non-fatal — UI already updated; just log silently
       console.error('ThanziProgress[water save]:', e.message);
     }
   }
 
   /** First-time setup for this session. */
   function init(user) {
-    _user   = user;
-    _inited = true;
+    _user = user;
     _bindWeightForm();
     _renderWeight();
     _renderCalories();
     _renderWater();
   }
 
-  /** Called every time the Progress nav tab is opened. */
+  /** Called every time the Progress tab is opened. */
   async function refresh() {
     if (!_user || _loading) return;
     _loading = true;

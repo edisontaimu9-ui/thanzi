@@ -23,6 +23,7 @@
 
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/log.css">
+  <link rel="stylesheet" href="css/progress.css">
 </head>
 <body>
 
@@ -215,6 +216,56 @@
 
     </div><!-- /log-panel -->
 
+    <!-- Progress Panel -->
+    <div id="progress-panel" class="dash-panel" style="display:none">
+
+      <!-- ── Weight Tracker ──────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">⚖️ Weight</span>
+          <span class="prog-latest-badge" id="prog-weight-latest"></span>
+          <button class="prog-log-btn" id="prog-log-weight-btn">+ Log</button>
+        </div>
+
+        <div id="prog-weight-form">
+          <div class="prog-form-row">
+            <input type="number" id="prog-weight-input" placeholder="Weight (kg)"
+                   min="20" max="350" step="0.1" inputmode="decimal">
+            <input type="date" id="prog-weight-date">
+          </div>
+          <div class="prog-form-actions">
+            <button class="prog-form-save-btn"   id="prog-weight-save-btn">Save</button>
+            <button class="prog-form-cancel-btn" id="prog-weight-cancel-btn">Cancel</button>
+          </div>
+          <p class="prog-form-error" id="prog-weight-error"></p>
+        </div>
+
+        <div id="prog-weight-chart"></div>
+
+        <p class="prog-list-title">Recent entries</p>
+        <div id="prog-weight-list"></div>
+      </div>
+
+      <!-- ── Calorie History ─────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">🔥 Calories — last 7 days</span>
+        </div>
+        <div id="prog-cal-chart"></div>
+        <p class="prog-goal-label" id="prog-cal-goal-label"></p>
+      </div>
+
+      <!-- ── Water History ───────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">💧 Water — last 7 days</span>
+        </div>
+        <div id="prog-water-chart"></div>
+        <p class="prog-goal-label" id="prog-water-goal-label"></p>
+      </div>
+
+    </div><!-- /progress-panel -->
+
     <!-- Profile Panel -->
     <div id="profile-panel" class="dash-panel" style="display:none">
 
@@ -386,6 +437,8 @@
   <script src="js/scanner.js"></script>
   <script src="js/log.js"></script>
   <script src="js/profile.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
