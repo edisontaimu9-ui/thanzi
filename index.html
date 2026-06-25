@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="css/custom-foods.css">
   <link rel="stylesheet" href="css/meal-templates.css">
   <link rel="stylesheet" href="css/exercise.css">
+  <link rel="stylesheet" href="css/weight.css">
   <link rel="stylesheet" href="css/ai.css">
 </head>
 <body>
@@ -556,6 +557,129 @@
 
     </div><!-- /exercise-panel -->
 
+    <!-- Weight Panel -->
+    <div id="weight-panel" class="dash-panel" style="display:none">
+
+      <!-- Header -->
+      <div class="wt-header">
+        <div>
+          <div class="wt-title">Weight</div>
+          <div class="wt-subtitle">Monitor your progress</div>
+        </div>
+      </div>
+
+      <!-- Summary banner -->
+      <div class="wt-summary-banner">
+        <div class="wt-stat">
+          <span class="wt-stat-label">Current Weight</span>
+          <span class="wt-stat-value" id="wt-stat-weight">—</span>
+          <span class="wt-stat-unit">kg</span>
+        </div>
+        <div class="wt-stat">
+          <span class="wt-stat-label">BMI</span>
+          <span class="wt-stat-value" id="wt-stat-bmi">—</span>
+        </div>
+        <div class="wt-stat">
+          <span class="wt-stat-label">Change</span>
+          <span class="wt-stat-value" id="wt-stat-change">—</span>
+        </div>
+      </div>
+
+      <!-- Stat cards grid -->
+      <div class="wt-cards-grid">
+        <div class="wt-card">
+          <span class="wt-card-label">Current Weight</span>
+          <span class="wt-card-value" id="wt-card-current">—</span>
+          <div class="wt-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+            </svg>
+          </div>
+        </div>
+        <div class="wt-card">
+          <span class="wt-card-label">BMI</span>
+          <span class="wt-card-value" id="wt-card-bmi">—</span>
+          <span class="wt-card-sub" id="wt-card-bmi-sub">—</span>
+          <div class="wt-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <path d="M12 3l9 9-9 9-9-9 9-9z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="wt-card">
+          <span class="wt-card-label">Total Change</span>
+          <span class="wt-card-value" id="wt-card-change">—</span>
+          <div class="wt-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="wt-card">
+          <span class="wt-card-label">Change %</span>
+          <span class="wt-card-value" id="wt-card-pct">—</span>
+          <div class="wt-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress chart -->
+      <div class="wt-chart-card">
+        <div class="wt-chart-title">Weight Progress</div>
+        <div class="wt-chart-wrap">
+          <canvas id="wt-chart"></canvas>
+          <div class="wt-chart-empty" id="wt-chart-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            No weight data yet. Add your first entry below!
+          </div>
+        </div>
+      </div>
+
+      <!-- Log weight -->
+      <div class="wt-log-card">
+        <div class="wt-log-card-title">Log Weight</div>
+
+        <div class="wt-field">
+          <label class="wt-field-label" for="wt-weight-input">Weight (kg)</label>
+          <input type="number" id="wt-weight-input"
+                 placeholder="70.5" min="1" max="500" step="0.1" inputmode="decimal">
+        </div>
+
+        <div class="wt-field">
+          <label class="wt-field-label" for="wt-date-select">Date</label>
+          <div class="wt-date-wrap">
+            <select id="wt-date-select" aria-label="Select date"></select>
+          </div>
+        </div>
+
+        <p id="wt-error"></p>
+
+        <button id="wt-add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add Weight Entry
+        </button>
+      </div>
+
+      <!-- Weight history -->
+      <div class="wt-history-card">
+        <div class="wt-history-title">Weight History</div>
+        <div id="wt-history-list"></div>
+      </div>
+
+    </div><!-- /weight-panel -->
+
     <!-- AI Assistant Panel -->
     <div id="ai-panel" class="dash-panel" style="display:none">
       <div class="ai-panel-wrap">
@@ -925,6 +1049,7 @@
 
   <script src="js/meal-templates.js"></script>
   <script src="js/exercise.js"></script>
+  <script src="js/weight.js"></script>
   <script src="js/custom-foods.js"></script>
 </body>
 </html>

@@ -1,0 +1,377 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   weight.css — Thanzi Weight Panel
+   Uses the same CSS var tokens as the rest of Thanzi (style.css)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#weight-panel {
+  padding: 20px 16px 96px;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.wt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.wt-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
+}
+
+.wt-subtitle {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+/* ── Summary banner ──────────────────────────────────────────────────────── */
+.wt-summary-banner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-active, #1a7a52) 100%);
+  border-radius: 18px;
+  padding: 18px 12px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.wt-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.wt-stat + .wt-stat {
+  border-left: 1px solid rgba(255,255,255,.2);
+}
+
+.wt-stat-label {
+  font-size: .7rem;
+  color: rgba(255,255,255,.8);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+
+.wt-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.wt-stat-unit {
+  font-size: .7rem;
+  color: rgba(255,255,255,.75);
+  margin-top: 2px;
+}
+
+.wt-stat-badge {
+  font-size: .68rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.18);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-top: 4px;
+}
+
+/* ── Stat cards grid (Current Weight, BMI, Total Change, Change %) ────────── */
+.wt-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.wt-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wt-card-label {
+  font-size: .72rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.wt-card-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.1;
+}
+
+.wt-card-sub {
+  font-size: .72rem;
+  color: var(--text-3);
+}
+
+.wt-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  margin-top: -34px; /* float to top-right */
+  margin-left: auto;
+}
+
+.wt-card-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--accent);
+}
+
+/* ── Progress chart card ────────────────────────────────────────────────── */
+.wt-chart-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.wt-chart-title {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+
+.wt-chart-wrap {
+  position: relative;
+  height: 160px;
+}
+
+.wt-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+  color: var(--text-3);
+  font-size: .85rem;
+  text-align: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wt-chart-empty svg {
+  width: 36px;
+  height: 36px;
+  stroke: var(--text-3);
+  opacity: .4;
+}
+
+/* ── Log weight card ────────────────────────────────────────────────────── */
+.wt-log-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.wt-log-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 14px;
+}
+
+.wt-field {
+  margin-bottom: 12px;
+}
+
+.wt-field-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.wt-field input[type="number"],
+.wt-field select {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: .95rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s;
+  appearance: none;
+}
+
+.wt-field input[type="number"]:focus,
+.wt-field select:focus {
+  border-color: var(--accent);
+}
+
+.wt-date-wrap {
+  position: relative;
+}
+
+.wt-date-wrap select { padding-right: 36px; cursor: pointer; }
+
+.wt-date-wrap::after {
+  content: '';
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text-3);
+  pointer-events: none;
+}
+
+#wt-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 50px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: .93rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .1s, opacity .15s;
+}
+
+#wt-add-btn:active   { transform: scale(0.97); }
+#wt-add-btn:disabled { opacity: .55; cursor: not-allowed; }
+#wt-add-btn svg { width: 17px; height: 17px; stroke: var(--on-accent); flex-shrink: 0; }
+
+/* ── Weight history card ─────────────────────────────────────────────────── */
+.wt-history-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.wt-history-title {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+
+.wt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0 8px;
+  color: var(--text-3);
+}
+
+.wt-empty svg {
+  width: 38px;
+  height: 38px;
+  stroke: var(--text-3);
+  opacity: .4;
+}
+
+.wt-empty-text  { font-size: .85rem; }
+.wt-empty-sub   { font-size: .78rem; color: var(--text-3); text-align: center; }
+
+/* ── History row ─────────────────────────────────────────────────────────── */
+.wt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.wt-row:last-child { border-bottom: none; }
+
+.wt-row-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wt-row-icon svg { width: 18px; height: 18px; stroke: var(--accent); }
+
+.wt-row-info { flex: 1; min-width: 0; }
+
+.wt-row-weight {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.wt-row-date {
+  font-size: .75rem;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.wt-row-delta {
+  font-size: .82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wt-row-delta.up   { color: #e05; }
+.wt-row-delta.down { color: var(--accent); }
+.wt-row-delta.same { color: var(--text-3); }
+
+.wt-row-delete {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  flex-shrink: 0;
+}
+
+.wt-row-delete:hover { color: #e05; background: color-mix(in srgb, #e05 10%, transparent); }
+.wt-row-delete svg { width: 16px; height: 16px; stroke: currentColor; }
+
+/* ── Error ───────────────────────────────────────────────────────────────── */
+#wt-error {
+  font-size: .8rem;
+  color: #e05;
+  min-height: 18px;
+  margin: 6px 0 0;
+  display: none;
+}
+
+#wt-error.visible { display: block; }
