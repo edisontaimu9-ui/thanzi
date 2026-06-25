@@ -16,7 +16,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  display: flex;
+  display: none;         /* hidden by default; shown via JS on dashboard only */
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -35,10 +35,6 @@
   background: var(--text-1);
   transition: transform .25s, opacity .2s;
 }
-
-/* Hide on auth/profile-setup screens */
-#auth-screen    ~ .hamburger-btn,
-#profile-screen ~ .hamburger-btn { display: none; }
 
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
 .drawer-overlay {

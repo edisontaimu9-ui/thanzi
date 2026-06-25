@@ -56,6 +56,9 @@ const ThanziApp = (() => {
   const showScreen = (screenId) => {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById(screenId).style.display = 'block';
+    // Show hamburger only on the dashboard — hidden on auth & profile-setup screens
+    const hamburger = document.getElementById('hamburger-btn');
+    if (hamburger) hamburger.style.display = screenId === 'dashboard-screen' ? 'flex' : 'none';
   };
 
   const showPanel = (panelId) => {
