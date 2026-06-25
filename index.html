@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/log.css">
   <link rel="stylesheet" href="css/progress.css">
+  <link rel="stylesheet" href="css/drawer.css">
 </head>
 <body>
 
@@ -109,6 +110,9 @@
   <!-- ── Dashboard Screen ─────────────────────────────────────────────────── -->
   <div id="dashboard-screen" class="screen" style="display:none">
     <header class="dash-header">
+      <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
       <span id="greeting">Good morning</span>
     </header>
 
@@ -437,8 +441,116 @@
   <script src="js/scanner.js"></script>
   <script src="js/log.js"></script>
   <script src="js/profile.js"></script>
+  <!-- Overlay -->
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+
+  <!-- Side Drawer -->
+  <div id="side-drawer" class="side-drawer" role="dialog" aria-label="Navigation menu">
+
+    <!-- User -->
+    <div class="drawer-user">
+      <div class="drawer-avatar">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+        </svg>
+      </div>
+      <div>
+        <div class="drawer-user-name" id="drawer-user-name"></div>
+        <div class="drawer-user-sub"  id="drawer-user-sub"></div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="drawer-nav">
+
+      <button class="drawer-nav-item active" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Dashboard
+      </button>
+
+      <button class="drawer-nav-item" data-nav="ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
+          <circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>
+        </svg>
+        AI Assistant
+      </button>
+
+      <button class="drawer-nav-item" data-nav="meals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
+        </svg>
+        Meals
+      </button>
+
+      <button class="drawer-nav-item" data-nav="custom-foods">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a7 7 0 017 7c0 4-3 6-5 8H10c-2-2-5-4-5-8a7 7 0 017-7z"/><line x1="8.5" y1="17" x2="15.5" y2="17"/><line x1="8.5" y1="20" x2="15.5" y2="20"/>
+        </svg>
+        Custom Foods
+      </button>
+
+      <button class="drawer-nav-item" data-nav="meal-templates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/>
+          <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+        </svg>
+        Meal Templates
+      </button>
+
+      <button class="drawer-nav-item" data-nav="exercise">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5h11M6.5 17.5h11M3 10h18M3 14h18"/>
+        </svg>
+        Exercise
+      </button>
+
+      <button class="drawer-nav-item" data-nav="weight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="3"/><path d="M6.5 8a6 6 0 0011 0"/><rect x="2" y="8" width="20" height="12" rx="2"/>
+        </svg>
+        Weight
+      </button>
+
+      <button class="drawer-nav-item" data-nav="goals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+        Goals
+      </button>
+
+      <button class="drawer-nav-item" data-nav="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+        </svg>
+        Profile
+      </button>
+
+      <button class="drawer-nav-item" data-nav="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
+
+    </nav>
+
+    <!-- Logout -->
+    <button class="drawer-logout" id="drawer-logout-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Logout
+    </button>
+
+  </div><!-- /side-drawer -->
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <script src="js/progress.js"></script>
+  <script src="js/drawer.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

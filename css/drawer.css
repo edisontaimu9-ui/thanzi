@@ -156,3 +156,17 @@
   background: color-mix(in srgb, #ef4444 10%, var(--bg-card, #fff));
 }
 .drawer-logout svg { color: #ef4444; width: 20px; height: 20px; }
+
+/* ── dash-header layout with hamburger ───────────────────────────────────── */
+.dash-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+.dash-header #greeting {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}

@@ -1,12 +1,15 @@
 /**
  * drawer.js — Thanzi Side Drawer
- * Open/close only. Nav items are stubs — wire up one by one.
+ * Wired: dashboard
+ * Stubs: ai, meals, custom-foods, meal-templates, exercise, weight, goals, settings
  */
 const ThanziDrawer = (() => {
   'use strict';
 
   const _drawer  = () => document.getElementById('side-drawer');
   const _overlay = () => document.getElementById('drawer-overlay');
+
+  // ── Open / Close ─────────────────────────────────────────────────────────
 
   function open() {
     _drawer().classList.add('open');
@@ -20,11 +23,15 @@ const ThanziDrawer = (() => {
     document.body.style.overflow = '';
   }
 
+  // ── Active state ──────────────────────────────────────────────────────────
+
   function setActive(navKey) {
     document.querySelectorAll('.drawer-nav-item').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.nav === navKey);
     });
   }
+
+  // ── User info ─────────────────────────────────────────────────────────────
 
   function setUser(name, sub) {
     const nameEl = document.getElementById('drawer-user-name');
@@ -33,28 +40,45 @@ const ThanziDrawer = (() => {
     if (subEl)  subEl.textContent  = sub  || '';
   }
 
+  // ── Nav routing ───────────────────────────────────────────────────────────
+
+  const _routes = {
+    // ✅ Wired — triggers existing bottom nav
+    dashboard: () => document.getElementById('nav-home').click(),
+
+    // 🔲 Stubs — wire up one by one
+    ai:             () => console.log('TODO: AI Assistant'),
+    meals:          () => console.log('TODO: Meals'),
+    'custom-foods': () => console.log('TODO: Custom Foods'),
+    'meal-templates': () => console.log('TODO: Meal Templates'),
+    exercise:       () => console.log('TODO: Exercise'),
+    weight:         () => console.log('TODO: Weight'),
+    goals:          () => console.log('TODO: Goals'),
+    profile:        () => document.getElementById('nav-profile').click(),
+    settings:       () => console.log('TODO: Settings'),
+  };
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+
   function init() {
-    // Hamburger opens drawer
     document.getElementById('hamburger-btn')
       .addEventListener('click', open);
 
-    // Overlay click closes drawer
     _overlay().addEventListener('click', close);
 
-    // Nav item stubs — close drawer then TODO: route
     document.querySelectorAll('.drawer-nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
-        setActive(btn.dataset.nav);
+        const key = btn.dataset.nav;
+        setActive(key);
         close();
-        // TODO: handle btn.dataset.nav routing
+        if (_routes[key]) _routes[key]();
       });
     });
 
-    // Logout stub
     document.getElementById('drawer-logout-btn')
       .addEventListener('click', () => {
         close();
-        // TODO: call ThanziAuth.logout()
+        document.getElementById('logout-btn').click();
       });
   }
 
