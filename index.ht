@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanzi — Know what you eat</title>
+
+  <!-- Set theme before first paint to avoid a flash of the wrong theme -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('thanzi_theme');
+        if (!t) {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+            ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/log.css">
+  <link rel="stylesheet" href="css/progress.css">
+  <link rel="stylesheet" href="css/drawer.css">
+  <link rel="stylesheet" href="css/ai.css">
+  <link rel="stylesheet" href="css/customFoods.css">
+</head>
+<body>
+
+  <!-- ── Theme toggle (visible on every screen) ───────────────────────────── -->
+  <button id="theme-toggle-btn" class="theme-toggle-btn" type="button" aria-label="Switch to light mode" title="Switch to light mode">
+    <svg class="theme-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="theme-icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  </button>
+
+
+  <!-- Hamburger — fixed top-right, left of theme toggle -->
+  <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+
+  <!-- ── Auth Screen ──────────────────────────────────────────────────────── -->
+  <div id="auth-screen" class="screen">
+    <div class="auth-container">
+      <h1 class="logo">Thanzi</h1>
+      <p class="tagline">Know what you eat</p>
+      <div class="auth-tabs">
+        <button id="login-tab" class="tab active">Login</button>
+        <button id="register-tab" class="tab">Register</button>
+      </div>
+      <div id="login-form">
+        <input type="email"    id="login-email"    placeholder="Email">
+        <input type="password" id="login-password" placeholder="Password">
+        <button id="login-btn">Login</button>
+      </div>
+      <div id="register-form" style="display:none">
+        <input type="text"     id="reg-name"     placeholder="Full name">
+        <input type="email"    id="reg-email"    placeholder="Email">
+        <input type="password" id="reg-password" placeholder="Password">
+        <button id="register-btn">Create Account</button>
+      </div>
+      <p id="auth-error" class="error"></p>
+    </div>
+  </div>
+
+  <!-- ── Profile Setup Screen ─────────────────────────────────────────────── -->
+  <div id="profile-screen" class="screen" style="display:none">
+    <div class="profile-container">
+      <h2>Set up your profile</h2>
+      <p class="profile-sub">Help Thanzi personalise your nutrition plan</p>
+      <div class="step" id="step-1">
+        <label>Age</label>
+        <input type="number" id="p-age"    placeholder="e.g. 25"  min="18" max="60">
+        <label>Gender</label>
+        <div class="option-group">
+          <button class="option-btn" data-val="M" data-group="gender">Male</button>
+          <button class="option-btn" data-val="F" data-group="gender">Female</button>
+        </div>
+        <label>Weight (kg)</label>
+        <input type="number" id="p-weight" placeholder="e.g. 70"  min="30" max="300">
+        <label>Height (cm)</label>
+        <input type="number" id="p-height" placeholder="e.g. 170" min="100" max="250">
+        <label>Activity Level</label>
+        <div class="option-group vertical">
+          <button class="option-btn" data-val="sedentary"   data-group="activity">Sedentary (desk job, no exercise)</button>
+          <button class="option-btn" data-val="low_active"  data-group="activity">Low active (light exercise 1–3×/week)</button>
+          <button class="option-btn" data-val="active"      data-group="activity">Active (moderate exercise 3–5×/week)</button>
+          <button class="option-btn" data-val="very_active" data-group="activity">Very active (hard exercise 6–7×/week)</button>
+        </div>
+        <label>Goal</label>
+        <div class="option-group">
+          <button class="option-btn" data-val="lose"     data-group="goal">Lose weight</button>
+          <button class="option-btn" data-val="maintain" data-group="goal">Maintain</button>
+          <button class="option-btn" data-val="gain"     data-group="goal">Gain muscle</button>
+        </div>
+        <button id="save-profile-btn">Generate my plan</button>
+        <p id="profile-error" class="error"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dashboard Screen ─────────────────────────────────────────────────── -->
+  <div id="dashboard-screen" class="screen" style="display:none">
+    <header class="dash-header">
+      <span id="greeting">Good morning</span>
+    </header>
+
+    <!-- Home Panel -->
+    <div id="home-panel" class="dash-panel">
+      <div class="calorie-card">
+        <div class="ring-container">
+          <svg class="ring" viewBox="0 0 120 120">
+            <circle class="ring-bg"   cx="60" cy="60" r="50"/>
+            <circle class="ring-fill" id="calorie-ring" cx="60" cy="60" r="50"/>
+          </svg>
+          <div class="ring-text">
+            <span id="calories-consumed">0</span>
+            <small>of <span id="calories-goal">2000</span> kcal</small>
+          </div>
+        </div>
+        <div class="macros">
+          <div class="macro">
+            <span class="macro-val" id="carbs-val">0g</span>
+            <span class="macro-label">Carbs</span>
+          </div>
+          <div class="macro">
+            <span class="macro-val" id="protein-val">0g</span>
+            <span class="macro-label">Protein</span>
+          </div>
+          <div class="macro">
+            <span class="macro-val" id="fat-val">0g</span>
+            <span class="macro-label">Fat</span>
+          </div>
+        </div>
+      </div>
+      <div class="water-card">
+        <div class="water-header">
+          <span>💧 Water</span>
+          <span id="water-amount">0 / 2000ml</span>
+        </div>
+        <div class="water-bar">
+          <div class="water-fill" id="water-fill"></div>
+        </div>
+        <div class="water-btns">
+          <button class="water-btn" onclick="ThanziApp.addWater(250)">+250ml</button>
+          <button class="water-btn" onclick="ThanziApp.addWater(500)">+500ml</button>
+          <button class="water-btn" onclick="ThanziApp.addWater(750)">+750ml</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Panel -->
+    <div id="log-panel" class="dash-panel" style="display:none">
+
+      <!-- Meal selector -->
+      <div class="meal-selector">
+        <button class="meal-btn active" data-meal="breakfast">🌅 Breakfast</button>
+        <button class="meal-btn"        data-meal="lunch">☀️ Lunch</button>
+        <button class="meal-btn"        data-meal="dinner">🌙 Dinner</button>
+        <button class="meal-btn"        data-meal="snack">🍎 Snack</button>
+      </div>
+
+      <!-- Quick Add — natural language meal entry -->
+      <div class="quick-meal-wrap">
+        <label class="quick-meal-label" for="quick-meal-input">Quick add — describe your meal</label>
+        <div class="quick-meal-row">
+          <textarea
+            id="quick-meal-input"
+            rows="1"
+            placeholder="e.g. 2 eggs and toast, nsima with beans and greens"
+            autocorrect="off"
+            spellcheck="false"
+          ></textarea>
+          <button id="quick-meal-btn" class="quick-meal-btn">Add</button>
+        </div>
+        <div id="quick-meal-preview" style="display:none"></div>
+      </div>
+
+      <div class="log-divider"><span>or search for a single food</span></div>
+
+      <!-- Search row: input + barcode button -->
+      <div class="food-search-wrap">
+        <input
+          type="search"
+          id="food-search-input"
+          placeholder="Search food (e.g. nsima, beans, banana)…"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        >
+        <button id="barcode-scan-btn" class="barcode-scan-btn" title="Scan barcode" aria-label="Scan barcode">
+          <!-- Barcode SVG icon -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M15 3h4a2 2 0 012 2v4M15 21h4a2 2 0 002-2v-4"/>
+            <line x1="7" y1="7" x2="7" y2="17"/>
+            <line x1="10" y1="7" x2="10" y2="17"/>
+            <line x1="13" y1="7" x2="13" y2="17"/>
+            <line x1="16" y1="9" x2="16" y2="15"/>
+          </svg>
+        </button>
+        <div id="food-search-results" style="display:none"></div>
+      </div>
+
+      <!-- Selected food card -->
+      <div id="selected-food-card" style="display:none">
+        <div id="selected-food-name"></div>
+        <div id="selected-food-per100"></div>
+        <div class="portion-row">
+          <input type="number" id="portion-qty" value="1" min="0.1" max="99" step="0.5" inputmode="decimal">
+          <select id="portion-unit-select" class="portion-unit-select"></select>
+          <span id="portion-unit-label"></span>
+        </div>
+        <div id="portion-grams-hint" class="portion-grams-hint"></div>
+        <div id="portion-calc"></div>
+        <button id="log-food-btn">Log Food</button>
+        <p id="log-error"></p>
+      </div>
+
+      <!-- Today's log -->
+      <div class="todays-log">
+        <div class="log-day-header">
+          <span id="log-date-label"></span>
+          <span id="log-total-kcal">0 kcal today</span>
+        </div>
+        <div id="log-entries"></div>
+      </div>
+
+    </div><!-- /log-panel -->
+
+    <!-- Progress Panel -->
+    <div id="progress-panel" class="dash-panel" style="display:none">
+
+      <!-- ── Weight Tracker ──────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">⚖️ Weight</span>
+          <span class="prog-latest-badge" id="prog-weight-latest"></span>
+          <button class="prog-log-btn" id="prog-log-weight-btn">+ Log</button>
+        </div>
+
+        <div id="prog-weight-form">
+          <div class="prog-form-row">
+            <input type="number" id="prog-weight-input" placeholder="Weight (kg)"
+                   min="20" max="350" step="0.1" inputmode="decimal">
+            <input type="date" id="prog-weight-date">
+          </div>
+          <div class="prog-form-actions">
+            <button class="prog-form-save-btn"   id="prog-weight-save-btn">Save</button>
+            <button class="prog-form-cancel-btn" id="prog-weight-cancel-btn">Cancel</button>
+          </div>
+          <p class="prog-form-error" id="prog-weight-error"></p>
+        </div>
+
+        <div id="prog-weight-chart"></div>
+
+        <p class="prog-list-title">Recent entries</p>
+        <div id="prog-weight-list"></div>
+      </div>
+
+      <!-- ── Calorie History ─────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">🔥 Calories — last 7 days</span>
+        </div>
+        <div id="prog-cal-chart"></div>
+        <p class="prog-goal-label" id="prog-cal-goal-label"></p>
+      </div>
+
+      <!-- ── Water History ───────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">💧 Water — last 7 days</span>
+        </div>
+        <div id="prog-water-chart"></div>
+        <p class="prog-goal-label" id="prog-water-goal-label"></p>
+      </div>
+
+    </div><!-- /progress-panel -->
+
+    <!-- Profile Panel -->
+    <div id="profile-panel" class="dash-panel" style="display:none">
+
+      <!-- Stat cards -->
+      <div class="profile-stats">
+        <div class="pstat-card">
+          <span class="pstat-label">BMI</span>
+          <span class="pstat-val pstat-bmi" id="profile-bmi">—</span>
+          <span class="pstat-sub" id="profile-bmi-cat">&nbsp;</span>
+        </div>
+        <div class="pstat-card">
+          <span class="pstat-label">BMR</span>
+          <span class="pstat-val pstat-bmr" id="profile-bmr">—</span>
+          <span class="pstat-sub">cal/day</span>
+        </div>
+        <div class="pstat-card">
+          <span class="pstat-label">TDEE</span>
+          <span class="pstat-val pstat-tdee" id="profile-tdee">—</span>
+          <span class="pstat-sub">cal/day</span>
+        </div>
+      </div>
+
+      <!-- Account email -->
+      <div class="profile-email-row">
+        <span class="profile-email-icon">✉️</span>
+        <div class="profile-email-text">
+          <span class="profile-email-label">Account Email</span>
+          <span class="profile-email-val" id="profile-email">—</span>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="profile-subtabs">
+        <button class="psub-btn active" data-ptab="profile">Profile</button>
+        <button class="psub-btn" data-ptab="goals">Health &amp; Goals</button>
+        <button class="psub-btn" data-ptab="notifications">Notifications</button>
+        <button class="psub-btn" data-ptab="progress">Progress</button>
+        <button class="psub-btn" data-ptab="achievements">Achievements</button>
+      </div>
+
+      <!-- Profile tab content -->
+      <div id="ptab-profile" class="psub-content">
+
+        <div class="avatar-wrap">
+          <div class="avatar-circle" id="avatar-circle">
+            <svg class="avatar-placeholder" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+            </svg>
+            <img id="avatar-img" alt="Profile photo" style="display:none">
+          </div>
+          <button id="avatar-upload-btn" class="avatar-upload-btn" type="button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Upload Photo
+          </button>
+          <input type="file" id="avatar-file-input" accept="image/jpeg,image/png" style="display:none">
+          <p class="avatar-hint">Max size: 5MB • JPG, PNG</p>
+        </div>
+
+        <div class="profile-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+          </svg>
+          <span>Personal Details</span>
+        </div>
+
+        <label class="profile-field-label" for="profile-name">Full Name</label>
+        <input type="text" id="profile-name" placeholder="Your full name">
+
+        <label class="profile-field-label" for="profile-bio">Bio (optional)</label>
+        <textarea id="profile-bio" rows="3" placeholder="Tell us a little about yourself…"></textarea>
+
+        <button id="profile-save-btn" class="profile-save-btn">Save Changes</button>
+        <p id="profile-save-msg" class="profile-save-msg"></p>
+
+        <button id="logout-btn" class="profile-logout-btn">Sign Out</button>
+      </div>
+
+      <!-- Shared placeholder for not-yet-built tabs -->
+      <div id="ptab-placeholder" class="psub-content" style="display:none">
+        <div class="psub-coming-soon">
+          <span class="csoon-icon" id="csoon-icon">🛠️</span>
+          <p class="csoon-title" id="csoon-title">Coming soon</p>
+          <p class="csoon-sub" id="csoon-sub">This section is on the way.</p>
+        </div>
+      </div>
+
+    </div><!-- /profile-panel -->
+
+    <!-- AI Assistant Panel -->
+    <div id="ai-panel" class="dash-panel" style="display:none">
+      <div class="ai-panel-wrap">
+
+        <!-- Header -->
+        <div class="ai-header">
+          <div class="ai-avatar">🌿</div>
+          <div class="ai-header-text">
+            <span class="ai-name">Thandizo</span>
+            <span class="ai-subtitle">AI Nutrition Assistant</span>
+          </div>
+          <div class="ai-online-dot"></div>
+        </div>
+
+        <!-- Messages -->
+        <div class="ai-messages" id="ai-messages"></div>
+
+        <!-- Quick Actions -->
+        <div class="ai-quick-section" id="ai-quick-section"></div>
+
+        <!-- Composer -->
+        <div class="ai-composer">
+          <textarea
+            id="ai-input"
+            placeholder="Ask me anything about nutrition, meals, or recipes…"
+            rows="1"
+            autocorrect="off"
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+          <button id="ai-send-btn" class="ai-send-btn" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div><!-- /ai-panel -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" id="nav-home">🏠<span>Home</span></button>
+      <button class="nav-btn"        id="nav-log">➕<span>Log</span></button>
+      <button class="nav-btn"        id="nav-progress">📈<span>Progress</span></button>
+      <button class="nav-btn"        id="nav-profile">👤<span>Profile</span></button>
+    </nav>
+
+  </div><!-- /dashboard-screen -->
+
+  <!-- ── Barcode Scanner Modal ─────────────────────────────────────────────── -->
+  <div id="scanner-modal" class="scanner-modal" style="display:none" role="dialog" aria-modal="true" aria-label="Barcode Scanner">
+
+    <div class="scanner-inner">
+
+      <!-- Header -->
+      <div class="scanner-header">
+        <span class="scanner-title">Scan Barcode</span>
+        <button id="scanner-close-btn" class="scanner-close" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Choice screen -->
+      <div id="scanner-choice" class="scanner-choice">
+        <p class="scanner-choice-hint">Choose scanning method</p>
+        <div class="scanner-choice-btns">
+          <button id="scanner-camera-btn" class="scanner-choice-btn">
+            <span class="scb-icon">📷</span>
+            <span class="scb-label">Camera</span>
+            <span class="scb-sub">Live scan</span>
+          </button>
+          <button id="scanner-gallery-btn" class="scanner-choice-btn">
+            <span class="scb-icon">🖼️</span>
+            <span class="scb-label">Gallery</span>
+            <span class="scb-sub">Pick image</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Camera / preview view -->
+      <div id="scanner-camera-view" style="display:none">
+        <div class="scanner-viewport">
+          <video id="scanner-video" autoplay playsinline muted></video>
+          <!-- Gallery image preview (shown instead of video for gallery mode) -->
+          <img id="scanner-preview-img" class="scanner-preview-img" src="" alt="Scanned image" style="display:none">
+          <!-- Scanning frame overlay -->
+          <div class="scanner-frame-overlay">
+            <div class="scanner-frame">
+              <div class="scanner-corners tl"></div>
+              <div class="scanner-corners tr"></div>
+              <div class="scanner-corners bl"></div>
+              <div class="scanner-corners br"></div>
+              <div class="scanner-line"></div>
+            </div>
+          </div>
+        </div>
+        <p class="scanner-live-hint">Point the barcode at the frame</p>
+        <button id="scanner-back-btn" class="scanner-back-btn">← Back</button>
+      </div>
+
+      <!-- Status / error message -->
+      <div id="scanner-status" class="scanner-status" style="display:none"></div>
+
+    </div>
+  </div>
+
+  <!-- Hidden file input for gallery scan -->
+  <input type="file" id="scanner-file-input" accept="image/*" capture="environment" style="display:none">
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13/dist/iife/sdk.min.js"></script>
+  <script src="js/thanzi-foodData.js"></script>
+  <script src="js/thanzi-foodSearch.js"></script>
+  <script src="js/thanzi-nutrition.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/log.js"></script>
+  <script src="js/profile.js"></script>
+  <!-- Overlay -->
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+
+  <!-- Side Drawer -->
+  <div id="side-drawer" class="side-drawer" role="dialog" aria-label="Navigation menu">
+
+    <!-- User -->
+    <div class="drawer-user">
+      <div class="drawer-avatar">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+        </svg>
+      </div>
+      <div>
+        <div class="drawer-user-name" id="drawer-user-name"></div>
+        <div class="drawer-user-sub"  id="drawer-user-sub"></div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="drawer-nav">
+
+      <button class="drawer-nav-item active" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Dashboard
+      </button>
+
+      <button class="drawer-nav-item" data-nav="ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
+          <circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>
+        </svg>
+        AI Assistant
+      </button>
+
+      <button class="drawer-nav-item" data-nav="custom-foods">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a7 7 0 017 7c0 4-3 6-5 8H10c-2-2-5-4-5-8a7 7 0 017-7z"/><line x1="8.5" y1="17" x2="15.5" y2="17"/><line x1="8.5" y1="20" x2="15.5" y2="20"/>
+        </svg>
+        Custom Foods
+      </button>
+
+      <button class="drawer-nav-item" data-nav="meal-templates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/>
+          <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+        </svg>
+        Meal Templates
+      </button>
+
+      <button class="drawer-nav-item" data-nav="exercise">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5h11M6.5 17.5h11M3 10h18M3 14h18"/>
+        </svg>
+        Exercise
+      </button>
+
+      <button class="drawer-nav-item" data-nav="weight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="3"/><path d="M6.5 8a6 6 0 0011 0"/><rect x="2" y="8" width="20" height="12" rx="2"/>
+        </svg>
+        Weight
+      </button>
+
+      <button class="drawer-nav-item" data-nav="goals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+        Goals
+      </button>
+
+      <button class="drawer-nav-item" data-nav="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+        </svg>
+        Profile
+      </button>
+
+      <button class="drawer-nav-item" data-nav="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
+
+    </nav>
+
+    <!-- Logout -->
+    <button class="drawer-logout" id="drawer-logout-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Logout
+    </button>
+
+  </div><!-- /side-drawer -->
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/drawer.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/customFoods.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

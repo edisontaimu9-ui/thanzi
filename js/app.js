@@ -156,6 +156,11 @@ const ThanziApp = (() => {
     if (typeof ThanziAI !== 'undefined') {
       ThanziAI.init(user, () => state);
     }
+
+    // Init Custom Foods module
+    if (typeof ThanziCustomFoods !== 'undefined') {
+      ThanziCustomFoods.init(user);
+    }
   };
 
   // ── Nav panel switching ──────────────────────────────────────────────────
