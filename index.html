@@ -216,6 +216,97 @@
 
     </div><!-- /log-panel -->
 
+    <!-- Profile Panel -->
+    <div id="profile-panel" class="dash-panel" style="display:none">
+
+      <!-- Stat cards -->
+      <div class="profile-stats">
+        <div class="pstat-card">
+          <span class="pstat-label">BMI</span>
+          <span class="pstat-val pstat-bmi" id="profile-bmi">—</span>
+          <span class="pstat-sub" id="profile-bmi-cat">&nbsp;</span>
+        </div>
+        <div class="pstat-card">
+          <span class="pstat-label">BMR</span>
+          <span class="pstat-val pstat-bmr" id="profile-bmr">—</span>
+          <span class="pstat-sub">cal/day</span>
+        </div>
+        <div class="pstat-card">
+          <span class="pstat-label">TDEE</span>
+          <span class="pstat-val pstat-tdee" id="profile-tdee">—</span>
+          <span class="pstat-sub">cal/day</span>
+        </div>
+      </div>
+
+      <!-- Account email -->
+      <div class="profile-email-row">
+        <span class="profile-email-icon">✉️</span>
+        <div class="profile-email-text">
+          <span class="profile-email-label">Account Email</span>
+          <span class="profile-email-val" id="profile-email">—</span>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="profile-subtabs">
+        <button class="psub-btn active" data-ptab="profile">Profile</button>
+        <button class="psub-btn" data-ptab="goals">Health &amp; Goals</button>
+        <button class="psub-btn" data-ptab="notifications">Notifications</button>
+        <button class="psub-btn" data-ptab="progress">Progress</button>
+        <button class="psub-btn" data-ptab="achievements">Achievements</button>
+      </div>
+
+      <!-- Profile tab content -->
+      <div id="ptab-profile" class="psub-content">
+
+        <div class="avatar-wrap">
+          <div class="avatar-circle" id="avatar-circle">
+            <svg class="avatar-placeholder" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+            </svg>
+            <img id="avatar-img" alt="Profile photo" style="display:none">
+          </div>
+          <button id="avatar-upload-btn" class="avatar-upload-btn" type="button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Upload Photo
+          </button>
+          <input type="file" id="avatar-file-input" accept="image/jpeg,image/png" style="display:none">
+          <p class="avatar-hint">Max size: 5MB • JPG, PNG</p>
+        </div>
+
+        <div class="profile-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>
+          </svg>
+          <span>Personal Details</span>
+        </div>
+
+        <label class="profile-field-label" for="profile-name">Full Name</label>
+        <input type="text" id="profile-name" placeholder="Your full name">
+
+        <label class="profile-field-label" for="profile-bio">Bio (optional)</label>
+        <textarea id="profile-bio" rows="3" placeholder="Tell us a little about yourself…"></textarea>
+
+        <button id="profile-save-btn" class="profile-save-btn">Save Changes</button>
+        <p id="profile-save-msg" class="profile-save-msg"></p>
+      </div>
+
+      <!-- Shared placeholder for not-yet-built tabs -->
+      <div id="ptab-placeholder" class="psub-content" style="display:none">
+        <div class="psub-coming-soon">
+          <span class="csoon-icon" id="csoon-icon">🛠️</span>
+          <p class="csoon-title" id="csoon-title">Coming soon</p>
+          <p class="csoon-sub" id="csoon-sub">This section is on the way.</p>
+        </div>
+      </div>
+
+    </div><!-- /profile-panel -->
+
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
       <button class="nav-btn active" id="nav-home">🏠<span>Home</span></button>
@@ -293,6 +384,7 @@
   <script src="js/auth.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/log.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

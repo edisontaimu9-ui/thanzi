@@ -41,5 +41,14 @@ const ThanziAuth = (() => {
     }
   };
 
-  return { register, login, logout, getUser };
+  const updateName = async (name) => {
+    try {
+      const user = await account.updateName(name);
+      return { success: true, user };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  return { register, login, logout, getUser, updateName };
 })();

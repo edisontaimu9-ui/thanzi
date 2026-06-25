@@ -15,6 +15,7 @@ const ThanziApp = (() => {
   let selections = { gender: null, activity: null, goal: null };
   let _currentUser = null;
   let _logInited = false;
+  let _profileInited = false;
 
   // ── Theme (dark/light) ───────────────────────────────────────────────────
 
@@ -132,6 +133,12 @@ const ThanziApp = (() => {
       await ThanziLog.init(user);
       _logInited = true;
     }
+
+    // Init the profile module — stats, account info, avatar, sub-tabs
+    if (typeof ThanziProfile !== 'undefined') {
+      ThanziProfile.init(user);
+      _profileInited = true;
+    }
   };
 
   // ── Nav panel switching ──────────────────────────────────────────────────
@@ -160,7 +167,10 @@ const ThanziApp = (() => {
 
     document.getElementById('nav-profile').addEventListener('click', () => {
       _setActiveNav('nav-profile');
-      showPanel('home-panel'); // placeholder
+      showPanel('profile-panel');
+      if (_profileInited && typeof ThanziProfile !== 'undefined') {
+        ThanziProfile.refresh();
+      }
     });
   };
 

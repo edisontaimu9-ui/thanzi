@@ -466,3 +466,195 @@
   text-align: center;
 }
 .scanner-status.error { color: var(--danger); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFILE PANEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Stat cards: BMI / BMR / TDEE */
+.profile-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.pstat-card {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pstat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pstat-val { font-size: 1.35rem; font-weight: 700; line-height: 1.25; }
+.pstat-val.pstat-bmi  { color: var(--blue); }
+.pstat-val.pstat-bmr  { color: var(--purple); }
+.pstat-val.pstat-tdee { color: var(--accent); }
+.pstat-sub { font-size: 0.68rem; color: var(--text-4); }
+
+/* Account email row */
+.profile-email-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  margin-bottom: 18px;
+}
+.profile-email-icon {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg-inset);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+.profile-email-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.profile-email-label { font-size: 0.68rem; color: var(--text-4); }
+.profile-email-val {
+  font-size: 0.9rem; font-weight: 600; color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Sub-tabs (pill row, same pattern as .meal-selector) */
+.profile-subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.profile-subtabs::-webkit-scrollbar { display: none; }
+.psub-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-3);
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.psub-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Avatar */
+.avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.avatar-circle {
+  width: 116px; height: 116px;
+  border-radius: 50%;
+  background: var(--bg-inset);
+  border: 4px solid var(--bg-page);
+  box-shadow: 0 0 0 1px var(--border);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  color: var(--accent);
+}
+.avatar-circle.has-photo .avatar-placeholder { display: none; }
+#avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-upload-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-1);
+  font-size: 0.88rem; font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.avatar-upload-btn:hover,
+.avatar-upload-btn:active { border-color: var(--accent); color: var(--accent); }
+.avatar-hint { font-size: 0.72rem; color: var(--text-4); }
+
+/* Section title */
+.profile-section-title {
+  display: flex; align-items: center; gap: 8px;
+  margin: 4px 0 14px;
+  font-size: 0.95rem; font-weight: 700;
+  color: var(--text-1);
+}
+.profile-section-title svg { color: var(--accent); flex-shrink: 0; }
+
+/* Field labels (scoped to the profile panel so the auth-style label rule
+   under .profile-container is untouched) */
+.profile-field-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+#profile-panel textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-1);
+  font-size: 0.92rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#profile-panel textarea::placeholder { color: var(--text-5); }
+#profile-panel textarea:focus { border-color: var(--accent); }
+
+.profile-save-btn {
+  width: 100%;
+  padding: 13px;
+  margin-top: 22px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.profile-save-btn:disabled { opacity: 0.6; cursor: default; }
+.profile-save-btn:active:not(:disabled) { background: var(--accent-active); }
+
+.profile-save-msg {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  text-align: center;
+  color: var(--accent);
+  display: none;
+}
+.profile-save-msg.error { color: var(--danger); }
+
+/* "Coming soon" placeholder for not-yet-built sub-tabs */
+.psub-coming-soon {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-4);
+}
+.csoon-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+.csoon-title { font-size: 0.95rem; font-weight: 700; color: var(--text-2); margin-bottom: 4px; }
+.csoon-sub { font-size: 0.85rem; line-height: 1.5; }
