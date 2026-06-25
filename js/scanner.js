@@ -38,7 +38,7 @@ const ThanziScanner = (() => {
     const el = _el('scanner-status');
     if (!el) return;
     el.textContent  = msg;
-    el.style.color  = isError ? '#e74c3c' : '#aaa';
+    el.classList.toggle('error', isError);
     el.style.display = msg ? 'block' : 'none';
   }
 

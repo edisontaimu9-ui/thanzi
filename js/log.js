@@ -85,68 +85,76 @@ const ThanziLog = (() => {
   }
 
   function _totalGrams() {
-    return parseFloat(_el('portion-grams').value) || 0;
+    const qty       = parseFloat(_el('portion-qty').value)         || 0;
+    const unitGrams = parseFloat(_el('portion-unit-select').value) || 1;
+    return qty * unitGrams;
   }
 
   // ── Measures dropdown ─────────────────────────────────────────────────────
-  //
-  // Mirrors the Oasis CNST pattern: an editable "per X g" basis (freely
-  // typed) plus a household-measure dropdown that shows the kcal for each
-  // measure inline, so you can compare at a glance. Picking a measure just
-  // fills in the gram field — it's a shortcut, not a separate mode.
 
   function _populateMeasures(food) {
-    const select = _el('portion-measure-select');
-    select.innerHTML = '<option value="" selected disabled>Choose a household measure…</option>';
+    const select   = _el('portion-unit-select');
+    const qtyInput = _el('portion-qty');
+    select.innerHTML = '';
 
-    const rawMeasures = (food.measures && food.measures.length > 0) ? food.measures : null;
+    const measures = (food.measures && food.measures.length > 0)
+      ? food.measures
+      : DEFAULT_MEASURES;
 
-    if (rawMeasures) {
-      rawMeasures.forEach(m => {
-        const wm = (m.lbl || '').match(/\((\d+(?:\.\d+)?)\s*(?:g|mL|ml)\)/i);
-        const grams = wm ? parseFloat(wm[1]) : null;
-        if (!grams || grams <= 0) return;
-        const label = m.lbl.replace(/\s*\(\d+(?:\.\d+)?\s*(?:g|mL|ml)\)\s*$/i, '').trim();
-        const kcal  = m.kcal != null ? Math.round(m.kcal) : Math.round((food.kcal || 0) * grams / 100);
+    measures.forEach(m => {
+      if (!m.g || m.g <= 0) return;
+      const opt       = document.createElement('option');
+      opt.value       = m.g;
+      opt.textContent = `${m.label} (${m.g}g)`;
+      select.appendChild(opt);
+    });
 
-        const opt       = document.createElement('option');
-        opt.value        = grams;
-        opt.textContent  = `${label} (${grams}g) — ${kcal} kcal`;
-        select.appendChild(opt);
-      });
-    } else {
-      DEFAULT_MEASURES.forEach(m => {
-        const kcal = Math.round((food.kcal || 0) * m.g / 100);
-        const opt       = document.createElement('option');
-        opt.value        = m.g;
-        opt.textContent  = `${m.label} (${m.g}g) — ${kcal} kcal`;
-        select.appendChild(opt);
-      });
-    }
+    const gOpt           = document.createElement('option');
+    gOpt.value           = '1';
+    gOpt.dataset.manual  = 'true';
+    gOpt.textContent     = 'g (manual)';
+    select.appendChild(gOpt);
 
-    _el('portion-grams').value = 100;
-    select.selectedIndex = 0; // placeholder — no measure pre-applied
+    select.selectedIndex = 0;
+    qtyInput.value = 1;
+    qtyInput.step  = 0.5;
+    qtyInput.min   = 0.1;
+    qtyInput.max   = 99;
 
     _updatePortionCalc();
   }
 
-  function _onMeasureSelect() {
-    const grams = parseFloat(_el('portion-measure-select').value);
-    if (grams > 0) {
-      _el('portion-grams').value = grams;
-      _updatePortionCalc();
-    }
-  }
+  function _onUnitChange() {
+    const select   = _el('portion-unit-select');
+    const qtyInput = _el('portion-qty');
+    const isManual = select.options[select.selectedIndex]?.dataset?.manual === 'true';
 
-  function _onResetGrams() {
-    _el('portion-grams').value = 100;
-    _el('portion-measure-select').selectedIndex = 0;
+    if (isManual) {
+      qtyInput.value = 100;
+      qtyInput.step  = 10;
+      qtyInput.min   = 1;
+      qtyInput.max   = 5000;
+    } else {
+      qtyInput.value = 1;
+      qtyInput.step  = 0.5;
+      qtyInput.min   = 0.1;
+      qtyInput.max   = 99;
+    }
     _updatePortionCalc();
   }
 
   function _updatePortionCalc() {
     if (!_state.selectedFood) return;
     const totalGrams = _totalGrams();
+    const isManual   = _el('portion-unit-select')
+      .options[_el('portion-unit-select').selectedIndex]
+      ?.dataset?.manual === 'true';
+
+    const hint = _el('portion-grams-hint');
+    hint.textContent = (!isManual && totalGrams > 0)
+      ? `= ${Math.round(totalGrams)}g`
+      : '';
+
     const s = _scale(_state.selectedFood, totalGrams);
     _el('portion-calc').innerHTML = `
       <div class="pc-item"><span class="pc-val">${s.calories}</span><span class="pc-lbl">kcal</span></div>
@@ -277,6 +285,8 @@ const ThanziLog = (() => {
   function _selectFood(food) {
     _state.selectedFood = food;
     _el('selected-food-name').textContent = food.name;
+    _el('selected-food-per100').textContent =
+      `Per 100g: ${food.kcal ?? '?'} kcal · ${food.cho ?? '?'}g carbs · ${food.pro ?? '?'}g protein · ${food.fat ?? '?'}g fat`;
     _populateMeasures(food);
     const card = _el('selected-food-card');
     card.style.display = 'block';
@@ -795,9 +805,8 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
       }
     }, { passive: true });
 
-    _el('portion-grams').addEventListener('input', _updatePortionCalc);
-    _el('portion-measure-select').addEventListener('change', _onMeasureSelect);
-    _el('portion-reset-btn').addEventListener('click', _onResetGrams);
+    _el('portion-qty').addEventListener('input', _updatePortionCalc);
+    _el('portion-unit-select').addEventListener('change', _onUnitChange);
     _el('log-food-btn').addEventListener('click', _logFood);
 
     // Quick add — natural language meal entry

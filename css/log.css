@@ -305,50 +305,31 @@
   padding: 16px;
   margin-bottom: 16px;
 }
-#selected-food-name    { font-size: 1rem; font-weight: 600; color: var(--text-1); margin-bottom: 12px; }
+#selected-food-name    { font-size: 1rem; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+#selected-food-per100  { font-size: 0.78rem; color: var(--text-4); margin-bottom: 14px; }
 
-/* Editable "per X g" basis row */
-.portion-basis-row {
+/* Portion row */
+.portion-row {
   display: flex; align-items: center;
-  gap: 8px; margin-bottom: 12px;
+  gap: 8px; margin-bottom: 6px;
 }
-.portion-basis-label { font-size: 0.85rem; color: var(--text-3); flex-shrink: 0; }
-#portion-grams {
-  width: 84px; padding: 10px 8px;
+#portion-qty {
+  width: 72px; padding: 10px 8px;
   background: var(--bg-inset); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text-1);
-  font-size: 1rem; font-weight: 600; text-align: center; outline: none;
+  font-size: 1rem; text-align: center; outline: none;
   flex-shrink: 0; transition: border-color 0.15s;
   -moz-appearance: textfield;
 }
-#portion-grams::-webkit-inner-spin-button,
-#portion-grams::-webkit-outer-spin-button { -webkit-appearance: none; }
-#portion-grams:focus { border-color: var(--accent); }
-.portion-basis-unit { font-size: 0.85rem; color: var(--text-3); flex-shrink: 0; }
+#portion-qty::-webkit-inner-spin-button,
+#portion-qty::-webkit-outer-spin-button { -webkit-appearance: none; }
+#portion-qty:focus { border-color: var(--accent); }
 
-#portion-reset-btn {
-  margin-left: auto; flex-shrink: 0;
-  padding: 7px 12px;
-  background: transparent; border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text-3);
-  font-size: 0.78rem; font-weight: 600; cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-#portion-reset-btn:hover,
-#portion-reset-btn:active { border-color: var(--accent); color: var(--accent); }
-
-/* Household measure dropdown — kcal shown inline per option */
-.portion-measure-row {
-  display: flex; align-items: center;
-  gap: 10px; margin-bottom: 14px;
-}
-.portion-measure-label { font-size: 0.85rem; color: var(--text-3); flex-shrink: 0; }
-
-.portion-measure-select {
+.portion-unit-select {
   flex: 1; padding: 10px 32px 10px 12px;
   background: var(--bg-inset); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text-1);
-  font-size: 0.85rem; outline: none;
+  font-size: 0.875rem; outline: none;
   cursor: pointer; appearance: none; -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -357,8 +338,13 @@
   min-width: 0; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;
 }
-.portion-measure-select:focus { border-color: var(--accent); }
-.portion-measure-select option { background: var(--bg-surface); color: var(--text-1); }
+.portion-unit-select:focus { border-color: var(--accent); }
+.portion-unit-select option { background: var(--bg-surface); color: var(--text-1); }
+
+.portion-grams-hint {
+  font-size: 0.78rem; color: var(--accent);
+  margin-bottom: 12px; min-height: 18px; padding-left: 2px;
+}
 
 #portion-calc {
   display: flex; gap: 8px; margin-bottom: 14px;
