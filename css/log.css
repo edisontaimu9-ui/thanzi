@@ -42,6 +42,142 @@
   color: var(--on-accent);
 }
 
+/* ── Quick Add — natural language meal entry ─────────────────────────────── */
+
+.quick-meal-wrap { margin-bottom: 14px; }
+
+.quick-meal-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+
+.quick-meal-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#quick-meal-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-1);
+  font-size: 0.92rem;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  max-height: 90px;
+  transition: border-color 0.15s;
+}
+#quick-meal-input::placeholder { color: var(--text-5); }
+#quick-meal-input:focus { border-color: var(--accent); }
+
+.quick-meal-btn {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.quick-meal-btn:disabled { opacity: 0.6; cursor: default; }
+.quick-meal-btn:active:not(:disabled) { background: var(--accent-active); }
+
+/* Parsed item preview list */
+#quick-meal-preview {
+  margin-top: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.qm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  gap: 10px;
+}
+.qm-item:last-child { border-bottom: none; }
+
+.qm-item-left  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qm-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.qm-name { font-size: 0.88rem; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; text-transform: capitalize; }
+.qm-sub  { font-size: 0.72rem; color: var(--text-4); }
+.qm-kcal { font-size: 0.8rem; color: var(--text-2); white-space: nowrap; }
+
+.qm-badge {
+  font-size: 0.62rem; font-weight: 700;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--border); color: var(--text-3);
+}
+.qm-badge--local { background: rgba(var(--accent-rgb), 0.2); color: var(--accent); }
+.qm-badge--ai    { background: rgba(var(--purple-rgb), 0.2); color: var(--purple); }
+.qm-badge--error { background: rgba(231,76,60,0.15); color: var(--danger); }
+
+.qm-remove {
+  background: transparent; border: none; color: var(--text-6);
+  font-size: 0.85rem; cursor: pointer; padding: 4px 6px;
+  border-radius: 6px; flex-shrink: 0; transition: color 0.15s, background 0.15s;
+}
+.qm-remove:hover  { color: var(--danger); background: rgba(231,76,60,0.1); }
+.qm-remove:active { color: var(--danger); }
+
+.qm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--bg-inset);
+}
+.qm-total { font-size: 0.82rem; color: var(--text-2); font-weight: 600; }
+
+.qm-log-all-btn {
+  padding: 9px 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.qm-log-all-btn:disabled { opacity: 0.6; cursor: default; }
+.qm-log-all-btn:active:not(:disabled) { background: var(--accent-active); }
+
+/* Divider between quick-add and structured search */
+.log-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0 14px;
+  color: var(--text-5);
+  font-size: 0.72rem;
+}
+.log-divider::before,
+.log-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+.log-divider span { padding: 0 10px; }
+
 /* ── Food search ──────────────────────────────────────────────────────────── */
 
 .food-search-wrap {

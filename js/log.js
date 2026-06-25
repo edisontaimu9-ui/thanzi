@@ -30,6 +30,8 @@ const ThanziLog = (() => {
     logInited:    false,
     searchTimer:  null,
     searching:    false,
+    quickItems:   [],
+    quickBusy:    false,
   };
 
   // ── Fallback household measures ───────────────────────────────────────────
@@ -40,6 +42,28 @@ const ThanziLog = (() => {
     { label: '1 tsp',     g: 5   },
     { label: '1 piece',   g: 80  },
   ];
+
+  // ── Quick-add natural language parsing tables ────────────────────────────
+  const WORD_NUM = {
+    a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    couple: 2, few: 3, several: 3, half: 0.5,
+  };
+
+  const UNIT_GRAMS = {
+    cup: 240, cups: 240,
+    tbsp: 15, tablespoon: 15, tablespoons: 15,
+    tsp: 5, teaspoon: 5, teaspoons: 5,
+    slice: 30, slices: 30,
+    piece: 80, pieces: 80,
+    bowl: 300, bowls: 300,
+    plate: 350, plates: 350,
+    glass: 250, glasses: 250,
+    serving: 100, servings: 100,
+    handful: 30, handfuls: 30,
+    scoop: 30, scoops: 30,
+    g: 1, gram: 1, grams: 1,
+  };
 
   // ── Utilities ─────────────────────────────────────────────────────────────
   function _el(id) { return document.getElementById(id); }
@@ -311,6 +335,283 @@ const ThanziLog = (() => {
     if (q) await _searchFullAsync(q);
   }
 
+  // ── Quick Add — natural language meal entry ─────────────────────────────
+  //
+  // Splits a free-text meal description ("2 eggs and toast") into individual
+  // food clauses, tries to resolve each against the local Malawi/regional
+  // food database first, and only falls back to the AI backend for items it
+  // can't confidently match. Calorie/macro values for AI items are estimated
+  // directly for the stated quantity (not per-100g), so no further scaling
+  // is needed before saving.
+
+  const _CLAUSE_SPLIT = /\s*,\s*|\s*;\s*|\s+and\s+|\s+with\s+|\s+plus\s+|\s*\+\s*/i;
+
+  function _parseClause(clauseRaw) {
+    let text = clauseRaw.trim();
+    let qty  = 1;
+
+    const numMatch = text.match(/^(\d+(?:\.\d+)?)\s+/);
+    if (numMatch) {
+      qty  = parseFloat(numMatch[1]);
+      text = text.slice(numMatch[0].length);
+    } else {
+      const wordMatch = text.match(/^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|couple|few|several|half)\s+(?:a\s+)?(?:of\s+)?/i);
+      if (wordMatch) {
+        qty  = WORD_NUM[wordMatch[1].toLowerCase()] ?? 1;
+        text = text.slice(wordMatch[0].length);
+      }
+    }
+
+    let unit = null;
+    const unitNames = Object.keys(UNIT_GRAMS).sort((a, b) => b.length - a.length).join('|');
+    const unitMatch = text.match(new RegExp(`^(${unitNames})\\s+(?:of\\s+)?`, 'i'));
+    if (unitMatch) {
+      unit = unitMatch[1].toLowerCase();
+      text = text.slice(unitMatch[0].length);
+    }
+
+    text = text.replace(/^(a|an|the)\s+/i, '').trim();
+    return { raw: clauseRaw.trim(), qty, unit, name: text };
+  }
+
+  /** Estimate a total gram weight for a parsed clause, using a detected unit,
+   *  the matched food's own count-based measure (e.g. "2 eggs (100g)"), or a
+   *  generic per-item fallback. */
+  function _estimateGrams(qty, unit, rawFood) {
+    if (unit && UNIT_GRAMS[unit]) return qty * UNIT_GRAMS[unit];
+
+    if (rawFood && Array.isArray(rawFood.measures)) {
+      for (const m of rawFood.measures) {
+        const cm = (m.lbl || '').match(/^(\d+)\s+\D*\((\d+(?:\.\d+)?)\s*(?:g|mL|ml)\)/i);
+        if (cm) {
+          const n = parseFloat(cm[1]);
+          const w = parseFloat(cm[2]);
+          if (n > 0) return qty * (w / n);
+        }
+      }
+    }
+    return qty * 80; // generic "1 piece" default
+  }
+
+  /** True if a local search hit is confident enough to use without AI. */
+  function _isGoodLocalMatch(hit) {
+    if (!hit) return false;
+    return hit.matchTier === 'exact' || hit.matchTier === 'alias' ||
+      (hit.matchTier === 'token' && hit.confidenceScore >= 0.55);
+  }
+
+  /** One-shot call to the AI backend for items the local DB couldn't resolve.
+   *  Asks for calories/macros for each item AS WRITTEN (exact stated
+   *  quantity) — not per 100g — so results can be used directly. */
+  async function _estimateViaAI(rawItems) {
+    const functionId = THANZI_CONFIG.functions && THANZI_CONFIG.functions.aiAssistant;
+    if (!functionId) {
+      throw new Error('AI function not configured. Set THANZI_CONFIG.functions.aiAssistant in config.js');
+    }
+
+    const prompt = `You are a nutrition estimation engine for a Malawian food-tracking app.
+For each numbered food item below (written by a user, with its stated quantity), estimate the calories, carbohydrates (g), protein (g), and fat (g) for that EXACT stated quantity — do not normalise to 100g. Prefer foods and dishes common in Malawi and Southern Africa when a term is ambiguous (e.g. "porridge" → maize porridge, "greens" → leafy vegetables like mustard or pumpkin leaves).
+Respond with ONLY a valid JSON array, no markdown formatting, no commentary — in this exact shape and order:
+[{"name":"short food name","calories":123,"carbs":12.3,"protein":5.0,"fat":3.0}]
+
+Items:
+${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
+
+    const res = await fetch(
+      `${THANZI_CONFIG.endpoint}/functions/${functionId}/executions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Appwrite-Project': THANZI_CONFIG.projectId,
+        },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+        credentials: 'include',
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`AI function error (${res.status}): ${err}`);
+    }
+
+    const execution = await res.json();
+
+    let replyText;
+    try {
+      const parsed = JSON.parse(execution.responseBody);
+      replyText = parsed.reply || parsed.content || parsed.text || execution.responseBody;
+    } catch {
+      replyText = execution.responseBody;
+    }
+
+    const cleaned = String(replyText).replace(/```json|```/g, '').trim();
+    const arr = JSON.parse(cleaned);
+    if (!Array.isArray(arr)) throw new Error('Unexpected AI response shape');
+    return arr;
+  }
+
+  async function _quickAddMeal() {
+    if (_state.quickBusy) return;
+    const input = _el('quick-meal-input');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    _state.quickBusy = true;
+    const btn = _el('quick-meal-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Parsing…';
+
+    const clauses = text.split(_CLAUSE_SPLIT).map(s => s.trim()).filter(Boolean);
+    const resolved = [];
+    const needsAI  = [];
+
+    clauses.forEach((clause) => {
+      const { qty, unit, name } = _parseClause(clause);
+      if (!name) return;
+
+      const hits = ThanziFood.searchLocal(name, 3);
+      const top  = hits[0];
+
+      if (_isGoodLocalMatch(top)) {
+        const grams  = _estimateGrams(qty, unit, top._raw || top);
+        const scaled = _scale(top, grams);
+        resolved.push({
+          raw: clause, name: top.name, source: 'local',
+          quantity: Math.round(grams * 10) / 10,
+          calories: scaled.calories, carbs: scaled.carbs,
+          protein: scaled.protein, fat: scaled.fat,
+        });
+      } else {
+        const grams = _estimateGrams(qty, unit, null);
+        needsAI.push({ raw: clause, name, quantity: Math.round(grams * 10) / 10 });
+      }
+    });
+
+    if (needsAI.length) {
+      try {
+        const aiResults = await _estimateViaAI(needsAI.map(i => i.raw));
+        aiResults.forEach((r, i) => {
+          const meta = needsAI[i];
+          if (!meta) return;
+          resolved.push({
+            raw: meta.raw, name: r.name || meta.name, source: 'ai',
+            quantity: meta.quantity,
+            calories: Math.round(r.calories || 0),
+            carbs:    Math.round((r.carbs   || 0) * 10) / 10,
+            protein:  Math.round((r.protein || 0) * 10) / 10,
+            fat:      Math.round((r.fat     || 0) * 10) / 10,
+          });
+        });
+      } catch (err) {
+        console.error('ThanziLog: AI estimate failed', err.message);
+        needsAI.forEach(meta => {
+          resolved.push({
+            raw: meta.raw, name: meta.name, source: 'error',
+            quantity: meta.quantity, calories: null, carbs: null, protein: null, fat: null,
+          });
+        });
+      }
+    }
+
+    _state.quickItems = resolved;
+    _renderQuickPreview(resolved);
+
+    btn.disabled    = false;
+    btn.textContent = 'Add';
+    _state.quickBusy = false;
+  }
+
+  function _renderQuickPreview(items) {
+    const wrap = _el('quick-meal-preview');
+    if (!wrap) return;
+
+    if (!items.length) {
+      wrap.style.display = 'none';
+      wrap.innerHTML = '';
+      return;
+    }
+
+    const totalKcal = items.reduce((s, it) => s + (it.calories || 0), 0);
+    const badgeLabel = { local: 'MW', ai: 'AI', error: '⚠' };
+
+    wrap.innerHTML = `
+      ${items.map((it, i) => `
+        <div class="qm-item" data-i="${i}">
+          <div class="qm-item-left">
+            <span class="qm-name">${it.name}</span>
+            <span class="qm-sub">${it.calories != null ? `${it.quantity}g (est.)` : 'Not recognized — remove or search manually'}</span>
+          </div>
+          <div class="qm-item-right">
+            ${it.calories != null ? `<span class="qm-kcal">${it.calories} kcal</span>` : ''}
+            <span class="qm-badge qm-badge--${it.source}">${badgeLabel[it.source] || ''}</span>
+            <button class="qm-remove" data-i="${i}" aria-label="Remove">✕</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="qm-footer">
+        <span class="qm-total">${totalKcal} kcal total</span>
+        <button id="quick-log-all-btn" class="qm-log-all-btn">Log All</button>
+      </div>
+    `;
+    wrap.style.display = 'block';
+
+    wrap.querySelectorAll('.qm-remove').forEach(b => {
+      b.addEventListener('click', () => {
+        _state.quickItems.splice(parseInt(b.dataset.i, 10), 1);
+        _renderQuickPreview(_state.quickItems);
+      });
+    });
+
+    _el('quick-log-all-btn')?.addEventListener('click', _confirmQuickLog);
+  }
+
+  async function _confirmQuickLog() {
+    const items = (_state.quickItems || []).filter(it => it.calories != null);
+    if (!items.length || !_state.currentUser) return;
+
+    const btn = _el('quick-log-all-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      for (const it of items) {
+        await _db.createDocument(
+          THANZI_CONFIG.databaseId,
+          THANZI_CONFIG.collections.foodLogs,
+          Appwrite.ID.unique(),
+          {
+            userId:   _state.currentUser.$id,
+            foodName: it.name,
+            calories: it.calories,
+            carbs:    it.carbs,
+            protein:  it.protein,
+            fat:      it.fat,
+            mealType: _state.selectedMeal,
+            date:     _today(),
+            quantity: it.quantity,
+            unit:     'g',
+          }
+        );
+      }
+
+      _el('quick-meal-input').value = '';
+      _el('quick-meal-input').style.height = 'auto';
+      _el('quick-meal-preview').style.display = 'none';
+      _state.quickItems = [];
+
+      await _loadTodayLogs();
+    } catch (err) {
+      console.error('ThanziLog: quick-add save error', err.message);
+      btn.textContent = 'Error — try again';
+      btn.disabled = false;
+      return;
+    }
+
+    btn.textContent = 'Log All';
+    btn.disabled = false;
+  }
+
   // ── Meal selector ─────────────────────────────────────────────────────────
 
   function _bindMealSelector() {
@@ -507,6 +808,22 @@ const ThanziLog = (() => {
     _el('portion-qty').addEventListener('input', _updatePortionCalc);
     _el('portion-unit-select').addEventListener('change', _onUnitChange);
     _el('log-food-btn').addEventListener('click', _logFood);
+
+    // Quick add — natural language meal entry
+    const quickInput = _el('quick-meal-input');
+    if (quickInput) {
+      quickInput.addEventListener('input', () => {
+        quickInput.style.height = 'auto';
+        quickInput.style.height = Math.min(quickInput.scrollHeight, 90) + 'px';
+      });
+      quickInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          _quickAddMeal();
+        }
+      });
+    }
+    _el('quick-meal-btn')?.addEventListener('click', _quickAddMeal);
 
     // Barcode scan button
     _el('barcode-scan-btn')?.addEventListener('click', () => {
