@@ -846,6 +846,40 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     await _loadTodayLogs();
   }
 
-  return { init, refresh };
+  /**
+   * Log an array of pre-calculated food items to Appwrite.
+   * Called by ThanziMealTemplates when a template is applied.
+   * items: [{ name, grams, kcal, carbs, protein, fat }]
+   */
+  async function logItems(items, mealType) {
+    if (!_state.currentUser || !items || !items.length) return;
+    const today = _today();
+    for (const item of items) {
+      try {
+        await _db.createDocument(
+          THANZI_CONFIG.databaseId,
+          THANZI_CONFIG.collections.foodLogs,
+          Appwrite.ID.unique(),
+          {
+            userId:   _state.currentUser.$id,
+            foodName: item.name,
+            calories: Math.round(item.kcal    || 0),
+            carbs:    Math.round((item.carbs   || 0) * 10) / 10,
+            protein:  Math.round((item.protein || 0) * 10) / 10,
+            fat:      Math.round((item.fat     || 0) * 10) / 10,
+            mealType: mealType || 'breakfast',
+            date:     today,
+            quantity: Math.round((item.grams   || 100) * 10) / 10,
+            unit:     'g',
+          }
+        );
+      } catch (err) {
+        console.error('ThanziLog: logItems error', err.message);
+      }
+    }
+    await _loadTodayLogs();
+  }
+
+  return { init, refresh, logItems };
 
 })();

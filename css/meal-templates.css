@@ -1,0 +1,687 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   meal-templates.css — Thanzi Meal Templates Panel
+   Same CSS var tokens as style.css / custom-foods.css
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#meal-templates-panel {
+  padding: 20px 16px 96px;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.mt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mt-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
+}
+
+.mt-subtitle {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+.mt-count {
+  font-size: .78rem;
+  color: var(--text-3);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+#mt-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 50px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: .86rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, transform .1s;
+}
+#mt-create-btn:active { background: var(--accent-active); transform: scale(0.96); }
+#mt-create-btn svg { width: 15px; height: 15px; stroke: var(--on-accent); }
+
+/* ── Info strip ──────────────────────────────────────────────────────────── */
+.mt-info-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb), .08);
+  border: 1px solid rgba(var(--accent-rgb), .18);
+  margin-bottom: 18px;
+}
+
+.mt-info-icon {
+  width: 18px;
+  height: 18px;
+  stroke: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mt-info-text {
+  font-size: .8rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+/* ── Template cards ──────────────────────────────────────────────────────── */
+#mt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mt-card {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  padding: 16px;
+  transition: border-color .15s;
+}
+.mt-card:active { border-color: var(--accent); }
+
+.mt-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.mt-card-name {
+  font-size: .97rem;
+  font-weight: 700;
+  color: var(--text-1);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-meal-tag {
+  font-size: .7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 50px;
+  background: rgba(var(--accent-rgb), .12);
+  color: var(--accent);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mt-card-preview {
+  font-size: .78rem;
+  color: var(--text-3);
+  margin-bottom: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-more {
+  color: var(--text-4);
+  font-style: italic;
+}
+
+/* ── Card macro badges ────────────────────────────────────────────────────── */
+.mt-card-macros {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.mt-cmacro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: .8rem;
+}
+
+.mt-cmacro-val { font-weight: 700; }
+.mt-cmacro-lbl { font-weight: 500; opacity: .7; }
+
+.mt-cmacro--kcal  { background: rgba(var(--orange-rgb), .12); color: var(--orange); }
+.mt-cmacro--carb  { background: rgba(var(--blue-rgb),   .12); color: var(--blue); }
+.mt-cmacro--pro   { background: rgba(var(--accent-rgb), .12); color: var(--accent); }
+.mt-cmacro--fat   { background: rgba(var(--purple-rgb), .12); color: var(--purple); }
+
+/* ── Card footer ─────────────────────────────────────────────────────────── */
+.mt-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mt-log-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.mt-log-btn:active  { background: var(--accent-active); }
+.mt-log-btn:disabled { opacity: .6; cursor: not-allowed; }
+.mt-log-btn svg { width: 16px; height: 16px; stroke: var(--on-accent); }
+
+.mt-card-icon-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.mt-edit-btn,
+.mt-delete-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+
+.mt-edit-btn {
+  background: rgba(var(--accent-rgb), .1);
+}
+.mt-edit-btn:active { background: rgba(var(--accent-rgb), .2); }
+.mt-edit-btn svg { width: 15px; height: 15px; stroke: var(--accent); }
+
+.mt-delete-btn {
+  background: rgba(231, 76, 60, .09);
+}
+.mt-delete-btn:active { background: rgba(231, 76, 60, .18); }
+.mt-delete-btn svg { width: 15px; height: 15px; stroke: var(--danger); }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+#mt-empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 52px 24px;
+  gap: 12px;
+}
+
+.mt-empty-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), .1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mt-empty-icon svg {
+  width: 32px;
+  height: 32px;
+  stroke: var(--accent);
+  opacity: .65;
+}
+
+.mt-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.mt-empty-sub {
+  font-size: .83rem;
+  color: var(--text-4);
+  line-height: 1.55;
+  max-width: 270px;
+}
+
+/* ── Form modal (bottom sheet) ───────────────────────────────────────────── */
+#mt-form-wrap {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+}
+
+#mt-form-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+}
+
+#mt-form-card {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 18px 32px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, .32);
+  animation: mtSlideUp .24s ease-out;
+}
+
+@keyframes mtSlideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+#mt-form-card::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 0 auto 20px;
+}
+
+#mt-form-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 18px;
+}
+
+/* ── Form fields ─────────────────────────────────────────────────────────── */
+.mt-field {
+  margin-bottom: 16px;
+}
+
+.mt-field label {
+  display: block;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 7px;
+}
+
+.mt-field input[type="text"],
+.mt-field input[type="search"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: .93rem;
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color .15s;
+}
+
+.mt-field input:focus { border-color: var(--accent); }
+
+/* ── Meal type pills inside form ────────────────────────────────────────── */
+.mt-meal-pills {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.mt-meal-pill {
+  padding: 7px 13px;
+  border-radius: 50px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-2);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.mt-meal-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── Food search row ─────────────────────────────────────────────────────── */
+.mt-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mt-search-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.mt-search-wrap input { width: 100%; }
+
+/* Dropdown */
+#mt-food-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-dropdown);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.mt-sr-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background .12s;
+}
+
+.mt-sr-item:last-child { border-bottom: none; }
+.mt-sr-item:active     { background: rgba(var(--accent-rgb), .08); }
+
+.mt-sr-name  { font-size: .88rem; color: var(--text-1); font-weight: 500; }
+.mt-sr-kcal  { font-size: .75rem; color: var(--text-3); }
+.mt-sr-empty { padding: 12px 14px; font-size: .83rem; color: var(--text-4); }
+
+.mt-grams-input {
+  width: 68px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: .9rem;
+  text-align: center;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.mt-grams-input:focus { border-color: var(--accent); }
+
+.mt-add-food-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.mt-add-food-btn:active { background: var(--accent-active); }
+.mt-add-food-btn svg { width: 18px; height: 18px; stroke: var(--on-accent); }
+
+/* ── Draft items ─────────────────────────────────────────────────────────── */
+.mt-items-list {
+  margin-bottom: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+
+.mt-items-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  color: var(--text-4);
+  font-size: .8rem;
+}
+
+.mt-items-empty svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-4);
+  flex-shrink: 0;
+}
+
+.mt-draft-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+}
+
+.mt-draft-item:last-child { border-bottom: none; }
+
+.mt-draft-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mt-draft-name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-draft-detail {
+  font-size: .73rem;
+  color: var(--text-3);
+}
+
+.mt-draft-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: rgba(231, 76, 60, .1);
+  color: var(--danger);
+  font-size: .75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 10px;
+  transition: background .15s;
+}
+.mt-draft-remove:active { background: rgba(231, 76, 60, .2); }
+
+/* ── Totals strip ────────────────────────────────────────────────────────── */
+.mt-totals {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 2px;
+  margin-bottom: 10px;
+}
+
+.mt-total {
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.mt-total--kcal { background: rgba(var(--orange-rgb), .12); color: var(--orange); }
+.mt-total--carb { background: rgba(var(--blue-rgb),   .12); color: var(--blue);   }
+.mt-total--pro  { background: rgba(var(--accent-rgb), .12); color: var(--accent); }
+.mt-total--fat  { background: rgba(var(--purple-rgb), .12); color: var(--purple); }
+
+/* ── Form error ──────────────────────────────────────────────────────────── */
+#mt-form-error {
+  font-size: .82rem;
+  color: var(--danger);
+  min-height: 18px;
+  margin-bottom: 12px;
+}
+
+/* ── Form actions ────────────────────────────────────────────────────────── */
+.mt-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+#mt-save-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: .93rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+#mt-save-btn:disabled { opacity: .6; cursor: not-allowed; }
+#mt-save-btn:not(:disabled):active { background: var(--accent-active); }
+
+#mt-cancel-btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: .93rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+}
+#mt-cancel-btn:active { background: var(--bg-inset); }
+
+/* ── Log meal picker (small bottom sheet) ────────────────────────────────── */
+.mt-log-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+}
+
+.mt-log-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .5);
+}
+
+.mt-log-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 18px 32px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, .28);
+  animation: mtSlideUp .22s ease-out;
+}
+
+.mt-log-sheet-title {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.mt-log-meal-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mt-log-meal-btn {
+  padding: 13px 10px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.mt-log-meal-btn.active,
+.mt-log-meal-btn:active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.mt-log-meal-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.mt-log-cancel-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.mt-log-cancel-btn:active { background: rgba(231, 76, 60, .08); }
+
+/* ── Toast notification ──────────────────────────────────────────────────── */
+.mt-toast {
+  position: fixed;
+  bottom: 86px;       /* sits above bottom-nav */
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-surface);
+  color: var(--text-1);
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: .85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .3);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  z-index: 500;
+}
+
+.mt-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

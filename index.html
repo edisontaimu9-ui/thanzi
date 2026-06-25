@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="css/progress.css">
   <link rel="stylesheet" href="css/drawer.css">
   <link rel="stylesheet" href="css/custom-foods.css">
+  <link rel="stylesheet" href="css/meal-templates.css">
   <link rel="stylesheet" href="css/ai.css">
 </head>
 <body>
@@ -423,6 +424,57 @@
 
     </div><!-- /custom-foods-panel -->
 
+    <!-- Meal Templates Panel -->
+    <div id="meal-templates-panel" class="dash-panel" style="display:none">
+
+      <!-- Header -->
+      <div class="mt-header">
+        <div class="mt-header-left">
+          <div class="mt-title">Meal Templates</div>
+          <div class="mt-subtitle">Save meals you eat regularly</div>
+          <div class="mt-count" id="mt-count"></div>
+        </div>
+        <button id="mt-create-btn" aria-label="Create meal template">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Template
+        </button>
+      </div>
+
+      <!-- How it works info strip -->
+      <div class="mt-info-strip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" class="mt-info-icon">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p class="mt-info-text">Build a template once — then log the whole meal in one tap. Great for breakfast routines, packed lunches, or post-workout meals.</p>
+      </div>
+
+      <!-- Template list -->
+      <div id="mt-list"></div>
+
+      <!-- Empty state -->
+      <div id="mt-empty">
+        <div class="mt-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 8h1a4 4 0 010 8h-1"/>
+            <path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/>
+            <line x1="6" y1="2" x2="6" y2="4"/>
+            <line x1="10" y1="2" x2="10" y2="4"/>
+            <line x1="14" y1="2" x2="14" y2="4"/>
+          </svg>
+        </div>
+        <p class="mt-empty-title">No templates yet</p>
+        <p class="mt-empty-sub">Tap <strong>New Template</strong> to save your first meal — logging repeat meals will take seconds.</p>
+      </div>
+
+    </div><!-- /meal-templates-panel -->
+
     <!-- AI Assistant Panel -->
     <div id="ai-panel" class="dash-panel" style="display:none">
       <div class="ai-panel-wrap">
@@ -709,6 +761,88 @@
     </div><!-- /cf-form-card -->
   </div><!-- /cf-form-wrap -->
 
+  <!-- ── Meal Templates Form Modal ─────────────────────────────────────────── -->
+  <div id="mt-form-wrap" role="dialog" aria-modal="true" aria-label="Create / edit meal template">
+    <div id="mt-form-backdrop"></div>
+    <div id="mt-form-card">
+
+      <div id="mt-form-title">New Meal Template</div>
+
+      <!-- Template name -->
+      <div class="mt-field">
+        <label for="mt-name">Template Name</label>
+        <input type="text" id="mt-name" placeholder="e.g. My Morning Routine"
+               autocorrect="off" autocomplete="off" spellcheck="false">
+      </div>
+
+      <!-- Meal type selector -->
+      <div class="mt-field">
+        <label>Default Meal</label>
+        <div class="mt-meal-pills">
+          <button class="mt-meal-pill active" data-meal="breakfast">🌅 Breakfast</button>
+          <button class="mt-meal-pill" data-meal="lunch">☀️ Lunch</button>
+          <button class="mt-meal-pill" data-meal="dinner">🌙 Dinner</button>
+          <button class="mt-meal-pill" data-meal="snack">🍎 Snack</button>
+        </div>
+      </div>
+
+      <!-- Food search -->
+      <div class="mt-field">
+        <label>Add Foods</label>
+        <div class="mt-search-row">
+          <div class="mt-search-wrap">
+            <input type="search" id="mt-food-search" placeholder="Search food…"
+                   autocomplete="off" autocorrect="off" spellcheck="false">
+            <div id="mt-food-results" style="display:none"></div>
+          </div>
+          <input type="number" id="mt-food-grams" placeholder="g" min="1" max="5000"
+                 value="100" inputmode="numeric" class="mt-grams-input">
+          <button id="mt-food-add-btn" class="mt-add-food-btn" title="Add to template">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Items list -->
+      <div id="mt-items-list" class="mt-items-list"></div>
+
+      <!-- Macro totals -->
+      <div id="mt-totals" class="mt-totals" style="display:none">
+        <span class="mt-total mt-total--kcal"><span id="mt-total-kcal">0</span> kcal</span>
+        <span class="mt-total mt-total--carb"><span id="mt-total-carbs">0</span>g carbs</span>
+        <span class="mt-total mt-total--pro"><span id="mt-total-protein">0</span>g protein</span>
+        <span class="mt-total mt-total--fat"><span id="mt-total-fat">0</span>g fat</span>
+      </div>
+
+      <p id="mt-form-error"></p>
+
+      <div class="mt-form-actions">
+        <button id="mt-cancel-btn">Cancel</button>
+        <button id="mt-save-btn">Save Template</button>
+      </div>
+
+    </div><!-- /mt-form-card -->
+  </div><!-- /mt-form-wrap -->
+
+  <!-- ── Log Template meal-type picker ──────────────────────────────────────── -->
+  <div id="mt-log-picker" class="mt-log-picker" style="display:none">
+    <div id="mt-log-backdrop" class="mt-log-backdrop"></div>
+    <div class="mt-log-sheet">
+      <p class="mt-log-sheet-title">Log as which meal?</p>
+      <div class="mt-log-meal-btns">
+        <button class="mt-log-meal-btn" data-meal="breakfast">🌅 Breakfast</button>
+        <button class="mt-log-meal-btn" data-meal="lunch">☀️ Lunch</button>
+        <button class="mt-log-meal-btn" data-meal="dinner">🌙 Dinner</button>
+        <button class="mt-log-meal-btn" data-meal="snack">🍎 Snack</button>
+      </div>
+      <button id="mt-log-cancel" class="mt-log-cancel-btn">Cancel</button>
+    </div>
+  </div>
+
+  <script src="js/meal-templates.js"></script>
   <script src="js/custom-foods.js"></script>
 </body>
 </html>
