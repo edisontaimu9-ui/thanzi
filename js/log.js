@@ -254,7 +254,7 @@ const ThanziLog = (() => {
       return;
     }
 
-    const sourceLabel = { local: 'MW', regional: 'AF', FDC: 'US', OFF: 'PKG', combined: '✓' };
+    const sourceLabel = { local: 'MW', regional: 'AF', FDC: 'US', OFF: 'PKG', combined: '✓', custom: '★ Mine' };
 
     container.innerHTML = results.map((f, i) => `
       <div class="sr-item" data-idx="${i}">
@@ -303,8 +303,13 @@ const ThanziLog = (() => {
     }
     clearTimeout(_state.searchTimer);
     _state.searchTimer = setTimeout(() => {
+      // Merge custom foods (shown first, labelled "Mine") + local DB
+      const customResults = (typeof ThanziCustomFoods !== 'undefined')
+        ? ThanziCustomFoods.search(q).map(f => ({ ...f, sourceUsed: 'custom' }))
+        : [];
       const localResults = ThanziFood.searchLocal(q, 10);
-      _renderSearchResults(localResults, false);
+      const merged = [...customResults, ...localResults];
+      _renderSearchResults(merged, false);
       if (localResults.length < 3) _searchFullAsync(q);
     }, 220);
   }

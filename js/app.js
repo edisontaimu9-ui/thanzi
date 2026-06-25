@@ -157,7 +157,7 @@ const ThanziApp = (() => {
       ThanziAI.init(user, () => state);
     }
 
-    // Init Custom Foods module
+    // Init the custom foods module
     if (typeof ThanziCustomFoods !== 'undefined') {
       ThanziCustomFoods.init(user);
     }

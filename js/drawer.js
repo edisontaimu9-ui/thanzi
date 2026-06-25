@@ -53,7 +53,10 @@ const ThanziDrawer = (() => {
       if (typeof ThanziAI !== 'undefined') ThanziAI.onFocus();
     },
     'custom-foods': () => {
-      if (typeof ThanziCustomFoods !== 'undefined') ThanziCustomFoods.show();
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('custom-foods-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziCustomFoods !== 'undefined') ThanziCustomFoods.refresh();
     },
     'meal-templates': () => console.log('TODO: Meal Templates'),
     exercise:       () => console.log('TODO: Exercise'),
