@@ -1,0 +1,337 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   settings.css — Thanzi Settings Panel
+   Uses CSS var tokens from style.css
+   ─────────────────────────────────────────────────────────────────────────── */
+
+#settings-panel {
+  padding: 0 0 96px;
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.st-page-header {
+  padding: 24px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  margin-bottom: 16px;
+}
+
+.st-page-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.4px;
+}
+
+.st-page-sub {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+/* ── Section card ────────────────────────────────────────────────────────── */
+.st-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin: 0 16px 14px;
+  overflow: hidden;
+}
+
+.st-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.st-card-icon {
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), .15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.st-card-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.2px;
+}
+
+/* ── Row ─────────────────────────────────────────────────────────────────── */
+.st-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.st-row:last-child { border-bottom: none; }
+
+.st-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.st-row-icon {
+  font-size: .95rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.st-row-info { flex: 1; min-width: 0; }
+
+.st-row-name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.st-row-desc {
+  font-size: .74rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── Static value (e.g. email display) ───────────────────────────────────── */
+.st-row-value {
+  font-size: .8rem;
+  color: var(--text-3);
+  text-align: right;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Chevron (tappable rows) ─────────────────────────────────────────────── */
+.st-chevron {
+  color: var(--text-4);
+  font-size: .8rem;
+  flex-shrink: 0;
+}
+
+/* ── Toggle ──────────────────────────────────────────────────────────────── */
+.st-toggle {
+  position: relative;
+  width: 44px;
+  height: 25px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.st-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.st-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 25px;
+  transition: background .2s;
+}
+
+.st-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 19px;
+  height: 19px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+.st-toggle input:checked + .st-toggle-track {
+  background: var(--accent);
+}
+
+.st-toggle input:checked + .st-toggle-track::after {
+  transform: translateX(19px);
+}
+
+/* ── Select ──────────────────────────────────────────────────────────────── */
+.st-select {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  font-size: .82rem;
+  padding: 7px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  min-width: 96px;
+  text-align: right;
+}
+
+.st-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Stepper ─────────────────────────────────────────────────────────────── */
+.st-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.st-step-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background .15s, border-color .15s;
+  flex-shrink: 0;
+}
+
+.st-step-btn:active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.st-step-val {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-1);
+  min-width: 62px;
+  text-align: center;
+}
+
+/* ── Action row (tappable, no right control) ─────────────────────────────── */
+.st-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  width: 100%;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  text-align: left;
+  transition: background .12s;
+}
+
+.st-action-row:last-child { border-bottom: none; }
+.st-action-row:active { background: var(--bg-inset); }
+
+/* ── Danger action ───────────────────────────────────────────────────────── */
+.st-danger-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  transition: background .12s;
+}
+
+.st-danger-row:active { background: rgba(231,76,60,.08); }
+
+.st-danger-icon {
+  font-size: .95rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(231,76,60,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.st-danger-name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: #e74c3c;
+}
+
+.st-danger-desc {
+  font-size: .74rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── Version footer ──────────────────────────────────────────────────────── */
+.st-footer {
+  text-align: center;
+  padding: 20px 16px 8px;
+}
+
+.st-footer-name {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -.2px;
+}
+
+.st-footer-ver {
+  font-size: .72rem;
+  color: var(--text-5);
+  margin-top: 3px;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.st-toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--accent);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 20px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .22s, transform .22s;
+  z-index: 9999;
+  white-space: nowrap;
+}
+
+.st-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
