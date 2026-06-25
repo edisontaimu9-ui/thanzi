@@ -9,7 +9,7 @@
 </head>
 <body>
 
-  <!-- Auth Screen -->
+  <!-- ── Auth Screen ──────────────────────────────────────────────────────── -->
   <div id="auth-screen" class="screen">
     <div class="auth-container">
       <h1 class="logo">Thanzi</h1>
@@ -19,13 +19,13 @@
         <button id="register-tab" class="tab">Register</button>
       </div>
       <div id="login-form">
-        <input type="email" id="login-email" placeholder="Email">
+        <input type="email"    id="login-email"    placeholder="Email">
         <input type="password" id="login-password" placeholder="Password">
         <button id="login-btn">Login</button>
       </div>
       <div id="register-form" style="display:none">
-        <input type="text" id="reg-name" placeholder="Full name">
-        <input type="email" id="reg-email" placeholder="Email">
+        <input type="text"     id="reg-name"     placeholder="Full name">
+        <input type="email"    id="reg-email"    placeholder="Email">
         <input type="password" id="reg-password" placeholder="Password">
         <button id="register-btn">Create Account</button>
       </div>
@@ -33,60 +33,51 @@
     </div>
   </div>
 
-  <!-- Profile Setup Screen -->
+  <!-- ── Profile Setup Screen ─────────────────────────────────────────────── -->
   <div id="profile-screen" class="screen" style="display:none">
     <div class="profile-container">
       <h2>Set up your profile</h2>
       <p class="profile-sub">Help Thanzi personalise your nutrition plan</p>
-
       <div class="step" id="step-1">
         <label>Age</label>
-        <input type="number" id="p-age" placeholder="e.g. 25" min="18" max="60">
-
+        <input type="number" id="p-age"    placeholder="e.g. 25"  min="18" max="60">
         <label>Gender</label>
         <div class="option-group">
           <button class="option-btn" data-val="M" data-group="gender">Male</button>
           <button class="option-btn" data-val="F" data-group="gender">Female</button>
         </div>
-
         <label>Weight (kg)</label>
-        <input type="number" id="p-weight" placeholder="e.g. 70" min="30" max="300">
-
+        <input type="number" id="p-weight" placeholder="e.g. 70"  min="30" max="300">
         <label>Height (cm)</label>
         <input type="number" id="p-height" placeholder="e.g. 170" min="100" max="250">
-
         <label>Activity Level</label>
         <div class="option-group vertical">
-          <button class="option-btn" data-val="sedentary"  data-group="activity">Sedentary (desk job, no exercise)</button>
-          <button class="option-btn" data-val="low_active" data-group="activity">Low active (light exercise 1-3x/week)</button>
-          <button class="option-btn" data-val="active"     data-group="activity">Active (moderate exercise 3-5x/week)</button>
-          <button class="option-btn" data-val="very_active" data-group="activity">Very active (hard exercise 6-7x/week)</button>
+          <button class="option-btn" data-val="sedentary"   data-group="activity">Sedentary (desk job, no exercise)</button>
+          <button class="option-btn" data-val="low_active"  data-group="activity">Low active (light exercise 1–3×/week)</button>
+          <button class="option-btn" data-val="active"      data-group="activity">Active (moderate exercise 3–5×/week)</button>
+          <button class="option-btn" data-val="very_active" data-group="activity">Very active (hard exercise 6–7×/week)</button>
         </div>
-
         <label>Goal</label>
         <div class="option-group">
           <button class="option-btn" data-val="lose"     data-group="goal">Lose weight</button>
           <button class="option-btn" data-val="maintain" data-group="goal">Maintain</button>
           <button class="option-btn" data-val="gain"     data-group="goal">Gain muscle</button>
         </div>
-
         <button id="save-profile-btn">Generate my plan</button>
         <p id="profile-error" class="error"></p>
       </div>
     </div>
   </div>
 
-  <!-- Dashboard Screen -->
+  <!-- ── Dashboard Screen ─────────────────────────────────────────────────── -->
   <div id="dashboard-screen" class="screen" style="display:none">
     <header class="dash-header">
       <span id="greeting">Good morning</span>
       <button id="logout-btn">Logout</button>
     </header>
 
-    <!-- ── Home Panel ──────────────────────────────────────────────────── -->
+    <!-- Home Panel -->
     <div id="home-panel" class="dash-panel">
-
-      <!-- Calorie Ring -->
       <div class="calorie-card">
         <div class="ring-container">
           <svg class="ring" viewBox="0 0 120 120">
@@ -113,8 +104,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Water Tracker -->
       <div class="water-card">
         <div class="water-header">
           <span>💧 Water</span>
@@ -129,13 +118,12 @@
           <button class="water-btn" onclick="ThanziApp.addWater(750)">+750ml</button>
         </div>
       </div>
+    </div>
 
-    </div><!-- /home-panel -->
-
-    <!-- ── Log Panel ───────────────────────────────────────────────────── -->
+    <!-- Log Panel -->
     <div id="log-panel" class="dash-panel" style="display:none">
 
-      <!-- Meal type selector -->
+      <!-- Meal selector -->
       <div class="meal-selector">
         <button class="meal-btn active" data-meal="breakfast">🌅 Breakfast</button>
         <button class="meal-btn"        data-meal="lunch">☀️ Lunch</button>
@@ -143,7 +131,7 @@
         <button class="meal-btn"        data-meal="snack">🍎 Snack</button>
       </div>
 
-      <!-- Food search -->
+      <!-- Search row: input + barcode button -->
       <div class="food-search-wrap">
         <input
           type="search"
@@ -153,22 +141,30 @@
           autocorrect="off"
           spellcheck="false"
         >
+        <button id="barcode-scan-btn" class="barcode-scan-btn" title="Scan barcode" aria-label="Scan barcode">
+          <!-- Barcode SVG icon -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M15 3h4a2 2 0 012 2v4M15 21h4a2 2 0 002-2v-4"/>
+            <line x1="7" y1="7" x2="7" y2="17"/>
+            <line x1="10" y1="7" x2="10" y2="17"/>
+            <line x1="13" y1="7" x2="13" y2="17"/>
+            <line x1="16" y1="9" x2="16" y2="15"/>
+          </svg>
+        </button>
         <div id="food-search-results" style="display:none"></div>
       </div>
 
-      <!-- Selected food + portion card -->
+      <!-- Selected food card -->
       <div id="selected-food-card" style="display:none">
         <div id="selected-food-name"></div>
         <div id="selected-food-per100"></div>
-
         <div class="portion-row">
-          <span class="portion-label">Portion</span>
-          <input type="number" id="portion-input" value="100" min="1" max="5000">
-          <span class="portion-unit">g</span>
+          <input type="number" id="portion-qty" value="1" min="0.1" max="99" step="0.5" inputmode="decimal">
+          <select id="portion-unit-select" class="portion-unit-select"></select>
+          <span id="portion-unit-label"></span>
         </div>
-
+        <div id="portion-grams-hint" class="portion-grams-hint"></div>
         <div id="portion-calc"></div>
-
         <button id="log-food-btn">Log Food</button>
         <p id="log-error"></p>
       </div>
@@ -194,6 +190,64 @@
 
   </div><!-- /dashboard-screen -->
 
+  <!-- ── Barcode Scanner Modal ─────────────────────────────────────────────── -->
+  <div id="scanner-modal" class="scanner-modal" style="display:none" role="dialog" aria-modal="true" aria-label="Barcode Scanner">
+
+    <div class="scanner-inner">
+
+      <!-- Header -->
+      <div class="scanner-header">
+        <span class="scanner-title">Scan Barcode</span>
+        <button id="scanner-close-btn" class="scanner-close" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Choice screen -->
+      <div id="scanner-choice" class="scanner-choice">
+        <p class="scanner-choice-hint">Choose scanning method</p>
+        <div class="scanner-choice-btns">
+          <button id="scanner-camera-btn" class="scanner-choice-btn">
+            <span class="scb-icon">📷</span>
+            <span class="scb-label">Camera</span>
+            <span class="scb-sub">Live scan</span>
+          </button>
+          <button id="scanner-gallery-btn" class="scanner-choice-btn">
+            <span class="scb-icon">🖼️</span>
+            <span class="scb-label">Gallery</span>
+            <span class="scb-sub">Pick image</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Camera / preview view -->
+      <div id="scanner-camera-view" style="display:none">
+        <div class="scanner-viewport">
+          <video id="scanner-video" autoplay playsinline muted></video>
+          <!-- Gallery image preview (shown instead of video for gallery mode) -->
+          <img id="scanner-preview-img" class="scanner-preview-img" src="" alt="Scanned image" style="display:none">
+          <!-- Scanning frame overlay -->
+          <div class="scanner-frame-overlay">
+            <div class="scanner-frame">
+              <div class="scanner-corners tl"></div>
+              <div class="scanner-corners tr"></div>
+              <div class="scanner-corners bl"></div>
+              <div class="scanner-corners br"></div>
+              <div class="scanner-line"></div>
+            </div>
+          </div>
+        </div>
+        <p class="scanner-live-hint">Point the barcode at the frame</p>
+        <button id="scanner-back-btn" class="scanner-back-btn">← Back</button>
+      </div>
+
+      <!-- Status / error message -->
+      <div id="scanner-status" class="scanner-status" style="display:none"></div>
+
+    </div>
+  </div>
+
+  <!-- Hidden file input for gallery scan -->
+  <input type="file" id="scanner-file-input" accept="image/*" capture="environment" style="display:none">
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@13/dist/iife/sdk.min.js"></script>
   <script src="js/thanzi-foodData.js"></script>
@@ -201,6 +255,7 @@
   <script src="js/thanzi-nutrition.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/scanner.js"></script>
   <script src="js/log.js"></script>
   <script src="js/app.js"></script>
 </body>
