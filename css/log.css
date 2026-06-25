@@ -794,3 +794,28 @@
 .csoon-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
 .csoon-title { font-size: 0.95rem; font-weight: 700; color: var(--text-2); margin-bottom: 4px; }
 .csoon-sub { font-size: 0.85rem; line-height: 1.5; }
+
+/* ── psub-content: base for all profile sub-tab panels ─────────────────── */
+.psub-content {
+  padding-bottom: 80px; /* clear bottom nav */
+}
+
+/* Profile panel overflow so tall tabs scroll */
+#profile-panel {
+  overflow-y: auto;
+  padding: 16px 16px 0;
+}
+
+/* Inline progress tab: no outer margin on prog-section */
+#ptab-progress .prog-section {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Weight form inside progress tab */
+.prog-weight-form-inner {
+  background: var(--bg-inset);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}

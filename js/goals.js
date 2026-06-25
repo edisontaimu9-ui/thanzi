@@ -286,4 +286,4 @@ const ThanziGoals = (() => {
   return { init, refresh };
 })();
 
-document.addEventListener('DOMContentLoaded', ThanziGoals.init);
+// Init is called by ThanziProfile when the Health & Goals tab is opened.
