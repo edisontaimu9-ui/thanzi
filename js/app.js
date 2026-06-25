@@ -16,6 +16,40 @@ const ThanziApp = (() => {
   let _currentUser = null;
   let _logInited = false;
 
+  // ── Theme (dark/light) ───────────────────────────────────────────────────
+
+  const THEME_KEY = 'thanzi_theme';
+
+  const applyTheme = (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+      const next = theme === 'light' ? 'dark' : 'light';
+      const label = `Switch to ${next} mode`;
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+    }
+  };
+
+  const initTheme = () => {
+    let theme;
+    try {
+      theme = localStorage.getItem(THEME_KEY);
+    } catch (e) { /* localStorage unavailable — fall through to default */ }
+    if (!theme) {
+      theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+        ? 'light' : 'dark';
+    }
+    applyTheme(theme);
+  };
+
+  const toggleTheme = () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
+    applyTheme(next);
+  };
+
   // ── Screen / panel helpers ───────────────────────────────────────────────
 
   const showScreen = (screenId) => {
@@ -138,6 +172,9 @@ const ThanziApp = (() => {
   // ── Event binding ────────────────────────────────────────────────────────
 
   const bindEvents = () => {
+    // Theme toggle
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
     // Profile option buttons
     document.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -247,6 +284,8 @@ const ThanziApp = (() => {
   // ── App init ─────────────────────────────────────────────────────────────
 
   const init = async () => {
+    initTheme();
+
     const user = await ThanziAuth.getUser();
 
     if (user) {
