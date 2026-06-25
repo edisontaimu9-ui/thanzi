@@ -1,0 +1,210 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   progress.css — Thanzi Progress Panel
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel container ─────────────────────────────────────────────────────── */
+#progress-panel {
+  padding: 0 0 96px;   /* bottom nav clearance */
+}
+
+/* ── Section card ────────────────────────────────────────────────────────── */
+.prog-section {
+  background: var(--bg-card);
+  border-radius: 16px;
+  margin: 12px 16px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+
+/* ── Section header row ──────────────────────────────────────────────────── */
+.prog-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.prog-section-title {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Latest reading badge (weight) */
+.prog-latest-badge {
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 20px;
+  padding: 2px 10px;
+  display: none;   /* shown by JS */
+}
+
+/* Log weight button */
+.prog-log-btn {
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.prog-log-btn:hover,
+.prog-log-btn:active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Weight entry form ───────────────────────────────────────────────────── */
+#prog-weight-form {
+  display: none;
+  background: var(--bg-input, rgba(255,255,255,.06));
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.prog-form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.prog-form-row input[type="number"],
+.prog-form-row input[type="date"] {
+  flex: 1 1 90px;
+  min-width: 80px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  background: var(--bg-input, rgba(255,255,255,.08));
+  color: var(--text-primary);
+  font-size: .88rem;
+}
+
+.prog-form-row input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(var(--date-invert, 0));
+  opacity: .6;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .prog-form-row input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.prog-form-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.prog-form-save-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.prog-form-save-btn:disabled { opacity: .55; }
+
+.prog-form-cancel-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  background: transparent;
+  color: var(--text-muted);
+  font-size: .85rem;
+  cursor: pointer;
+}
+
+.prog-form-error {
+  font-size: .78rem;
+  color: var(--error, #ef4444);
+  margin-top: 4px;
+  min-height: 1em;
+}
+
+/* ── SVG chart helpers ────────────────────────────────────────────────────── */
+.pcc-lbl {
+  font-size: 9px;
+  fill: var(--text-muted, #888);
+  font-family: inherit;
+}
+
+.prog-chart-empty,
+.prog-chart-loading,
+.prog-single-point {
+  font-size: .82rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0 8px;
+  line-height: 1.6;
+}
+
+/* ── Goal label row ──────────────────────────────────────────────────────── */
+.prog-goal-label {
+  font-size: .73rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: right;
+}
+
+/* ── Recent weight list ──────────────────────────────────────────────────── */
+.prog-list-title {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.prog-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border, rgba(255,255,255,.07));
+  font-size: .84rem;
+}
+
+.prog-list-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 64px;
+}
+
+.prog-list-date {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+.prog-list-del {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: .78rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.prog-list-del:hover {
+  color: var(--error, #ef4444);
+  background: color-mix(in srgb, var(--error, #ef4444) 12%, transparent);
+}

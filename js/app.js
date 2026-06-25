@@ -118,6 +118,10 @@ const ThanziApp = (() => {
   const addWater = (ml) => {
     state.water = Math.min(state.water + ml, state.waterGoal);
     updateWater();
+    // Persist to water_logs collection
+    if (typeof ThanziProgress !== 'undefined') {
+      ThanziProgress.saveWater(ml);
+    }
   };
 
   // ── Dashboard init ───────────────────────────────────────────────────────
@@ -139,6 +143,11 @@ const ThanziApp = (() => {
       ThanziProfile.init(user);
       _profileInited = true;
     }
+
+    // Init the progress module — weight, calorie history, water history
+    if (typeof ThanziProgress !== 'undefined') {
+      ThanziProgress.init(user);
+    }
   };
 
   // ── Nav panel switching ──────────────────────────────────────────────────
@@ -159,10 +168,13 @@ const ThanziApp = (() => {
       }
     });
 
-    // progress / profile — panels not built yet; swap in later
-    document.getElementById('nav-progress').addEventListener('click', () => {
+    // progress — live panel
+    document.getElementById('nav-progress').addEventListener('click', async () => {
       _setActiveNav('nav-progress');
-      showPanel('home-panel'); // placeholder
+      showPanel('progress-panel');
+      if (typeof ThanziProgress !== 'undefined') {
+        await ThanziProgress.refresh();
+      }
     });
 
     document.getElementById('nav-profile').addEventListener('click', () => {
