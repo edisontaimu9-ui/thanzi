@@ -64,7 +64,12 @@ const ThanziDrawer = (() => {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       if (typeof ThanziMealTemplates !== 'undefined') ThanziMealTemplates.refresh();
     },
-    exercise:       () => console.log('TODO: Exercise'),
+    exercise: () => {
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('exercise-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziExercise !== 'undefined') ThanziExercise.refresh();
+    },
     weight:         () => console.log('TODO: Weight'),
     goals:          () => console.log('TODO: Goals'),
     profile:        () => document.getElementById('nav-profile').click(),

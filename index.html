@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="css/drawer.css">
   <link rel="stylesheet" href="css/custom-foods.css">
   <link rel="stylesheet" href="css/meal-templates.css">
+  <link rel="stylesheet" href="css/exercise.css">
   <link rel="stylesheet" href="css/ai.css">
 </head>
 <body>
@@ -475,6 +476,86 @@
 
     </div><!-- /meal-templates-panel -->
 
+    <!-- Exercise Panel -->
+    <div id="exercise-panel" class="dash-panel" style="display:none">
+
+      <!-- Header -->
+      <div class="ex-header">
+        <div>
+          <div class="ex-title">Exercise</div>
+          <div class="ex-subtitle">Log workouts with natural language</div>
+        </div>
+      </div>
+
+      <!-- Summary banner -->
+      <div class="ex-summary-banner">
+        <div class="ex-stat">
+          <span class="ex-stat-label">Exercises</span>
+          <span class="ex-stat-value" id="ex-stat-count">0</span>
+        </div>
+        <div class="ex-stat">
+          <span class="ex-stat-label">Duration</span>
+          <span class="ex-stat-value" id="ex-stat-duration">0</span>
+          <span class="ex-stat-unit">min</span>
+        </div>
+        <div class="ex-stat">
+          <span class="ex-stat-label">Burned</span>
+          <span class="ex-stat-value" id="ex-stat-calories">0</span>
+          <span class="ex-stat-unit">kcal</span>
+        </div>
+      </div>
+
+      <!-- Date selector -->
+      <div class="ex-date-card">
+        <div class="ex-date-label">Select Date</div>
+        <div class="ex-date-select-wrap">
+          <select id="ex-date-select" aria-label="Select date"></select>
+        </div>
+      </div>
+
+      <!-- Log exercise -->
+      <div class="ex-log-card">
+        <div class="ex-log-card-title">Log an Exercise</div>
+        <div class="ex-log-card-sub">What exercise did you do?</div>
+
+        <div class="ex-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            id="ex-input"
+            placeholder="e.g., ran 5km in 30 minutes, yoga for 45 min"
+            autocorrect="off"
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+
+        <p class="ex-input-hint">
+          Try: "ran 5 km", "30 minutes of weight lifting", "yoga for 45 minutes"
+        </p>
+
+        <p id="ex-error"></p>
+
+        <button id="ex-add-btn">
+          <svg class="ex-btn-icon" viewBox="0 0 24 24" fill="none" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span class="ex-btn-spinner"></span>
+          Add Exercise
+        </button>
+      </div>
+
+      <!-- Exercise list -->
+      <div class="ex-list-card">
+        <div class="ex-list-title" id="ex-list-title">Exercises for today</div>
+        <div id="ex-list"></div>
+      </div>
+
+    </div><!-- /exercise-panel -->
+
     <!-- AI Assistant Panel -->
     <div id="ai-panel" class="dash-panel" style="display:none">
       <div class="ai-panel-wrap">
@@ -843,6 +924,7 @@
   </div>
 
   <script src="js/meal-templates.js"></script>
+  <script src="js/exercise.js"></script>
   <script src="js/custom-foods.js"></script>
 </body>
 </html>

@@ -1,0 +1,342 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   exercise.css — Thanzi Exercise Panel
+   Uses the same CSS var tokens as the rest of Thanzi (style.css)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#exercise-panel {
+  padding: 20px 16px 96px;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.ex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ex-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
+}
+
+.ex-subtitle {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+/* ── Summary banner (mirrors NutriTrack's orange stats bar, Thanzi green) ─ */
+.ex-summary-banner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-active, #1a7a52) 100%);
+  border-radius: 18px;
+  padding: 18px 12px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.ex-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.ex-stat + .ex-stat {
+  border-left: 1px solid rgba(255,255,255,.2);
+}
+
+.ex-stat-label {
+  font-size: .7rem;
+  color: rgba(255,255,255,.8);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+
+.ex-stat-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.ex-stat-unit {
+  font-size: .7rem;
+  color: rgba(255,255,255,.75);
+  margin-top: 2px;
+}
+
+/* ── Date selector ───────────────────────────────────────────────────────── */
+.ex-date-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.ex-date-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+
+.ex-date-select-wrap {
+  position: relative;
+}
+
+.ex-date-select-wrap select {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: .93rem;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.ex-date-select-wrap select:focus {
+  border-color: var(--accent);
+}
+
+.ex-date-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text-3);
+  pointer-events: none;
+}
+
+/* ── Log exercise card ───────────────────────────────────────────────────── */
+.ex-log-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.ex-log-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.ex-log-card-sub {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-bottom: 14px;
+}
+
+.ex-input-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.ex-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 17px;
+  height: 17px;
+  stroke: var(--text-3);
+  pointer-events: none;
+}
+
+.ex-input-wrap input {
+  width: 100%;
+  padding: 11px 14px 11px 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: .93rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+
+.ex-input-wrap input:focus {
+  border-color: var(--accent);
+}
+
+.ex-input-hint {
+  font-size: .75rem;
+  color: var(--text-3);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+#ex-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 50px;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: .93rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .1s, opacity .15s;
+}
+
+#ex-add-btn:active  { transform: scale(0.97); }
+#ex-add-btn:disabled { opacity: .55; cursor: not-allowed; }
+#ex-add-btn svg { width: 17px; height: 17px; stroke: var(--on-accent); flex-shrink: 0; }
+
+#ex-add-btn .ex-btn-spinner {
+  display: none;
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ex-spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+#ex-add-btn.loading .ex-btn-icon   { display: none; }
+#ex-add-btn.loading .ex-btn-spinner { display: block; }
+
+@keyframes ex-spin { to { transform: rotate(360deg); } }
+
+/* ── Exercise list ───────────────────────────────────────────────────────── */
+.ex-list-card {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.ex-list-title {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+
+/* Empty state */
+.ex-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0 8px;
+  color: var(--text-3);
+}
+
+.ex-empty svg {
+  width: 40px;
+  height: 40px;
+  stroke: var(--text-3);
+  opacity: .45;
+}
+
+.ex-empty-text {
+  font-size: .85rem;
+}
+
+/* Exercise row */
+.ex-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ex-row:last-child { border-bottom: none; }
+
+.ex-row-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ex-row-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--accent);
+}
+
+.ex-row-info { flex: 1; min-width: 0; }
+
+.ex-row-name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ex-row-meta {
+  font-size: .75rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.ex-row-kcal {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ex-row-delete {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  flex-shrink: 0;
+}
+
+.ex-row-delete:hover { color: #e05; background: color-mix(in srgb, #e05 10%, transparent); }
+.ex-row-delete svg { width: 16px; height: 16px; stroke: currentColor; }
+
+/* ── Error message ───────────────────────────────────────────────────────── */
+#ex-error {
+  font-size: .8rem;
+  color: #e05;
+  min-height: 18px;
+  margin: 6px 0 0;
+  display: none;
+}
+
+#ex-error.visible { display: block; }
