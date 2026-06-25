@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/log.css">
   <link rel="stylesheet" href="css/progress.css">
   <link rel="stylesheet" href="css/drawer.css">
+  <link rel="stylesheet" href="css/ai.css">
 </head>
 <body>
 
@@ -365,6 +366,48 @@
 
     </div><!-- /profile-panel -->
 
+    <!-- AI Assistant Panel -->
+    <div id="ai-panel" class="dash-panel" style="display:none">
+      <div class="ai-panel-wrap">
+
+        <!-- Header -->
+        <div class="ai-header">
+          <div class="ai-avatar">🌿</div>
+          <div class="ai-header-text">
+            <span class="ai-name">Thandizo</span>
+            <span class="ai-subtitle">AI Nutrition Assistant</span>
+          </div>
+          <div class="ai-online-dot"></div>
+        </div>
+
+        <!-- Messages -->
+        <div class="ai-messages" id="ai-messages"></div>
+
+        <!-- Quick Actions -->
+        <div class="ai-quick-section" id="ai-quick-section"></div>
+
+        <!-- Composer -->
+        <div class="ai-composer">
+          <textarea
+            id="ai-input"
+            placeholder="Ask me anything about nutrition, meals, or recipes…"
+            rows="1"
+            autocorrect="off"
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+          <button id="ai-send-btn" class="ai-send-btn" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div><!-- /ai-panel -->
+
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
       <button class="nav-btn active" id="nav-home">🏠<span>Home</span></button>
@@ -553,6 +596,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <script src="js/progress.js"></script>
   <script src="js/drawer.js"></script>
+  <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

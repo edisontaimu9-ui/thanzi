@@ -43,11 +43,15 @@ const ThanziDrawer = (() => {
   // ── Nav routing ───────────────────────────────────────────────────────────
 
   const _routes = {
-    // ✅ Wired — triggers existing bottom nav
+    // ✅ Wired
     dashboard: () => document.getElementById('nav-home').click(),
 
-    // 🔲 Stubs — wire up one by one
-    ai:             () => console.log('TODO: AI Assistant'),
+    ai: () => {
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('ai-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziAI !== 'undefined') ThanziAI.onFocus();
+    },
     meals:          () => console.log('TODO: Meals'),
     'custom-foods': () => console.log('TODO: Custom Foods'),
     'meal-templates': () => console.log('TODO: Meal Templates'),

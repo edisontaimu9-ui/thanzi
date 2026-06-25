@@ -151,6 +151,11 @@ const ThanziApp = (() => {
     if (typeof ThanziProgress !== 'undefined') {
       ThanziProgress.init(user);
     }
+
+    // Init the AI assistant module
+    if (typeof ThanziAI !== 'undefined') {
+      ThanziAI.init(user, () => state);
+    }
   };
 
   // ── Nav panel switching ──────────────────────────────────────────────────
