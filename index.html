@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="css/meal-templates.css">
   <link rel="stylesheet" href="css/exercise.css">
   <link rel="stylesheet" href="css/weight.css">
+  <link rel="stylesheet" href="css/goals.css">
   <link rel="stylesheet" href="css/ai.css">
 </head>
 <body>
@@ -680,6 +681,131 @@
 
     </div><!-- /weight-panel -->
 
+    <!-- Goals Panel -->
+    <div id="goals-panel" class="dash-panel" style="display:none">
+
+      <!-- Header -->
+      <div class="gl-header">
+        <div class="gl-title">Goals</div>
+        <div class="gl-subtitle">Set your health and fitness goals</div>
+      </div>
+
+      <!-- Summary banner -->
+      <div class="gl-summary-banner">
+        <div class="gl-stat">
+          <span class="gl-stat-label">Daily Goal</span>
+          <span class="gl-stat-value" id="gl-stat-daily">—</span>
+          <span class="gl-stat-unit">kcal</span>
+        </div>
+        <div class="gl-stat">
+          <span class="gl-stat-label">Target Weight</span>
+          <span class="gl-stat-value" id="gl-stat-target">—</span>
+        </div>
+        <div class="gl-stat">
+          <span class="gl-stat-label">To Go</span>
+          <span class="gl-stat-value" id="gl-stat-togo">—</span>
+          <span class="gl-stat-unit">kg</span>
+        </div>
+      </div>
+
+      <!-- Weight / BMR / TDEE stat cards -->
+      <div class="gl-cards-row">
+        <div class="gl-card">
+          <span class="gl-card-label">Weight</span>
+          <span class="gl-card-value" id="gl-card-weight">—</span>
+          <span class="gl-card-unit">kg</span>
+        </div>
+        <div class="gl-card">
+          <span class="gl-card-label">BMR</span>
+          <span class="gl-card-value" id="gl-card-bmr">—</span>
+          <span class="gl-card-unit">cal/day</span>
+        </div>
+        <div class="gl-card">
+          <span class="gl-card-label">TDEE</span>
+          <span class="gl-card-value" id="gl-card-tdee">—</span>
+          <span class="gl-card-unit">cal/day</span>
+        </div>
+      </div>
+
+      <!-- Set Goal card -->
+      <div class="gl-set-card">
+        <div class="gl-set-title">Set Your Goal</div>
+        <div class="gl-set-sub">What's your goal?</div>
+
+        <button class="gl-goal-btn" data-goal="lose">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+            <polyline points="17 18 23 18 23 12"/>
+          </svg>
+          Lose Weight
+        </button>
+
+        <button class="gl-goal-btn" data-goal="maintain">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Maintain Weight
+        </button>
+
+        <button class="gl-goal-btn" data-goal="gain">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+          Gain Weight
+        </button>
+
+        <!-- Target weight (shown for lose / gain) -->
+        <div class="gl-target-wrap" id="gl-target-wrap">
+          <label class="gl-target-label" for="gl-target-weight-input">Target Weight (kg)</label>
+          <input type="number" id="gl-target-weight-input"
+                 placeholder="e.g. 65" min="20" max="500" step="0.1" inputmode="decimal">
+        </div>
+
+        <p id="gl-error"></p>
+        <p id="gl-success"></p>
+
+        <button id="gl-save-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Save Goal
+        </button>
+      </div>
+
+      <!-- Daily Targets card -->
+      <div class="gl-targets-card" id="gl-targets-card" style="display:none">
+        <div class="gl-targets-title">Your Daily Targets</div>
+        <div class="gl-targets-grid">
+          <div>
+            <div class="gl-target-item-label">Calories</div>
+            <div class="gl-target-item-value kcal" id="gl-tgt-kcal">—</div>
+            <div class="gl-target-item-sub" id="gl-tgt-kcal-sub"></div>
+          </div>
+          <div>
+            <div class="gl-target-item-label">Protein</div>
+            <div class="gl-target-item-value prot" id="gl-tgt-protein">—</div>
+            <div class="gl-target-item-sub">target</div>
+          </div>
+          <div>
+            <div class="gl-target-item-label">Carbs</div>
+            <div class="gl-target-item-value carb" id="gl-tgt-carbs">—</div>
+            <div class="gl-target-item-sub">target</div>
+          </div>
+          <div>
+            <div class="gl-target-item-label">Fat</div>
+            <div class="gl-target-item-value fat" id="gl-tgt-fat">—</div>
+            <div class="gl-target-item-sub">target</div>
+          </div>
+        </div>
+        <div class="gl-targets-note">
+          <strong>Note:</strong> Calculated based on your profile, activity level, and goal.
+        </div>
+      </div>
+
+    </div><!-- /goals-panel -->
+
     <!-- AI Assistant Panel -->
     <div id="ai-panel" class="dash-panel" style="display:none">
       <div class="ai-panel-wrap">
@@ -1050,6 +1176,7 @@
   <script src="js/meal-templates.js"></script>
   <script src="js/exercise.js"></script>
   <script src="js/weight.js"></script>
+  <script src="js/goals.js"></script>
   <script src="js/custom-foods.js"></script>
 </body>
 </html>
