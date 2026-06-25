@@ -52,7 +52,6 @@ const ThanziDrawer = (() => {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       if (typeof ThanziAI !== 'undefined') ThanziAI.onFocus();
     },
-    meals:          () => console.log('TODO: Meals'),
     'custom-foods': () => console.log('TODO: Custom Foods'),
     'meal-templates': () => console.log('TODO: Meal Templates'),
     exercise:       () => console.log('TODO: Exercise'),
