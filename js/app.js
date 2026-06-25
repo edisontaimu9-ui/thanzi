@@ -98,8 +98,8 @@ const ThanziApp = (() => {
   };
 
   const updateRing = () => {
-    const consumed     = state.caloriesConsumed;
-    const goal         = state.caloriesGoal;
+    const consumed      = state.caloriesConsumed;
+    const goal          = state.caloriesGoal;
     const circumference = 314;
     const offset = circumference - (Math.min(consumed / goal, 1) * circumference);
 
@@ -109,6 +109,28 @@ const ThanziApp = (() => {
     document.getElementById('carbs-val').textContent         = state.carbs + 'g';
     document.getElementById('protein-val').textContent       = state.protein + 'g';
     document.getElementById('fat-val').textContent           = state.fat + 'g';
+
+    // ── Remaining badge ──────────────────────────────────────────────────
+    const rem   = goal - consumed;
+    const remEl = document.getElementById('hd-remaining');
+    if (remEl) {
+      remEl.textContent = rem >= 0 ? rem + ' kcal left' : Math.abs(rem) + ' kcal over';
+      remEl.className   = 'hd-remaining-badge' + (rem < 0 ? ' over' : '');
+    }
+
+    // ── Macro progress bars ──────────────────────────────────────────────
+    _updateMacroBar('hd-bar-carbs',   state.carbs,   state.carbsGoal,   'hd-carbs-lbl');
+    _updateMacroBar('hd-bar-protein', state.protein, state.proteinGoal, 'hd-protein-lbl');
+    _updateMacroBar('hd-bar-fat',     state.fat,     state.fatGoal,     'hd-fat-lbl');
+  };
+
+  const _updateMacroBar = (barId, val, goal, lblId) => {
+    const bar = document.getElementById(barId);
+    const lbl = document.getElementById(lblId);
+    if (!bar || !lbl) return;
+    const pct = goal > 0 ? Math.min((val / goal) * 100, 100) : 0;
+    bar.style.width = pct + '%';
+    lbl.textContent = val + ' / ' + goal + 'g';
   };
 
   const updateWater = () => {
@@ -346,7 +368,45 @@ const ThanziApp = (() => {
     bindEvents();
   };
 
-  return { init, addWater, updateNutrition };
+  // ── Expose setWaterGoal for settings.js ─────────────────────────────────
+  const setWaterGoal = (ml) => {
+    state.waterGoal = ml;
+    updateWater();
+  };
+
+  // ── Update home meals summary (called by ThanziLog after each change) ────
+  const updateHomeMeals = (logs) => {
+    const el = document.getElementById('hd-meals-list');
+    if (!el) return;
+
+    const groups = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    const LABELS = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', dinner: '🌙 Dinner', snack: '🍎 Snack' };
+    const ORDER  = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+    (logs || []).forEach(l => { if (groups[l.mealType]) groups[l.mealType].push(l); });
+
+    const filled = ORDER.filter(m => groups[m].length > 0);
+
+    if (!filled.length) {
+      el.innerHTML = '<div class="hd-meals-empty">No meals logged yet today</div>';
+      return;
+    }
+
+    el.innerHTML = filled.map(meal => {
+      const entries = groups[meal];
+      const kcal    = entries.reduce((s, e) => s + (e.calories || 0), 0);
+      const names   = entries.slice(0, 2).map(e => e.foodName).join(', ')
+                    + (entries.length > 2 ? ` +${entries.length - 2} more` : '');
+      return `
+        <div class="hd-meal-row">
+          <span class="hd-meal-label">${LABELS[meal]}</span>
+          <span class="hd-meal-foods">${names}</span>
+          <span class="hd-meal-kcal">${kcal} kcal</span>
+        </div>`;
+    }).join('');
+  };
+
+  return { init, addWater, updateNutrition, setWaterGoal, updateHomeMeals };
 })();
 
 document.addEventListener('DOMContentLoaded', ThanziApp.init);

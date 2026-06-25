@@ -127,45 +127,88 @@
 
     <!-- Home Panel -->
     <div id="home-panel" class="dash-panel">
-      <div class="calorie-card">
-        <div class="ring-container">
-          <svg class="ring" viewBox="0 0 120 120">
-            <circle class="ring-bg"   cx="60" cy="60" r="50"/>
-            <circle class="ring-fill" id="calorie-ring" cx="60" cy="60" r="50"/>
-          </svg>
-          <div class="ring-text">
-            <span id="calories-consumed">0</span>
-            <small>of <span id="calories-goal">2000</span> kcal</small>
+      <div class="dash-main">
+
+        <!-- Calorie ring card -->
+        <div class="calorie-card">
+          <div class="ring-container">
+            <svg class="ring" viewBox="0 0 120 120">
+              <circle class="ring-bg"   cx="60" cy="60" r="50"/>
+              <circle class="ring-fill" id="calorie-ring" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="ring-text">
+              <span id="calories-consumed">0</span>
+              <small>of <span id="calories-goal">2000</span> kcal</small>
+            </div>
+          </div>
+          <div id="hd-remaining" class="hd-remaining-badge">2000 kcal left</div>
+          <div class="macros">
+            <div class="macro">
+              <span class="macro-val" id="carbs-val">0g</span>
+              <span class="macro-label">Carbs</span>
+            </div>
+            <div class="macro">
+              <span class="macro-val" id="protein-val">0g</span>
+              <span class="macro-label">Protein</span>
+            </div>
+            <div class="macro">
+              <span class="macro-val" id="fat-val">0g</span>
+              <span class="macro-label">Fat</span>
+            </div>
           </div>
         </div>
-        <div class="macros">
-          <div class="macro">
-            <span class="macro-val" id="carbs-val">0g</span>
-            <span class="macro-label">Carbs</span>
+
+        <!-- Macro progress bars card -->
+        <div class="hd-card">
+          <div class="hd-card-title">📊 Macros</div>
+          <div class="hd-macro-row">
+            <div class="hd-macro-meta">
+              <span class="hd-macro-name" style="color:var(--accent)">Carbs</span>
+              <span class="hd-macro-lbl" id="hd-carbs-lbl">0 / 250g</span>
+            </div>
+            <div class="hd-bar-track"><div class="hd-bar-fill carbs" id="hd-bar-carbs"></div></div>
           </div>
-          <div class="macro">
-            <span class="macro-val" id="protein-val">0g</span>
-            <span class="macro-label">Protein</span>
+          <div class="hd-macro-row">
+            <div class="hd-macro-meta">
+              <span class="hd-macro-name" style="color:var(--blue)">Protein</span>
+              <span class="hd-macro-lbl" id="hd-protein-lbl">0 / 100g</span>
+            </div>
+            <div class="hd-bar-track"><div class="hd-bar-fill protein" id="hd-bar-protein"></div></div>
           </div>
-          <div class="macro">
-            <span class="macro-val" id="fat-val">0g</span>
-            <span class="macro-label">Fat</span>
+          <div class="hd-macro-row">
+            <div class="hd-macro-meta">
+              <span class="hd-macro-name" style="color:var(--orange)">Fat</span>
+              <span class="hd-macro-lbl" id="hd-fat-lbl">0 / 65g</span>
+            </div>
+            <div class="hd-bar-track"><div class="hd-bar-fill fat" id="hd-bar-fat"></div></div>
           </div>
         </div>
-      </div>
-      <div class="water-card">
-        <div class="water-header">
-          <span>💧 Water</span>
-          <span id="water-amount">0 / 2000ml</span>
+
+        <!-- Water card -->
+        <div class="water-card">
+          <div class="water-header">
+            <span>💧 Water</span>
+            <span id="water-amount">0 / 2000ml</span>
+          </div>
+          <div class="water-bar">
+            <div class="water-fill" id="water-fill"></div>
+          </div>
+          <div class="water-btns">
+            <button class="water-btn" onclick="ThanziApp.addWater(250)">+250ml</button>
+            <button class="water-btn" onclick="ThanziApp.addWater(500)">+500ml</button>
+            <button class="water-btn" onclick="ThanziApp.addWater(750)">+750ml</button>
+          </div>
         </div>
-        <div class="water-bar">
-          <div class="water-fill" id="water-fill"></div>
+
+        <!-- Today's meals summary card -->
+        <div class="hd-card">
+          <div class="hd-card-title">🍽️ Today's Meals</div>
+          <div id="hd-meals-list">
+            <div class="hd-meals-empty">No meals logged yet today</div>
+          </div>
+          <button class="hd-log-btn" onclick="document.getElementById('nav-log').click()">+ Log a meal</button>
         </div>
-        <div class="water-btns">
-          <button class="water-btn" onclick="ThanziApp.addWater(250)">+250ml</button>
-          <button class="water-btn" onclick="ThanziApp.addWater(500)">+500ml</button>
-          <button class="water-btn" onclick="ThanziApp.addWater(750)">+750ml</button>
-        </div>
+
       </div>
     </div>
 

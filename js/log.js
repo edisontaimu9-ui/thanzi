@@ -782,6 +782,9 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     if (typeof ThanziApp !== 'undefined' && ThanziApp.updateNutrition) {
       ThanziApp.updateNutrition(totals);
     }
+    if (typeof ThanziApp !== 'undefined' && ThanziApp.updateHomeMeals) {
+      ThanziApp.updateHomeMeals(logs);
+    }
   }
 
   function _flashError(msg) {
