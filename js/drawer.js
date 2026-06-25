@@ -1,7 +1,7 @@
 /**
  * drawer.js — Thanzi Side Drawer
  * Wired: dashboard
- * Stubs: ai, meals, custom-foods, meal-templates, exercise, weight, goals, settings
+ * Stubs: ai, meals, custom-foods, meal-templates, exercise, weight, goals
  */
 const ThanziDrawer = (() => {
   'use strict';
@@ -83,7 +83,12 @@ const ThanziDrawer = (() => {
       if (typeof ThanziGoals !== 'undefined') ThanziGoals.refresh();
     },
     profile:        () => document.getElementById('nav-profile').click(),
-    settings:       () => console.log('TODO: Settings'),
+    settings: () => {
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('settings-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziSettings !== 'undefined') ThanziSettings.refresh();
+    },
   };
 
   // ── Init ─────────────────────────────────────────────────────────────────

@@ -1,0 +1,238 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   settings.css — Thanzi Settings Panel
+   Uses the same CSS var tokens as the rest of Thanzi (style.css)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#settings-panel {
+  padding: 20px 16px 96px;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.st-header { margin-bottom: 20px; }
+
+.st-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
+}
+
+.st-subtitle {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+.st-section {
+  margin-bottom: 20px;
+}
+
+.st-section-label {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+/* ── Row ─────────────────────────────────────────────────────────────────── */
+.st-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.st-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.st-row-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.st-row-info { flex: 1; min-width: 0; }
+
+.st-row-name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-row-desc {
+  font-size: .75rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── Toggle switch ───────────────────────────────────────────────────────── */
+.st-toggle {
+  position: relative;
+  width: 44px;
+  height: 25px;
+  flex-shrink: 0;
+}
+
+.st-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.st-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.st-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 19px;
+  height: 19px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+
+.st-toggle input:checked + .st-toggle-track {
+  background: var(--accent);
+}
+
+.st-toggle input:checked + .st-toggle-track::after {
+  transform: translateX(19px);
+}
+
+/* ── Select / inline control ─────────────────────────────────────────────── */
+.st-select {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  font-size: .85rem;
+  padding: 6px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  min-width: 90px;
+  text-align: right;
+}
+
+.st-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Number input ────────────────────────────────────────────────────────── */
+.st-number-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.st-num-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background .15s;
+}
+
+.st-num-btn:active { background: var(--accent); }
+
+.st-num-val {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text-1);
+  min-width: 54px;
+  text-align: center;
+}
+
+/* ── Danger zone ─────────────────────────────────────────────────────────── */
+.st-danger-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #c0392b;
+  color: #e74c3c;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background .15s;
+}
+
+.st-danger-btn:active { background: rgba(231,76,60,.12); }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.st-toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 20px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+  z-index: 999;
+  white-space: nowrap;
+}
+
+.st-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── App version footer ──────────────────────────────────────────────────── */
+.st-version {
+  text-align: center;
+  font-size: .72rem;
+  color: var(--text-5);
+  margin-top: 28px;
+  padding-bottom: 8px;
+}
