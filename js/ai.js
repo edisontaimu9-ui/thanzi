@@ -19,7 +19,7 @@ const ThanziAI = (() => {
   let _inited      = false;
 
   // ── Proxy config ───────────────────────────────────────────────────────────
-  const PROXY_URL = 'https://thanzi-proxy.onrender.com/groq';
+  const PROXY_URL = 'https://6a3e628f001662863512.fra.appwrite.run/groq';
   const AI_MODEL  = 'llama-3.3-70b-versatile';
 
   const QUICK_ACTIONS = [

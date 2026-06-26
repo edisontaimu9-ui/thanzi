@@ -420,7 +420,7 @@ Respond with ONLY a valid JSON array, no markdown formatting, no commentary — 
 Items:
 ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
-    const res = await fetch('https://thanzi-proxy.onrender.com/groq', {
+    const res = await fetch('https://6a3e628f001662863512.fra.appwrite.run/groq', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
