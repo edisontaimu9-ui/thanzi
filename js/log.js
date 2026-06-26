@@ -408,12 +408,10 @@ const ThanziLog = (() => {
   /** One-shot call to the AI backend for items the local DB couldn't resolve.
    *  Asks for calories/macros for each item AS WRITTEN (exact stated
    *  quantity) — not per 100g — so results can be used directly. */
+  /** One-shot call to the AI backend for items the local DB couldn't resolve.
+   *  Asks for calories/macros for each item AS WRITTEN (exact stated
+   *  quantity) — not per 100g — so results can be used directly. */
   async function _estimateViaAI(rawItems) {
-    const functionId = THANZI_CONFIG.functions && THANZI_CONFIG.functions.aiAssistant;
-    if (!functionId) {
-      throw new Error('AI function not configured. Set THANZI_CONFIG.functions.aiAssistant in config.js');
-    }
-
     const prompt = `You are a nutrition estimation engine for a Malawian food-tracking app.
 For each numbered food item below (written by a user, with its stated quantity), estimate the calories, carbohydrates (g), protein (g), and fat (g) for that EXACT stated quantity — do not normalise to 100g. Prefer foods and dishes common in Malawi and Southern Africa when a term is ambiguous (e.g. "porridge" → maize porridge, "greens" → leafy vegetables like mustard or pumpkin leaves).
 Respond with ONLY a valid JSON array, no markdown formatting, no commentary — in this exact shape and order:
@@ -422,33 +420,28 @@ Respond with ONLY a valid JSON array, no markdown formatting, no commentary — 
 Items:
 ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
-    const res = await fetch(
-      `${THANZI_CONFIG.endpoint}/functions/${functionId}/executions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-Project': THANZI_CONFIG.projectId,
-        },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
-        credentials: 'include',
-      }
-    );
+    const res = await fetch('https://thanzi-proxy.onrender.com/groq', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:       'llama-3.3-70b-versatile',
+        messages:    [{ role: 'user', content: prompt }],
+        temperature: 0.2,
+        max_tokens:  512,
+      }),
+    });
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`AI function error (${res.status}): ${err}`);
+      throw new Error(`Proxy error (${res.status}): ${err}`);
     }
 
-    const execution = await res.json();
+    const data      = await res.json();
+    const replyText = data.choices && data.choices[0] && data.choices[0].message
+      ? data.choices[0].message.content
+      : null;
 
-    let replyText;
-    try {
-      const parsed = JSON.parse(execution.responseBody);
-      replyText = parsed.reply || parsed.content || parsed.text || execution.responseBody;
-    } catch {
-      replyText = execution.responseBody;
-    }
+    if (!replyText) throw new Error('Empty response from AI');
 
     const cleaned = String(replyText).replace(/```json|```/g, '').trim();
     const arr = JSON.parse(cleaned);
