@@ -1,8 +1,8 @@
 /**
  * ai.js — Thanzi AI Nutrition Assistant
  *
- * Calls an Appwrite Function (THANZI_CONFIG.functions.aiAssistant) that
- * proxies to OpenRouter / Groq / OpenAI / Anthropic on the server side.
+ * Calls the Render proxy (thanzi-proxy.onrender.com/groq) which
+ * proxies to Groq on the server side, keeping API keys off the client.
  *
  * Public API:
  *   ThanziAI.init(user, getAppState)   — call from app.js after dashboard init
@@ -17,6 +17,10 @@ const ThanziAI = (() => {
   let _history     = [];     // [{ role: 'user'|'assistant', content: string }]
   let _busy        = false;
   let _inited      = false;
+
+  // ── Proxy config ───────────────────────────────────────────────────────────
+  const PROXY_URL = 'https://thanzi-proxy.onrender.com/groq';
+  const AI_MODEL  = 'llama-3.3-70b-versatile';
 
   const QUICK_ACTIONS = [
     { icon: '🍽️', label: 'Meal Ideas',     prompt: 'Suggest 3 meal ideas that fit my remaining macros for today.' },
@@ -152,50 +156,38 @@ INSTRUCTIONS:
     if (qs) qs.style.display = 'none';
   }
 
-  // ── Appwrite Function call ─────────────────────────────────────────────────
+  // ── Render proxy call ──────────────────────────────────────────────────────
 
   async function _callAI(userMessage) {
     // Add to history
     _history.push({ role: 'user', content: userMessage });
 
-    const payload = {
-      messages: _history,
-      context:  _buildContext(),
-    };
+    // Build messages: system context + full conversation history
+    const messages = [
+      { role: 'system', content: _buildContext() },
+      ..._history,
+    ];
 
-    const functionId = THANZI_CONFIG.functions && THANZI_CONFIG.functions.aiAssistant;
-    if (!functionId) {
-      throw new Error('AI function not configured. Set THANZI_CONFIG.functions.aiAssistant in config.js');
-    }
-
-    const res = await fetch(
-      `${THANZI_CONFIG.endpoint}/functions/${functionId}/executions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-Project': THANZI_CONFIG.projectId,
-        },
-        body: JSON.stringify(payload),
-        credentials: 'include',   // sends session cookie
-      }
-    );
+    const res = await fetch(PROXY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:       AI_MODEL,
+        messages:    messages,
+        temperature: 0.7,
+        max_tokens:  1024,
+      }),
+    });
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`Function error (${res.status}): ${err}`);
+      throw new Error(`Proxy error (${res.status}): ${err}`);
     }
 
-    const execution = await res.json();
-
-    // Appwrite wraps the function's return value in responseBody
-    let reply;
-    try {
-      const parsed = JSON.parse(execution.responseBody);
-      reply = parsed.reply || parsed.content || parsed.text || JSON.stringify(parsed);
-    } catch {
-      reply = execution.responseBody;
-    }
+    const data  = await res.json();
+    const reply = data.choices && data.choices[0] && data.choices[0].message
+      ? data.choices[0].message.content
+      : null;
 
     if (!reply) throw new Error('Empty response from AI');
 
