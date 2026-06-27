@@ -2,8 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Thanzi — Know what you eat</title>
+
+  <!-- ── PWA ──────────────────────────────────────────────────────────────── -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Thanzi">
+  <meta name="description" content="Smart nutrition tracker built for Malawi and southern Africa">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96.png">
 
   <!-- Set theme before first paint to avoid a flash of the wrong theme -->
   <script>
@@ -1349,5 +1363,16 @@
   <script src="js/weight.js"></script>
   <script src="js/custom-foods.js"></script>
   <script src="settings.js"></script>
+
+  <!-- ── Service Worker registration ──────────────────────────────────────── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[Thanzi] SW registered, scope:', reg.scope))
+          .catch(err => console.warn('[Thanzi] SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
