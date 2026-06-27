@@ -271,15 +271,15 @@ Ingredients: ${text}`;
 
       if (_s.editId) {
         await _db.updateDocument(
-          THANZI_CONFIG.databaseId,
-          THANZI_CONFIG.collections.recipes,
+          THANZI_CONFIG?.databaseId || 'thanzi-db',
+          THANZI_CONFIG?.collections?.recipes || 'recipes',
           _s.editId,
           doc
         );
       } else {
         await _db.createDocument(
-          THANZI_CONFIG.databaseId,
-          THANZI_CONFIG.collections.recipes,
+          THANZI_CONFIG?.databaseId || 'thanzi-db',
+          THANZI_CONFIG?.collections?.recipes || 'recipes',
           Appwrite.ID.unique(),
           doc
         );
@@ -301,8 +301,8 @@ Ingredients: ${text}`;
     if (!confirm('Delete this recipe?')) return;
     try {
       await _db.deleteDocument(
-        THANZI_CONFIG.databaseId,
-        THANZI_CONFIG.collections.recipes,
+        THANZI_CONFIG?.databaseId || 'thanzi-db',
+        THANZI_CONFIG?.collections?.recipes || 'recipes',
         id
       );
       await _loadRecipes();
@@ -334,8 +334,8 @@ Ingredients: ${text}`;
       };
 
       await _db.createDocument(
-        THANZI_CONFIG.databaseId,
-        THANZI_CONFIG.collections.foodLogs,
+        THANZI_CONFIG?.databaseId || 'thanzi-db',
+        THANZI_CONFIG?.collections?.foodLogs || 'food_logs',
         Appwrite.ID.unique(),
         doc
       );
@@ -356,8 +356,8 @@ Ingredients: ${text}`;
 
     try {
       const res = await _db.listDocuments(
-        THANZI_CONFIG.databaseId,
-        THANZI_CONFIG.collections.recipes,
+        THANZI_CONFIG?.databaseId || 'thanzi-db',
+        THANZI_CONFIG?.collections?.recipes || 'recipes',
         [
           Appwrite.Query.equal('userId', _s.user.$id),
           Appwrite.Query.orderDesc('$createdAt'),
