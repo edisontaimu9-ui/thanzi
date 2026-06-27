@@ -9,44 +9,47 @@
  *   - Chart.js CDN                     → Cache First (versioned URL, safe to cache)
  */
 
-const CACHE_NAME    = 'thanzi-v1';
-const DYNAMIC_CACHE = 'thanzi-dynamic-v1';
+const CACHE_NAME    = 'thanzi-v2';
+const DYNAMIC_CACHE = 'thanzi-dynamic-v2';
 
 // ── App shell — cached on install ────────────────────────────────────────────
 const APP_SHELL = [
-  '/',
-  '/index.html',
+  '/thanzi/',
+  '/thanzi/index.html',
 
   // CSS
-  '/css/style.css',
-  '/css/log.css',
-  '/css/progress.css',
-  '/css/drawer.css',
-  '/css/custom-foods.css',
-  '/css/meal-templates.css',
-  '/css/exercise.css',
-  '/css/weight.css',
-  '/css/goals.css',
-  '/css/ai.css',
-  '/settings.css',
+  '/thanzi/css/style.css',
+  '/thanzi/css/log.css',
+  '/thanzi/css/progress.css',
+  '/thanzi/css/drawer.css',
+  '/thanzi/css/custom-foods.css',
+  '/thanzi/css/meal-templates.css',
+  '/thanzi/css/exercise.css',
+  '/thanzi/css/weight.css',
+  '/thanzi/css/goals.css',
+  '/thanzi/css/ai.css',
+  '/thanzi/settings.css',
 
   // JS
-  '/js/progress.js',
-  '/js/drawer.js',
-  '/js/ai.js',
-  '/js/app.js',
-  '/js/meal-templates.js',
-  '/js/exercise.js',
-  '/js/weight.js',
-  '/js/custom-foods.js',
-  '/settings.js',
+  '/thanzi/js/progress.js',
+  '/thanzi/js/drawer.js',
+  '/thanzi/js/ai.js',
+  '/thanzi/js/app.js',
+  '/thanzi/js/meal-templates.js',
+  '/thanzi/js/exercise.js',
+  '/thanzi/js/weight.js',
+  '/thanzi/js/custom-foods.js',
+  '/thanzi/settings.js',
 
   // Icons
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/thanzi/icons/web-app-manifest-192x192.png',
+  '/thanzi/icons/web-app-manifest-512x512.png',
+  '/thanzi/icons/apple-touch-icon.png',
+  '/thanzi/icons/favicon-96x96.png',
+  '/thanzi/icons/favicon.ico',
 
   // Manifest
-  '/manifest.json',
+  '/thanzi/manifest.json',
 
   // Chart.js (versioned CDN — safe to cache forever)
   'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js',
@@ -165,7 +168,7 @@ async function _networkFirst(request) {
 function _offlineFallback(request) {
   // For navigation requests, return the cached index.html
   if (request.mode === 'navigate') {
-    return caches.match('/index.html');
+    return caches.match('/thanzi/index.html');
   }
   // For API requests, return a JSON offline error
   if (request.headers.get('accept')?.includes('application/json')) {
