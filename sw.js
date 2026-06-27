@@ -3,8 +3,8 @@
  * Vanilla JS — no build tools required
  */
 
-const CACHE      = 'thanzi-v3';
-const DYN_CACHE  = 'thanzi-dyn-v3';
+const CACHE      = 'thanzi-v4';
+const DYN_CACHE  = 'thanzi-dyn-v4';
 const SCOPE      = '/thanzi/';
 
 const APP_SHELL = [
