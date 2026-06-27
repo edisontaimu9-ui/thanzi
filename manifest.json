@@ -3,11 +3,13 @@
   "short_name": "Thanzi",
   "description": "Smart nutrition tracker built for Malawi and southern Africa",
   "start_url": "/thanzi/",
+  "scope": "/thanzi/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f1117",
   "theme_color": "#0f1117",
   "lang": "en",
+  "dir": "ltr",
   "categories": ["health", "fitness"],
   "icons": [
     {
@@ -39,14 +41,12 @@
     {
       "name": "Log Food",
       "short_name": "Log",
-      "description": "Quickly log what you ate",
       "url": "/thanzi/?panel=log",
       "icons": [{ "src": "/thanzi/icons/web-app-manifest-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Ask Thandizo",
       "short_name": "AI",
-      "description": "Chat with your nutrition assistant",
       "url": "/thanzi/?panel=ai",
       "icons": [{ "src": "/thanzi/icons/web-app-manifest-192x192.png", "sizes": "192x192" }]
     }

@@ -1,23 +1,16 @@
 /**
- * sw.js — Thanzi Service Worker
- *
- * Strategy:
- *   - App shell (HTML, CSS, JS, icons) → Cache First
- *   - Appwrite API calls                → Network Only  (auth/data must be live)
- *   - Groq / AI proxy calls            → Network Only  (AI must be live)
- *   - USDA FDC / Open Food Facts       → Network First, fallback to cache
- *   - Chart.js CDN                     → Cache First (versioned URL, safe to cache)
+ * sw.js — Thanzi Service Worker v3
+ * Vanilla JS — no build tools required
  */
 
-const CACHE_NAME    = 'thanzi-v2';
-const DYNAMIC_CACHE = 'thanzi-dynamic-v2';
+const CACHE      = 'thanzi-v3';
+const DYN_CACHE  = 'thanzi-dyn-v3';
+const SCOPE      = '/thanzi/';
 
-// ── App shell — cached on install ────────────────────────────────────────────
 const APP_SHELL = [
   '/thanzi/',
   '/thanzi/index.html',
-
-  // CSS
+  '/thanzi/manifest.json',
   '/thanzi/css/style.css',
   '/thanzi/css/log.css',
   '/thanzi/css/progress.css',
@@ -29,180 +22,96 @@ const APP_SHELL = [
   '/thanzi/css/goals.css',
   '/thanzi/css/ai.css',
   '/thanzi/settings.css',
-
-  // JS
+  '/thanzi/js/app.js',
+  '/thanzi/js/ai.js',
   '/thanzi/js/progress.js',
   '/thanzi/js/drawer.js',
-  '/thanzi/js/ai.js',
-  '/thanzi/js/app.js',
   '/thanzi/js/meal-templates.js',
   '/thanzi/js/exercise.js',
   '/thanzi/js/weight.js',
   '/thanzi/js/custom-foods.js',
   '/thanzi/settings.js',
-
-  // Icons
   '/thanzi/icons/web-app-manifest-192x192.png',
   '/thanzi/icons/web-app-manifest-512x512.png',
   '/thanzi/icons/apple-touch-icon.png',
   '/thanzi/icons/favicon-96x96.png',
-  '/thanzi/icons/favicon.ico',
-
-  // Manifest
-  '/thanzi/manifest.json',
-
-  // Chart.js (versioned CDN — safe to cache forever)
   'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js',
 ];
 
-// ── Hosts that must NEVER be served from cache ────────────────────────────────
-const NETWORK_ONLY_HOSTS = [
-  'appwrite.io',                          // Appwrite auth + database
-  'fra.appwrite.run',                     // Appwrite Functions
-  'workers.dev',                          // Thanzi AI proxy (Cloudflare)
-  'api.groq.com',                         // Groq (direct, fallback)
+// Never cache these — must always be live
+const NETWORK_ONLY = [
+  'appwrite.io',
+  'fra.appwrite.run',
+  'workers.dev',
+  'api.groq.com',
   'api.openai.com',
   'api.anthropic.com',
+  'api.nal.usda.gov',
+  'openfoodfacts.org',
 ];
 
-// ── Install — pre-cache app shell ────────────────────────────────────────────
-self.addEventListener('install', (event) => {
+// ── Install ───────────────────────────────────────────────────────────────────
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching app shell');
-      // Use individual adds so one failure doesn't block the whole shell
-      return Promise.allSettled(
-        APP_SHELL.map(url =>
-          cache.add(url).catch(err =>
-            console.warn('[SW] Failed to cache:', url, err.message)
-          )
-        )
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE).then(cache =>
+      Promise.allSettled(APP_SHELL.map(url =>
+        cache.add(url).catch(e => console.warn('[SW] skip:', url, e.message))
+      ))
+    ).then(() => self.skipWaiting())
   );
 });
 
-// ── Activate — clean up old caches ───────────────────────────────────────────
-self.addEventListener('activate', (event) => {
+// ── Activate ─────────────────────────────────────────────────────────────────
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME && k !== DYNAMIC_CACHE)
-          .map(k => {
-            console.log('[SW] Deleting old cache:', k);
-            return caches.delete(k);
-          })
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE && k !== DYN_CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// ── Fetch — routing logic ─────────────────────────────────────────────────────
-self.addEventListener('fetch', (event) => {
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+self.addEventListener('fetch', event => {
   const { request } = event;
+  if (request.method !== 'GET') return;
+  if (!request.url.startsWith('http')) return;
+
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
-
-  // Skip chrome-extension and other non-http requests
-  if (!url.protocol.startsWith('http')) return;
-
-  // 1. Network Only — live APIs
-  if (NETWORK_ONLY_HOSTS.some(h => url.hostname.includes(h))) {
+  // Network only for live APIs
+  if (NETWORK_ONLY.some(h => url.hostname.includes(h))) {
     event.respondWith(fetch(request));
     return;
   }
 
-  // 2. Cache First — app shell assets
-  if (_isAppShell(url)) {
-    event.respondWith(_cacheFirst(request));
-    return;
-  }
-
-  // 3. Network First with dynamic cache — external food APIs (FDC, OFF)
-  if (_isFoodAPI(url)) {
-    event.respondWith(_networkFirst(request));
-    return;
-  }
-
-  // 4. Default — Cache First for everything else (same origin)
-  if (url.origin === self.location.origin) {
-    event.respondWith(_cacheFirst(request));
-    return;
-  }
-});
-
-// ── Strategies ────────────────────────────────────────────────────────────────
-
-async function _cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return _offlineFallback(request);
-  }
-}
-
-async function _networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    return cached || _offlineFallback(request);
-  }
-}
-
-function _offlineFallback(request) {
-  // For navigation requests, return the cached index.html
-  if (request.mode === 'navigate') {
-    return caches.match('/thanzi/index.html');
-  }
-  // For API requests, return a JSON offline error
-  if (request.headers.get('accept')?.includes('application/json')) {
-    return new Response(
-      JSON.stringify({ error: 'You are offline. Please check your connection.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-  return new Response('Offline', { status: 503 });
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function _isAppShell(url) {
-  const sameOrigin = url.origin === self.location.origin;
-  const isCDN      = url.hostname === 'cdn.jsdelivr.net';
-  return sameOrigin || isCDN;
-}
-
-function _isFoodAPI(url) {
-  return (
-    url.hostname.includes('api.nal.usda.gov') ||     // USDA FDC
-    url.hostname.includes('openfoodfacts.org')        // Open Food Facts
+  // Cache first for app shell
+  event.respondWith(
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(response => {
+        if (response.ok) {
+          caches.open(DYN_CACHE).then(c => c.put(request, response.clone()));
+        }
+        return response;
+      }).catch(() => {
+        if (request.mode === 'navigate') {
+          return caches.match('/thanzi/index.html');
+        }
+      });
+    })
   );
-}
-
-// ── Background sync (future: queue failed log saves) ─────────────────────────
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-food-logs') {
-    event.waitUntil(_syncFoodLogs());
-  }
 });
 
-async function _syncFoodLogs() {
-  // Placeholder — implement queue from IndexedDB when offline logging is added
-  console.log('[SW] Background sync: food logs');
-}
+// ── Push notifications ────────────────────────────────────────────────────────
+self.addEventListener('push', event => {
+  const data = event.data ? event.data.json() : { title: 'Thanzi', body: 'New update!' };
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Thanzi', {
+      body: data.body || '',
+      icon: '/thanzi/icons/web-app-manifest-192x192.png',
+      badge: '/thanzi/icons/favicon-96x96.png',
+    })
+  );
+});
