@@ -19,8 +19,9 @@ const ThanziAI = (() => {
   let _inited      = false;
 
   // ── Proxy config ───────────────────────────────────────────────────────────
-  const PROXY_URL = 'https://6a3e628f001662863512.fra.appwrite.run/groq';
-  const AI_MODEL  = 'llama-3.3-70b-versatile';
+  const PROXY_URL   = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
+  const THANZI_KEY  = 'thanzi_app001';
+  const AI_MODEL    = 'llama-3.3-70b-versatile';
 
   const QUICK_ACTIONS = [
     { icon: '🍽️', label: 'Meal Ideas',     prompt: 'Suggest 3 meal ideas that fit my remaining macros for today.' },
@@ -170,7 +171,10 @@ INSTRUCTIONS:
 
     const res = await fetch(PROXY_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Thanzi-Key': THANZI_KEY,
+      },
       body: JSON.stringify({
         model:       AI_MODEL,
         messages:    messages,
