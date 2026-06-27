@@ -402,7 +402,7 @@ const ThanziLog = (() => {
   function _isGoodLocalMatch(hit) {
     if (!hit) return false;
     return hit.matchTier === 'exact' || hit.matchTier === 'alias' ||
-      (hit.matchTier === 'token' && hit.confidenceScore >= 0.55);
+      (hit.matchTier === 'token' && hit.confidenceScore >= 0.35);
   }
 
   /** One-shot call to the AI backend for items the local DB couldn't resolve.
@@ -412,42 +412,57 @@ const ThanziLog = (() => {
    *  Asks for calories/macros for each item AS WRITTEN (exact stated
    *  quantity) — not per 100g — so results can be used directly. */
   async function _estimateViaAI(rawItems) {
-    const prompt = `You are a nutrition estimation engine for a Malawian food-tracking app.
-For each numbered food item below (written by a user, with its stated quantity), estimate the calories, carbohydrates (g), protein (g), and fat (g) for that EXACT stated quantity — do not normalise to 100g. Prefer foods and dishes common in Malawi and Southern Africa when a term is ambiguous (e.g. "porridge" → maize porridge, "greens" → leafy vegetables like mustard or pumpkin leaves).
-Respond with ONLY a valid JSON array, no markdown formatting, no commentary — in this exact shape and order:
+    const prompt = `For each numbered food item below, estimate the calories, carbohydrates (g), protein (g), and fat (g) for that EXACT stated quantity. Prefer foods common in Malawi and Southern Africa (e.g. "porridge" means maize porridge, "greens" means leafy vegetables).
+Respond with ONLY a valid JSON array, no markdown, no commentary:
 [{"name":"short food name","calories":123,"carbs":12.3,"protein":5.0,"fat":3.0}]
 
 Items:
 ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
-    const res = await fetch('https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions', {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Thanzi-Key': 'thanzi_app001',
-      },
-      body: JSON.stringify({
-        model:       'llama-3.3-70b-versatile',
-        messages:    [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-        max_tokens:  512,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Proxy error (${res.status}): ${err}`);
+    let res;
+    try {
+      res = await fetch('https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions', {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Thanzi-Key': 'thanzi_app001',
+        },
+        body: JSON.stringify({
+          model:       'llama-3.3-70b-versatile',
+          messages:    [
+            { role: 'system', content: 'You are a nutrition estimation engine. Always respond with only a valid JSON array. No markdown, no explanation.' },
+            { role: 'user',   content: prompt },
+          ],
+          temperature: 0.1,
+          max_tokens:  512,
+        }),
+      });
+    } catch (netErr) {
+      throw new Error('Network error: ' + netErr.message);
     }
 
-    const data      = await res.json();
-    const replyText = data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => String(res.status));
+      throw new Error('Proxy error (' + res.status + '): ' + errText);
+    }
 
-    if (!replyText) throw new Error('Empty response from AI');
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error('Invalid JSON from proxy'); }
+
+    const replyText = data?.choices?.[0]?.message?.content ?? null;
+    if (!replyText) throw new Error('Empty AI response');
 
     const cleaned = String(replyText).replace(/```json|```/g, '').trim();
-    const arr = JSON.parse(cleaned);
+    let arr;
+    try {
+      arr = JSON.parse(cleaned);
+    } catch {
+      const m = cleaned.match(/\[[\s\S]*\]/);
+      if (m) arr = JSON.parse(m[0]);
+      else throw new Error('Could not parse AI response as JSON');
+    }
+
     if (!Array.isArray(arr)) throw new Error('Unexpected AI response shape');
     return arr;
   }
