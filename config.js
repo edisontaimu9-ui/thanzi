@@ -1,6 +1,6 @@
 const THANZI_CONFIG = {
-  endpoint: 'https://fra.cloud.appwrite.io/v1',
-  projectId: 'thanzi-app',
+  endpoint:   'https://fra.cloud.appwrite.io/v1',
+  projectId:  'fra-thanzi-app',
   databaseId: 'thanzi-db',
   collections: {
     profiles:      'profiles',
