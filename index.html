@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="css/exercise.css">
   <link rel="stylesheet" href="css/weight.css">
   <link rel="stylesheet" href="css/goals.css">
+  <link rel="stylesheet" href="css/recipe.css">
   <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="settings.css">
 </head>
@@ -1037,6 +1038,79 @@
     <div id="settings-panel" class="dash-panel" style="display:none"></div>
     <!-- /settings-panel -->
 
+    <!-- ── Recipe Builder Panel ──────────────────────────────────────────── -->
+    <div id="recipe-builder-panel" class="dash-panel" style="display:none">
+      <div class="rb-wrap">
+        <div class="rb-header">
+          <div>
+            <h2 class="rb-title">Recipe Builder</h2>
+            <p class="rb-subtitle">Build, save and log your own recipes</p>
+          </div>
+          <button class="rb-new-btn" id="rb-new-btn">+ New Recipe</button>
+        </div>
+        <div id="rb-list" class="rb-list">
+          <div class="rb-empty" id="rb-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <line x1="9" y1="12" x2="15" y2="12"/>
+              <line x1="9" y1="16" x2="13" y2="16"/>
+            </svg>
+            <p>No recipes yet. Create your first one!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /recipe-builder-panel -->
+
+    <!-- ── Recipe Editor Modal ───────────────────────────────────────────── -->
+    <div id="rb-modal-overlay" class="rb-modal-overlay" style="display:none">
+      <div class="rb-modal">
+        <div class="rb-modal-header">
+          <h3 id="rb-modal-title">New Recipe</h3>
+          <button class="rb-modal-close" id="rb-modal-close">✕</button>
+        </div>
+        <div class="rb-field-group">
+          <input class="rb-input" id="rb-recipe-name" type="text" placeholder="Recipe name (e.g. Nsima with Beans)" maxlength="80">
+          <div class="rb-row">
+            <input class="rb-input rb-input--sm" id="rb-servings" type="number" min="1" max="20" value="1">
+            <label class="rb-label-inline">servings</label>
+          </div>
+        </div>
+        <div class="rb-section-title">Ingredients</div>
+        <div class="rb-ai-row">
+          <textarea id="rb-ai-input" class="rb-ai-textarea" rows="2"
+            placeholder="Describe ingredients — e.g. '2 cups nsima flour, 1 cup beans, 1 tbsp oil'"></textarea>
+          <button class="rb-ai-btn" id="rb-ai-parse-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
+            </svg>
+            AI Parse
+          </button>
+        </div>
+        <p class="rb-ai-hint">Or search and add one by one below</p>
+        <div class="rb-search-wrap">
+          <input class="rb-input" id="rb-ing-search" type="search" placeholder="Search food to add…" autocomplete="off">
+          <div id="rb-ing-results" class="rb-ing-results" style="display:none"></div>
+        </div>
+        <div id="rb-ingredients" class="rb-ingredients"></div>
+        <div class="rb-nutrition-summary" id="rb-nutrition-summary" style="display:none">
+          <div class="rb-nut-title">Nutrition per serving</div>
+          <div class="rb-nut-row">
+            <div class="rb-nut-item"><span id="rb-nut-kcal">0</span><small>kcal</small></div>
+            <div class="rb-nut-item rb-nut-carbs"><span id="rb-nut-carbs">0g</span><small>Carbs</small></div>
+            <div class="rb-nut-item rb-nut-protein"><span id="rb-nut-protein">0g</span><small>Protein</small></div>
+            <div class="rb-nut-item rb-nut-fat"><span id="rb-nut-fat">0g</span><small>Fat</small></div>
+          </div>
+        </div>
+        <div class="rb-modal-actions">
+          <button class="rb-btn-secondary" id="rb-cancel-btn">Cancel</button>
+          <button class="rb-btn-primary" id="rb-save-btn">Save Recipe</button>
+        </div>
+      </div>
+    </div>
+    <!-- /recipe editor modal -->
+
     <!-- Settings Toast -->
     <div class="st-toast" id="st-toast" aria-live="polite"></div>
 
@@ -1169,6 +1243,14 @@
           <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
         </svg>
         Meal Templates
+      </button>
+
+      <button class="drawer-nav-item" data-nav="recipe-builder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <path d="M8 12h8M12 8v8"/>
+        </svg>
+        Recipe Builder
       </button>
 
       <button class="drawer-nav-item" data-nav="exercise">
@@ -1367,6 +1449,7 @@
   </div>
 
   <script src="js/meal-templates.js"></script>
+  <script src="js/recipe.js"></script>
   <script src="js/exercise.js"></script>
   <script src="js/weight.js"></script>
   <script src="js/custom-foods.js"></script>

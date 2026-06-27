@@ -64,6 +64,12 @@ const ThanziDrawer = (() => {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       if (typeof ThanziMealTemplates !== 'undefined') ThanziMealTemplates.refresh();
     },
+    'recipe-builder': () => {
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('recipe-builder-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziRecipe !== 'undefined') ThanziRecipe.refresh();
+    },
     exercise: () => {
       document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
       document.getElementById('exercise-panel').style.display = 'block';
