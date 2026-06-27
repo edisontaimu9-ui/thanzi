@@ -93,7 +93,7 @@ INSTRUCTIONS:
 
     const icon = document.createElement('div');
     icon.className = 'ai-msg-icon';
-    icon.textContent = role === 'user' ? '👤' : '🌿';
+    icon.innerHTML = role === 'user' ? '👤' : '<img src="/thanzi/icons/web-app-manifest-192x192.png" class="ai-msg-logo" alt="Thandizo">';
 
     const body = document.createElement('div');
     body.className = 'ai-msg-body';
@@ -125,7 +125,7 @@ INSTRUCTIONS:
 
     const icon = document.createElement('div');
     icon.className = 'ai-msg-icon';
-    icon.textContent = '🌿';
+    icon.innerHTML = '<img src="/thanzi/icons/web-app-manifest-192x192.png" class="ai-msg-logo" alt="Thandizo">';
 
     const body = document.createElement('div');
     body.className = 'ai-msg-body';

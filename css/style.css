@@ -140,6 +140,14 @@ button#login-btn, button#register-btn { width: 100%; padding: 14px; background: 
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
 }
+
+.dash-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 button#logout-btn, .profile-logout-btn {
   width: 100%;
   margin-top: 24px;
