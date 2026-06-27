@@ -6,7 +6,7 @@
   <title>Thanzi — Know what you eat</title>
 
   <!-- ── PWA ──────────────────────────────────────────────────────────────── -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/thanzi/manifest.json">
   <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="mobile-web-app-capable" content="yes">
@@ -1368,7 +1368,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register("/thanzi/sw.js")
           .then(reg => console.log('[Thanzi] SW registered, scope:', reg.scope))
           .catch(err => console.warn('[Thanzi] SW registration failed:', err));
       });
