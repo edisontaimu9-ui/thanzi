@@ -486,6 +486,35 @@ Ingredients: ${text}`;
     await _loadRecipes();
   }
 
+  /**
+   * Called by Thandizo AI when user asks for a recipe.
+   * Pre-fills the modal with AI-generated recipe data.
+   */
+  function openWithData(data) {
+    if (!data) return;
+    _s.editId      = null;
+    _s.ingredients = (data.ingredients || []).map(ing => ({
+      name:     ing.name     || 'Ingredient',
+      qty:      ing.qty      || 100,
+      unit:     ing.unit     || 'g',
+      calories: ing.calories || 0,
+      carbs:    ing.carbs    || 0,
+      protein:  ing.protein  || 0,
+      fat:      ing.fat      || 0,
+    }));
+
+    _el('rb-modal-title').textContent = 'New Recipe';
+    _el('rb-recipe-name').value       = data.name     || '';
+    _el('rb-servings').value          = data.servings || 1;
+    _el('rb-ai-input').value          = '';
+    _el('rb-ing-search').value        = '';
+    _el('rb-ing-results').style.display = 'none';
+
+    _renderIngredients();
+    _el('rb-modal-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
   // Auto-init on DOMContentLoaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -493,5 +522,5 @@ Ingredients: ${text}`;
     init();
   }
 
-  return { init, refresh };
+  return { init, refresh, openWithData };
 })();

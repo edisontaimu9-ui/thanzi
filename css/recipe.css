@@ -442,3 +442,25 @@
 .rb-btn-primary:hover,
 .rb-btn-secondary:hover { opacity: .85; }
 .rb-btn-primary:disabled { opacity: .6; cursor: wait; }
+
+/* ── AI Recipe Save Button (shown in Thandizo chat) ─────────────────────── */
+.ai-recipe-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 4px 48px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--accent), #16a34a);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  width: fit-content;
+}
+.ai-recipe-save-btn:hover {
+  opacity: .9;
+  transform: translateY(-1px);
+}

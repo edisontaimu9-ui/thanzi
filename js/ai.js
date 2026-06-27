@@ -157,6 +157,81 @@ INSTRUCTIONS:
     if (qs) qs.style.display = 'none';
   }
 
+  // ── Recipe request detection ───────────────────────────────────────────────
+  const _RECIPE_TRIGGERS = [
+    /recipe\s+for/i, /help\s+me\s+make/i, /how\s+to\s+(make|cook|prepare)/i,
+    /show\s+me\s+how\s+to\s+(make|cook|prepare)/i, /ingredients\s+for/i,
+    /make\s+me\s+a\s+recipe/i, /give\s+me\s+a\s+recipe/i,
+    /cook\s+.*\s+for\s+me/i,
+  ];
+
+  function _isRecipeRequest(text) {
+    return _RECIPE_TRIGGERS.some(r => r.test(text));
+  }
+
+  async function _fetchRecipeStructured(userMessage) {
+    const prompt = `The user asked: "${userMessage}"
+
+Extract a structured recipe from this request. Respond ONLY with valid JSON, no markdown:
+{
+  "name": "Recipe name",
+  "servings": 2,
+  "ingredients": [
+    {"name": "ingredient", "qty": 100, "unit": "g", "calories": 120, "carbs": 25, "protein": 3, "fat": 1}
+  ]
+}
+
+Use Malawian/Southern African food portions where relevant. Be realistic with quantities.`;
+
+    const res = await fetch(PROXY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Thanzi-Key': THANZI_KEY },
+      body: JSON.stringify({
+        model:       AI_MODEL,
+        messages:    [
+          { role: 'system', content: 'You are a nutrition assistant. Respond only with valid JSON. No markdown.' },
+          { role: 'user',   content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens:  600,
+      }),
+    });
+
+    const data  = await res.json();
+    const reply = data?.choices?.[0]?.message?.content ?? '';
+    const clean = reply.replace(/```json|```/g, '').trim();
+
+    try {
+      return JSON.parse(clean);
+    } catch {
+      const m = clean.match(/\{[\s\S]*\}/);
+      return m ? JSON.parse(m[0]) : null;
+    }
+  }
+
+  function _appendSaveRecipeBtn(recipeData) {
+    const el = _messagesEl();
+    if (!el) return;
+
+    const btn = document.createElement('button');
+    btn.className   = 'ai-recipe-save-btn';
+    btn.textContent = '🍳 Save to Recipe Builder →';
+    btn.addEventListener('click', () => {
+      if (typeof ThanziRecipe !== 'undefined' && ThanziRecipe.openWithData) {
+        ThanziRecipe.openWithData(recipeData);
+        // Navigate to recipe builder panel
+        document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+        const rbPanel = document.getElementById('recipe-builder-panel');
+        if (rbPanel) rbPanel.style.display = 'block';
+      } else {
+        alert('Recipe Builder not available yet.');
+      }
+    });
+
+    el.appendChild(btn);
+    _scrollToBottom();
+  }
+
   // ── Render proxy call ──────────────────────────────────────────────────────
 
   async function _callAI(userMessage) {
@@ -223,6 +298,16 @@ INSTRUCTIONS:
       const reply = await _callAI(text);
       _removeTyping();
       _appendMessage('assistant', reply);
+
+      // If recipe request → fetch structured data and show Save button
+      if (_isRecipeRequest(text)) {
+        try {
+          const recipeData = await _fetchRecipeStructured(text);
+          if (recipeData && recipeData.name && recipeData.ingredients?.length) {
+            _appendSaveRecipeBtn(recipeData);
+          }
+        } catch { /* silently skip if structured fetch fails */ }
+      }
     } catch (err) {
       _removeTyping();
       _appendMessage('assistant', `Sorry, I couldn't reach the AI right now. Please try again.\n\n(${err.message})`, true);
