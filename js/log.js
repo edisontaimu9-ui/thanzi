@@ -420,9 +420,12 @@ Respond with ONLY a valid JSON array, no markdown formatting, no commentary — 
 Items:
 ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
-    const res = await fetch('https://6a3e628f001662863512.fra.appwrite.run/groq', {
+    const res = await fetch('https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Thanzi-Key': 'thanzi_app001',
+      },
       body: JSON.stringify({
         model:       'llama-3.3-70b-versatile',
         messages:    [{ role: 'user', content: prompt }],
