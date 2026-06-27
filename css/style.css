@@ -132,13 +132,13 @@ button#login-btn, button#register-btn { width: 100%; padding: 14px; background: 
 .error { color: var(--danger); margin-top: 12px; font-size: 0.9rem; }
 
 /* DASHBOARD */
-.dash-header {
+/* ── Dashboard top bar ───────────────────────────────────────────────────── */
+.dash-topbar {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  position: relative;
 }
 
 .dash-logo {
@@ -147,16 +147,27 @@ button#login-btn, button#register-btn { width: 100%; padding: 14px; background: 
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
-  z-index: 1;
 }
 
-#greeting {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1rem;
-  font-weight: 600;
-  white-space: nowrap;
+/* ── Dashboard hero ──────────────────────────────────────────────────────── */
+.dash-hero {
+  padding: 18px 20px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-hero #greeting {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.dash-hero-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
 }
 button#logout-btn, .profile-logout-btn {
   width: 100%;
