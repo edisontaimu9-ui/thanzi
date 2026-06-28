@@ -91,6 +91,154 @@
     fdc:    'GLO1YbLvrZomZCBqe8FgQtXlaujpRB20acobHSFQ',
   });
 
+  // ── MALAWINUTRIENT API ────────────────────────────────────────────────────
+  // Layer 0 — highest-priority source. Searched first in searchFood() and
+  // searchBarcode(). Falls through silently on any network error so all
+  // existing local / FDC / OFF layers still work offline.
+  //
+  // Base URL lives in one place so it is trivial to update.
+  const _MW_API = 'https://malawunutrient-api.edisontaimu9.workers.dev';
+
+  /**
+   * Map a Malawinutrient API food object → Thanzi unified food shape.
+   * API fields: id, food_name, category, measure, weight_g,
+   *             kcal, kj, protein_g, carbs_g, fat_g
+   */
+  function _mwToUnified(item) {
+    const kcal = item.kcal ?? null;
+    return {
+      id:              'mw_' + item.id,
+      name:            item.food_name,
+      cat:             item.category   || 'Malawi',
+      measure:         item.measure    || null,
+      weight_g:        item.weight_g   || 100,
+      kcal:            kcal,
+      kj:              item.kj         ?? (kcal != null ? +(kcal * 4.184).toFixed(0) : null),
+      pro:             item.protein_g  ?? null,
+      cho:             item.carbs_g    ?? null,
+      fat:             item.fat_g      ?? null,
+      fiber:           item.fiber_g    ?? null,
+      sodium:          item.sodium_mg  != null
+                         ? +(item.sodium_mg / 1000).toFixed(3) : null,
+      measures:        item.measure
+                         ? [{ lbl: item.measure, weight: item.weight_g,
+                              kcal: item.kcal, kj: item.kj,
+                              pro:  item.protein_g, cho: item.carbs_g,
+                              fat:  item.fat_g }]
+                         : null,
+      sourceUsed:      'MalawiNutrient',
+      dbSource:        'Malawinutrient API',
+      confidenceScore: 0.98,
+      lastUpdated:     null,
+    };
+  }
+
+  /** Shared AbortSignal helper — keeps fetch calls from hanging forever */
+  function _mwSignal(ms = 6000) {
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+      return AbortSignal.timeout(ms);
+    }
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+  }
+
+  /**
+   * Layer 0 — text search against the Malawinutrient API /foods endpoint.
+   * Returns [] on any error so lower layers kick in automatically.
+   */
+  async function _searchMW(query, limit = 10) {
+    try {
+      const url = _MW_API + '/foods?search='
+        + encodeURIComponent(query.trim()) + '&limit=' + limit;
+      const res = await fetch(url, {
+        signal:  _mwSignal(),
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return [];
+      const json = await res.json();
+      if (json.status !== 'success' || !Array.isArray(json.data)) return [];
+      return json.data.map(_mwToUnified);
+    } catch (_e) { return []; }
+  }
+
+  /**
+   * Layer 0b — fetch a single food by id from Malawinutrient API.
+   * Used internally when an id is already known (e.g. from a previous search).
+   */
+  async function _fetchMWById(id) {
+    try {
+      const res = await fetch(_MW_API + '/foods/' + id, {
+        signal:  _mwSignal(),
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.status !== 'success' || !json.data) return null;
+      return _mwToUnified(json.data);
+    } catch (_e) { return null; }
+  }
+
+  /**
+   * Layer 0c — browse Malawinutrient API by food category.
+   * Useful for category screens (Staples, Vegetables, Legumes, etc.).
+   */
+  async function browseMWCategory(category, limit = 20) {
+    try {
+      const url = _MW_API + '/foods?category='
+        + encodeURIComponent(category) + '&limit=' + limit;
+      const res = await fetch(url, {
+        signal:  _mwSignal(),
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return [];
+      const json = await res.json();
+      if (json.status !== 'success' || !Array.isArray(json.data)) return [];
+      return json.data.map(_mwToUnified);
+    } catch (_e) { return []; }
+  }
+
+  /**
+   * Layer 0d — barcode lookup against Malawinutrient /packaged endpoint.
+   * Returns null when not found or on any network error.
+   */
+  async function _searchMWBarcode(barcode) {
+    try {
+      const url = _MW_API + '/packaged?barcode=' + encodeURIComponent(barcode.trim());
+      const res = await fetch(url, {
+        signal:  _mwSignal(),
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.status !== 'success' || !json.data) return null;
+      const d = json.data;
+      const kcal = d.kcal ?? null;
+      return {
+        id:              'mwp_' + (d.id || barcode),
+        name:            d.product_name || d.food_name || barcode,
+        brand:           d.brand        || null,
+        cat:             d.category     || 'Packaged',
+        barcode,
+        barcodeSource:   'MalawiNutrient',
+        barcodeMatch:    'exact',
+        kcal,
+        kj:              d.kj ?? (kcal != null ? +(kcal * 4.184).toFixed(0) : null),
+        pro:             d.protein_g    ?? null,
+        cho:             d.carbs_g      ?? null,
+        fat:             d.fat_g        ?? null,
+        fiber:           d.fiber_g      ?? null,
+        sodium:          d.sodium_mg != null ? +(d.sodium_mg / 1000).toFixed(3) : null,
+        measures:        null,
+        sourceUsed:      'MalawiNutrient',
+        dbSource:        'Malawinutrient Packaged DB',
+        confidenceScore: 0.97,
+        lastUpdated:     null,
+      };
+    } catch (_e) { return null; }
+  }
+
+
   // ── REGIONAL SYNONYM MAP ──────────────────────────────────────────────────
   // Maps alternative / regional names → canonical local DB search term(s).
   // Keys are lower-cased; values are the terms to search against MALAWI_FCT.
@@ -961,6 +1109,33 @@
     if (_cache.has(cacheKey)) return _cache.get(cacheKey);
 
     const terms   = _expandQuery(query);
+
+    // ── Layer 0 — Malawinutrient API (highest priority, online) ───────────
+    const mwResults = await _searchMW(query, multi ? limit : 3);
+    if (mwResults.length) {
+      if (multi) {
+        // Merge with local for multi-result mode
+        const locals   = _searchLocal(terms, limit);
+        const regional = _searchRegional(terms, limit);
+        const combined = [...mwResults, ...locals, ...regional];
+        // Deduplicate by normalised name
+        const seen = new Set();
+        const deduped = combined.filter(r => {
+          const key = _norm(r.name);
+          if (seen.has(key)) return false;
+          seen.add(key); return true;
+        });
+        deduped.sort((a, b) => b.confidenceScore - a.confidenceScore);
+        const result = deduped.slice(0, limit);
+        _cache.set(cacheKey, result);
+        return result;
+      }
+      // Single-result mode — MW API hit is authoritative
+      const best = mwResults[0];
+      _cache.set(cacheKey, best);
+      return best;
+    }
+
     const locals  = _searchLocal(terms);
 
     // ── Multi-result mode (for autocomplete / global search UI) ────────────
@@ -1123,6 +1298,10 @@
   async function searchBarcode(barcode) {
     if (!barcode) return null;
 
+    // ── Layer MW: Malawinutrient packaged barcode (online, highest priority) ─
+    const mwBcResult = await _searchMWBarcode(barcode);
+    if (mwBcResult) return mwBcResult;
+
     // ── Layer A: local registry (offline, instant) ────────────────────────
     const localResult = _searchLocalBarcode(barcode);
     if (localResult) return localResult;
@@ -1136,11 +1315,14 @@
     search:             searchFood,
     searchLocal:        searchLocal,
     searchEnteral:      _searchEnteral,    // Layer 1b — local Formula/Enteral DB search (per 100 mL)
-    searchBarcode:      searchBarcode,      // barcode scan entry-point (offline-first)
+    searchBarcode:      searchBarcode,      // barcode scan entry-point (MW → local → OFF)
+    browseCategory:     browseMWCategory,  // Layer 0c — browse MW API by category
     clearCache:         clearCache,
     _synonymMap:        SYNONYM_MAP,        // exposed for debugging only
     _localBarcodeDB:    _LOCAL_BARCODE_DB,  // exposed for dev inspection
     _brandPrefixDB:     _BRAND_PREFIX_DB,   // exposed for dev inspection
+    _mwSearch:          _searchMW,          // direct MW API text search (Layer 0)
+    _mwById:            _fetchMWById,       // direct MW API fetch by id (Layer 0b)
     _fdcSearch:         _searchFDC,         // public FDC-only search for explicit import UI
     _offSearch:         _searchOFF,         // public OFF text-search (name-based, Layer 3)
     _fetchOFFBarcode:   _fetchOFFBarcode,   // public OFF barcode fetch (Layer B) — for scanner UI
