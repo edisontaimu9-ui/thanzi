@@ -91,24 +91,24 @@
     fdc:    'GLO1YbLvrZomZCBqe8FgQtXlaujpRB20acobHSFQ',
   });
 
-  // ── MALAWINUTRIENT API ────────────────────────────────────────────────────
+  // ── CHAKUDYA API ──────────────────────────────────────────────────────────
   // Layer 0 — highest-priority source. Searched first in searchFood() and
   // searchBarcode(). Falls through silently on any network error so all
   // existing local / FDC / OFF layers still work offline.
   //
   // Base URL lives in one place so it is trivial to update.
-  const _MW_API = 'https://malawunutrient-api.edisontaimu9.workers.dev';
+  const _MW_API = 'https://chakudya-api.edisontaimu9.workers.dev';
 
   /**
-   * Map a Malawinutrient API food object → Thanzi unified food shape.
+   * Map a Chakudya API food object → Thanzi unified food shape.
    * API fields: id, food_name, category, measure, weight_g,
    *             kcal, kj, protein_g, carbs_g, fat_g
    */
   function _mwToUnified(item) {
-    const kcal = item.kcal ?? null;
+    const kcal = item.energy_kcal ?? item.kcal ?? null;
     return {
       id:              'mw_' + item.id,
-      name:            item.food_name,
+      name:            item.name || item.food_name,
       cat:             item.category   || 'Malawi',
       measure:         item.measure    || null,
       weight_g:        item.weight_g   || 100,
@@ -122,12 +122,12 @@
                          ? +(item.sodium_mg / 1000).toFixed(3) : null,
       measures:        item.measure
                          ? [{ lbl: item.measure, weight: item.weight_g,
-                              kcal: item.kcal, kj: item.kj,
+                              kcal: kcal, kj: item.kj,
                               pro:  item.protein_g, cho: item.carbs_g,
                               fat:  item.fat_g }]
                          : null,
-      sourceUsed:      'MalawiNutrient',
-      dbSource:        'Malawinutrient API',
+      sourceUsed:      'Chakudya',
+      dbSource:        'Chakudya API',
       confidenceScore: 0.98,
       lastUpdated:     null,
     };
@@ -144,7 +144,7 @@
   }
 
   /**
-   * Layer 0 — text search against the Malawinutrient API /foods endpoint.
+   * Layer 0 — text search against the Chakudya API /foods endpoint.
    * Returns [] on any error so lower layers kick in automatically.
    */
   async function _searchMW(query, limit = 10) {
@@ -163,7 +163,7 @@
   }
 
   /**
-   * Layer 0b — fetch a single food by id from Malawinutrient API.
+   * Layer 0b — fetch a single food by id from Chakudya API.
    * Used internally when an id is already known (e.g. from a previous search).
    */
   async function _fetchMWById(id) {
@@ -180,7 +180,7 @@
   }
 
   /**
-   * Layer 0c — browse Malawinutrient API by food category.
+   * Layer 0c — browse Chakudya API by food category.
    * Useful for category screens (Staples, Vegetables, Legumes, etc.).
    */
   async function browseMWCategory(category, limit = 20) {
@@ -199,7 +199,7 @@
   }
 
   /**
-   * Layer 0d — barcode lookup against Malawinutrient /packaged endpoint.
+   * Layer 0d — barcode lookup against Chakudya /packaged endpoint.
    * Returns null when not found or on any network error.
    */
   async function _searchMWBarcode(barcode) {
@@ -220,7 +220,7 @@
         brand:           d.brand        || null,
         cat:             d.category     || 'Packaged',
         barcode,
-        barcodeSource:   'MalawiNutrient',
+        barcodeSource:   'Chakudya',
         barcodeMatch:    'exact',
         kcal,
         kj:              d.kj ?? (kcal != null ? +(kcal * 4.184).toFixed(0) : null),
@@ -230,8 +230,8 @@
         fiber:           d.fiber_g      ?? null,
         sodium:          d.sodium_mg != null ? +(d.sodium_mg / 1000).toFixed(3) : null,
         measures:        null,
-        sourceUsed:      'MalawiNutrient',
-        dbSource:        'Malawinutrient Packaged DB',
+        sourceUsed:      'Chakudya',
+        dbSource:        'Chakudya Packaged DB',
         confidenceScore: 0.97,
         lastUpdated:     null,
       };
@@ -1111,7 +1111,7 @@
 
     const terms   = _expandQuery(query);
 
-    // ── Layer 0 — Malawinutrient API (highest priority, online) ───────────
+    // ── Layer 0 — Chakudya API (highest priority, online) ───────────
     const mwResults = await _searchMW(query, multi ? limit : 3);
     if (mwResults.length) {
       if (multi) {
@@ -1299,7 +1299,7 @@
   async function searchBarcode(barcode) {
     if (!barcode) return null;
 
-    // ── Layer MW: Malawinutrient packaged barcode (online, highest priority) ─
+    // ── Layer MW: Chakudya packaged barcode (online, highest priority) ─
     const mwBcResult = await _searchMWBarcode(barcode);
     if (mwBcResult) return mwBcResult;
 
@@ -1322,8 +1322,8 @@
     _synonymMap:        SYNONYM_MAP,        // exposed for debugging only
     _localBarcodeDB:    _LOCAL_BARCODE_DB,  // exposed for dev inspection
     _brandPrefixDB:     _BRAND_PREFIX_DB,   // exposed for dev inspection
-    _mwSearch:          _searchMW,          // direct MW API text search (Layer 0)
-    _mwById:            _fetchMWById,       // direct MW API fetch by id (Layer 0b)
+    _mwSearch:          _searchMW,          // direct Chakudya API text search (Layer 0)
+    _mwById:            _fetchMWById,       // direct Chakudya API fetch by id (Layer 0b)
     _fdcSearch:         _searchFDC,         // public FDC-only search for explicit import UI
     _offSearch:         _searchOFF,         // public OFF text-search (name-based, Layer 3)
     _fetchOFFBarcode:   _fetchOFFBarcode,   // public OFF barcode fetch (Layer B) — for scanner UI
