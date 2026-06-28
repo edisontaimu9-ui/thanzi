@@ -303,33 +303,45 @@ const ThanziLog = (() => {
     }
     clearTimeout(_state.searchTimer);
     _state.searchTimer = setTimeout(() => {
-      // Merge custom foods (shown first, labelled "Mine") + local DB
+      // Show custom foods instantly while API search runs
       const customResults = (typeof ThanziCustomFoods !== 'undefined')
         ? ThanziCustomFoods.search(q).map(f => ({ ...f, sourceUsed: 'custom' }))
         : [];
-      const localResults = ThanziFood.searchLocal(q, 10);
-      const merged = [...customResults, ...localResults];
-      _renderSearchResults(merged, false);
-      if (localResults.length < 3) _searchFullAsync(q);
-    }, 220);
+      if (customResults.length) _renderSearchResults(customResults, false);
+      // Always hit the Malawinutrient API (async, replaces local-only search)
+      _searchFullAsync(q);
+    }, 280);
   }
 
   async function _searchFullAsync(q) {
     if (_state.searching) return;
     _state.searching = true;
     const container = _el('food-search-results');
-    const hint = document.createElement('div');
-    hint.className = 'sr-loading';
-    hint.id = 'sr-loading-hint';
-    hint.textContent = '⏳ Searching online…';
-    container.appendChild(hint);
+
+    // Show loading indicator
+    let hint = document.getElementById('sr-loading-hint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.className = 'sr-loading';
+      hint.id = 'sr-loading-hint';
+      hint.textContent = '⏳ Searching…';
+      container.appendChild(hint);
+    }
     container.style.display = 'block';
+
     try {
-      const result  = await ThanziFood.search(q, false, false, 10);
-      const results = Array.isArray(result) ? result : (result ? [result] : []);
-      _renderSearchResults(results, true);
-    } catch {
-      _el('sr-loading-hint')?.remove();
+      // multi:true returns an array of up to 10 results
+      const results = await ThanziFood.search(q, { multi: true });
+      const arr = Array.isArray(results) ? results : (results ? [results] : []);
+
+      // Merge with custom foods (custom always first)
+      const customResults = (typeof ThanziCustomFoods !== 'undefined')
+        ? ThanziCustomFoods.search(q).map(f => ({ ...f, sourceUsed: 'custom' }))
+        : [];
+      const merged = [...customResults, ...arr];
+      _renderSearchResults(merged, true);
+    } catch (_e) {
+      document.getElementById('sr-loading-hint')?.remove();
     } finally {
       _state.searching = false;
     }
