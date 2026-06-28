@@ -463,18 +463,19 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     const resolved = [];
     const needsAI  = [];
 
-    clauses.forEach((clause) => {
+    for (const clause of clauses) {
       const { qty, unit, name } = _parseClause(clause);
-      if (!name) return;
+      if (!name) continue;
 
-      const hits = ThanziFood.searchLocal(name, 3);
+      const raw = await ThanziFood.search(name, { multi: true, limit: 3 });
+      const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
       const top  = hits[0];
 
       if (_isGoodLocalMatch(top)) {
         const grams  = _estimateGrams(qty, unit, top._raw || top);
         const scaled = _scale(top, grams);
         resolved.push({
-          raw: clause, name: top.name, source: 'local',
+          raw: clause, name: top.name, source: 'Chakudya',
           quantity: Math.round(grams * 10) / 10,
           calories: scaled.calories, carbs: scaled.carbs,
           protein: scaled.protein, fat: scaled.fat,
@@ -483,7 +484,7 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
         const grams = _estimateGrams(qty, unit, null);
         needsAI.push({ raw: clause, name, quantity: Math.round(grams * 10) / 10 });
       }
-    });
+    }
 
     if (needsAI.length) {
       try {

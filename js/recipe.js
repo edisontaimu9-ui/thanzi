@@ -13,7 +13,7 @@
  *  - Full backward-compatible openWithData() API (used by Thandizo AI).
  *
  * Unchanged from v1:
- *  - Manual ingredient search via ThanziFood.searchLocal()
+ *  - Manual ingredient search via ThanziFood.search()
  *  - Appwrite persistence (load / save / edit / delete / log)
  *  - ThanziLog.refresh() hook
  *
@@ -104,11 +104,12 @@ const ThanziRecipe = (() => {
    * If found, scale its per-100g macros to `qty` and `unit`.
    * Returns a nutrition object if matched, else null.
    */
-  function _matchToDatabase(name, qty, unit) {
+  async function _matchToDatabase(name, qty, unit) {
     if (typeof ThanziFood === 'undefined') return null;
 
-    const results = ThanziFood.searchLocal(name, 3);
-    if (!results || !results.length) return null;
+    const raw = await ThanziFood.search(name, { multi: true, limit: 3 });
+    const results = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    if (!results.length) return null;
 
     const food = results[0]; // best match
 
@@ -269,9 +270,9 @@ Rules:
         throw new Error('Invalid recipe structure from AI');
       }
 
-      // Match each ingredient to Malawi Food Composition Table (MFCT) and override nutrition if matched
-      recipe.ingredients = recipe.ingredients.map(ing => {
-        const dbMatch = _matchToDatabase(ing.name, ing.qty, ing.unit);
+      // Match each ingredient to Chakudya API and override nutrition if matched
+      recipe.ingredients = await Promise.all(recipe.ingredients.map(async ing => {
+        const dbMatch = await _matchToDatabase(ing.name, ing.qty, ing.unit);
         if (dbMatch) {
           return {
             ...ing,
@@ -353,8 +354,8 @@ Ingredients: ${text}`;
       const arr = await _callAI(systemPrompt, userPrompt, 900);
       if (!Array.isArray(arr) || !arr.length) throw new Error('No ingredients parsed');
 
-      arr.forEach(ing => {
-        const dbMatch = _matchToDatabase(ing.name, ing.qty, ing.unit);
+      for (const ing of arr) {
+        const dbMatch = await _matchToDatabase(ing.name, ing.qty, ing.unit);
         _s.ingredients.push({
           name:      ing.name     || 'Ingredient',
           qty:       ing.qty      || 100,
@@ -369,7 +370,7 @@ Ingredients: ${text}`;
           dbName:    dbMatch ? dbMatch.dbName   : null,
           dbMatched: !!dbMatch,
         });
-      });
+      }
 
       _el('rb-ai-input').value = '';
       _renderIngredients();
@@ -520,14 +521,20 @@ Ingredients: ${text}`;
     _el('rb-ing-results').style.display = 'none';
   }
 
-  function _runSearch(query) {
+  async function _runSearch(query) {
     const results = _el('rb-ing-results');
     if (!query || query.length < 2) { results.style.display = 'none'; return; }
 
-    let hits = typeof ThanziFood !== 'undefined' ? ThanziFood.searchLocal(query, 8) : [];
+    results.innerHTML = '<div class="rb-ing-result-item rb-ing-no-result">Searching…</div>';
+    results.style.display = 'block';
+
+    const raw  = typeof ThanziFood !== 'undefined'
+      ? await ThanziFood.search(query, { multi: true, limit: 8 })
+      : [];
+    const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
 
     if (!hits.length) {
-      results.innerHTML = '<div class="rb-ing-result-item rb-ing-no-result">No local results</div>';
+      results.innerHTML = '<div class="rb-ing-result-item rb-ing-no-result">No results found</div>';
       results.style.display = 'block';
       return;
     }
