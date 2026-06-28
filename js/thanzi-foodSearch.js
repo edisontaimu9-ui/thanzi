@@ -1103,7 +1103,8 @@
    * @returns {Promise<object|object[]|null>}
    */
   async function searchFood(query, opts = {}) {
-    const { enrich = false, multi = false } = opts;
+    const { enrich = false, multi = false, limit: _limit = 10 } = opts;
+    const limit    = _limit;
     const cacheKey = _norm(query) + (enrich ? '|e' : '') + (multi ? '|m' : '');
 
     if (_cache.has(cacheKey)) return _cache.get(cacheKey);
