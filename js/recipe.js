@@ -4,7 +4,7 @@
  * NEW in v2:
  *  - "Describe a meal" flow: Claude generates full recipe (name, servings,
  *    prep time, cook time, steps, ingredients with Malawian portions) then
- *    each ingredient is auto-matched to the Thandizo food database.
+ *    each ingredient is auto-matched to the Malawi Food Composition Table (MFCT).
  *  - Extended nutrition panel: fibre, sodium, sugar per serving in addition
  *    to kcal / carbs / protein / fat.
  *  - Preparation steps panel (editable).
@@ -96,7 +96,7 @@ const ThanziRecipe = (() => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // DATABASE MATCHING — map an AI ingredient name to Thandizo food DB
+  // DATABASE MATCHING — map an AI ingredient name to Malawi Food Composition Table
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
@@ -202,7 +202,7 @@ const ThanziRecipe = (() => {
    * Full recipe generation from a natural-language meal description.
    * Steps:
    *   1. AI generates complete recipe JSON
-   *   2. Each ingredient is matched against Thandizo DB
+   *   2. Each ingredient is matched against Malawi Food Composition Table (MFCT)
    *   3. DB values override AI nutrition estimates where matched
    *   4. Modal is populated with results
    */
@@ -269,7 +269,7 @@ Rules:
         throw new Error('Invalid recipe structure from AI');
       }
 
-      // Match each ingredient to Thandizo DB and override nutrition if matched
+      // Match each ingredient to Malawi Food Composition Table (MFCT) and override nutrition if matched
       recipe.ingredients = recipe.ingredients.map(ing => {
         const dbMatch = _matchToDatabase(ing.name, ing.qty, ing.unit);
         if (dbMatch) {
@@ -321,7 +321,7 @@ Rules:
           <span></span><span></span><span></span>
         </div>
         <p>Crafting "<strong>${input}</strong>" with Malawian ingredients…</p>
-        <small>Matching to Thandizo food database…</small>
+        <small>Matching to Malawi Food Composition Table…</small>
       </div>`;
     _el('rb-nutrition-summary').style.display = 'none';
     _el('rb-steps-section').style.display     = 'none';
@@ -400,7 +400,7 @@ Ingredients: ${text}`;
       <div class="rb-ing-row ${ing.dbMatched ? 'rb-ing-row--matched' : ''}" data-idx="${i}">
         <div class="rb-ing-info">
           <span class="rb-ing-name">${ing.name}</span>
-          ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Thandizo DB: ${ing.dbName || ''}">✓ DB</span>` : ''}
+          ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Malawi FCT: ${ing.dbName || ''}">✓ DB</span>` : ''}
           <span class="rb-ing-macros">
             ${Math.round(ing.calories)} kcal ·
             <span class="rb-c">${_fmt(ing.carbs)}g C</span> ·
@@ -649,34 +649,74 @@ Ingredients: ${text}`;
   // LOG RECIPE AS MEAL
   // ══════════════════════════════════════════════════════════════════════════
 
-  async function _logRecipe(recipe) {
+  /**
+   * Show the existing mt-log-picker bottom sheet so the user can choose a
+   * meal slot, then write a properly-shaped food_logs document.
+   */
+  function _logRecipe(recipe) {
     if (!_s.user) { _toast('Sign in to log meals.', 'error'); return; }
 
-    const meal = prompt('Which meal?\n(breakfast / lunch / dinner / snack)', 'lunch');
-    if (!meal) return;
+    const picker   = document.getElementById('mt-log-picker');
+    const backdrop = document.getElementById('mt-log-backdrop');
+    const cancelBtn = document.getElementById('mt-log-cancel');
 
+    if (!picker) {
+      // Fallback: no picker in DOM — default to lunch
+      _doLogRecipe(recipe, 'lunch');
+      return;
+    }
+
+    picker.style.display = 'flex';
+
+    // One-shot listeners — cleaned up after any selection or cancel
+    function cleanup() {
+      picker.style.display = 'none';
+      picker.querySelectorAll('.mt-log-meal-btn').forEach(b => {
+        b.removeEventListener('click', onMeal);
+      });
+      backdrop?.removeEventListener('click', onCancel);
+      cancelBtn?.removeEventListener('click', onCancel);
+    }
+
+    function onCancel() { cleanup(); }
+
+    function onMeal(e) {
+      const meal = e.currentTarget.dataset.meal;
+      cleanup();
+      _doLogRecipe(recipe, meal);
+    }
+
+    picker.querySelectorAll('.mt-log-meal-btn').forEach(b => {
+      b.addEventListener('click', onMeal);
+    });
+    backdrop?.addEventListener('click',  onCancel);
+    cancelBtn?.addEventListener('click', onCancel);
+  }
+
+  async function _doLogRecipe(recipe, meal) {
     try {
+      // Calories/macros on the recipe are already per-serving.
+      // Log quantity as 100g equivalent so the schema stays consistent.
       await _db.createDocument(
-        THANZI_CONFIG?.databaseId || 'thanzi-db',
+        THANZI_CONFIG?.databaseId    || 'thanzi-db',
         THANZI_CONFIG?.collections?.foodLogs || 'food_logs',
         Appwrite.ID.unique(),
         {
           userId:   _s.user.$id,
           date:     _today(),
-          meal:     meal.toLowerCase(),
-          name:     recipe.name,
-          calories: recipe.calories,
-          carbs:    recipe.carbs,
-          protein:  recipe.protein,
-          fat:      recipe.fat,
-          qty:      1,
-          unit:     'serving',
-          source:   'recipe',
+          mealType: meal,
+          foodName: recipe.name,
+          calories: Math.round(recipe.calories || 0),
+          carbs:    parseFloat((recipe.carbs   || 0).toFixed(1)),
+          protein:  parseFloat((recipe.protein || 0).toFixed(1)),
+          fat:      parseFloat((recipe.fat     || 0).toFixed(1)),
+          quantity: 100,
+          unit:     'g',
         }
       );
 
       if (typeof ThanziLog !== 'undefined') ThanziLog.refresh?.();
-      _toast(`"${recipe.name}" logged to ${meal}!`, 'success');
+      _toast(`"${recipe.name}" logged to ${meal}! ✓`, 'success');
 
     } catch (err) {
       _toast('Log failed: ' + err.message, 'error');
