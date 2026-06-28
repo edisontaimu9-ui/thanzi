@@ -913,6 +913,92 @@ Ingredients: ${text}`;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // LOG RECIPE FROM MODAL (replaces Save Recipe)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Called when the user taps "Log Food" inside the recipe editor modal.
+   * Shows the shared meal-type picker, then writes a food_logs document
+   * whose fields match the Appwrite schema used by ThanziLog:
+   *   userId, foodName, calories (int), carbs, protein, fat,
+   *   mealType, date, quantity (double, grams), unit ('g')
+   */
+  function _logFromModal() {
+    const name     = (_el('rb-recipe-name')?.value || '').trim();
+    const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
+
+    if (!name)                  { _toast('Enter a recipe name.', 'error'); return; }
+    if (!_s.ingredients.length) { _toast('Add at least one ingredient.', 'error'); return; }
+    if (!_s.user)               { _toast('Sign in to log food.', 'error'); return; }
+
+    const { per } = _recalc();
+
+    const picker    = document.getElementById('mt-log-picker');
+    const backdrop  = document.getElementById('mt-log-backdrop');
+    const cancelBtn = document.getElementById('mt-log-cancel');
+
+    if (!picker) {
+      _doLogFromModal(name, per, 'lunch');
+      return;
+    }
+
+    picker.style.display = 'flex';
+
+    function cleanup() {
+      picker.style.display = 'none';
+      picker.querySelectorAll('.mt-log-meal-btn').forEach(b => b.removeEventListener('click', onMeal));
+      backdrop?.removeEventListener('click', onCancel);
+      cancelBtn?.removeEventListener('click', onCancel);
+    }
+
+    function onCancel() { cleanup(); }
+
+    function onMeal(e) {
+      const meal = e.currentTarget.dataset.meal;
+      cleanup();
+      _doLogFromModal(name, per, meal);
+    }
+
+    picker.querySelectorAll('.mt-log-meal-btn').forEach(b => b.addEventListener('click', onMeal));
+    backdrop?.addEventListener('click', onCancel);
+    cancelBtn?.addEventListener('click', onCancel);
+  }
+
+  async function _doLogFromModal(name, per, meal) {
+    const btn = _el('rb-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Logging…'; }
+
+    try {
+      await _db.createDocument(
+        THANZI_CONFIG?.databaseId             || 'thanzi-db',
+        THANZI_CONFIG?.collections?.foodLogs  || 'food_logs',
+        Appwrite.ID.unique(),
+        {
+          userId:   _s.user.$id,
+          foodName: name,
+          calories: Math.round(per.calories),
+          carbs:    parseFloat((per.carbs   || 0).toFixed(1)),
+          protein:  parseFloat((per.protein || 0).toFixed(1)),
+          fat:      parseFloat((per.fat     || 0).toFixed(1)),
+          mealType: meal,
+          date:     _today(),
+          quantity: 100,   // one serving represented as 100 g equivalent
+          unit:     'g',
+        }
+      );
+
+      if (typeof ThanziLog !== 'undefined') ThanziLog.refresh?.();
+      _toast(`"${name}" logged to ${meal}! ✓`, 'success');
+      _closeModal();
+
+    } catch (err) {
+      _toast('Log failed: ' + err.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Log Food'; }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // INIT
   // ══════════════════════════════════════════════════════════════════════════
 
@@ -933,8 +1019,8 @@ Ingredients: ${text}`;
       if (e.target === _el('rb-modal-overlay')) _closeModal();
     });
 
-    // Save
-    _el('rb-save-btn')?.addEventListener('click', _saveRecipe);
+    // Log Food (replaces Save Recipe)
+    _el('rb-save-btn')?.addEventListener('click', _logFromModal);
 
     // Servings → recalc
     _el('rb-servings')?.addEventListener('input', _recalc);
