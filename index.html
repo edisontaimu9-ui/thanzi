@@ -1549,7 +1549,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register("/thanzi/sw.js")
+        navigator.serviceWorker.register("./sw.js")
           .then(reg => console.log('[Thanzi] SW registered, scope:', reg.scope))
           .catch(err => console.warn('[Thanzi] SW registration failed:', err));
       });
