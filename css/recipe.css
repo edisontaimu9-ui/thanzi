@@ -434,7 +434,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 0;
+  /* FIX: min-height:0 let flex shrink this below content height causing rows to
+     overflow (overflow:visible) and paint on top of the Nutrition + Steps cards.
+     flex-shrink:0 prevents that — the modal scrolls instead. */
+  flex-shrink: 0;
 }
 
 .rb-ing-row {
