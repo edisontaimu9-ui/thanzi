@@ -631,43 +631,43 @@
   function _searchRegional(terms, limit = 10) {
     if (typeof REGIONAL_FCT === 'undefined' || !REGIONAL_FCT.length) return [];
 
-    // Pre-normalise terms once
     const normTerms = terms.map(_norm).filter(Boolean);
-
     const hits = [];
+
     for (const food of REGIONAL_FCT) {
       let bestScore = 0;
       let bestTier  = null;
 
       for (const nt of normTerms) {
-        // Tier A: exact name match
-        if (nt === _norm(food.name)) {
-          bestScore = 1.00; bestTier = 'exact'; break;
-        }
-        // Tier B: altNames exact match
-        if (Array.isArray(food.altNames)) {
-          let aliasHit = false;
-          for (const alt of food.altNames) {
-            if (nt === _norm(alt)) {
-              if (bestTier === null || _TIER_ORDER['alias'] < _TIER_ORDER[bestTier]) {
-                bestScore = 0.90; bestTier = 'alias';
-              }
-              aliasHit = true;
-              break;
-            }
+        // Exact + alias tiers: reuse shared _scoreFood (avoids duplicate logic)
+        const result = _scoreFood(nt, food);
+        if (result && result.tier !== 'token') {
+          if (
+            bestTier === null ||
+            _TIER_ORDER[result.tier] < _TIER_ORDER[bestTier] ||
+            (result.tier === bestTier && result.score > bestScore)
+          ) {
+            bestScore = result.score;
+            bestTier  = result.tier;
           }
-          if (aliasHit) continue;
+          continue;
         }
-        // Tier C: fuzzy on name and altNames
+
+        // Token tier: score against name AND all altNames (lower threshold for
+        // regional data where spelling variants are common — 0.40 vs 0.45 local)
         const scores = [_fuzzyScore(nt, food.name)];
         if (Array.isArray(food.altNames)) {
           for (const alt of food.altNames) scores.push(_fuzzyScore(nt, alt));
         }
         const fuzzy = Math.max(...scores);
         if (fuzzy >= 0.40) {
-          if (bestTier === null || _TIER_ORDER['token'] < _TIER_ORDER[bestTier] ||
-              (bestTier === 'token' && fuzzy > bestScore)) {
-            bestScore = fuzzy; bestTier = 'token';
+          if (
+            bestTier === null ||
+            _TIER_ORDER['token'] < _TIER_ORDER[bestTier] ||
+            (bestTier === 'token' && fuzzy > bestScore)
+          ) {
+            bestScore = fuzzy;
+            bestTier  = 'token';
           }
         }
       }
@@ -675,21 +675,14 @@
       if (bestTier !== null) hits.push({ food, score: bestScore, tier: bestTier });
     }
 
-    hits.sort((a, b) =>
-      _TIER_ORDER[a.tier] - _TIER_ORDER[b.tier] || b.score - a.score
-    );
+    hits.sort((a, b) => _TIER_ORDER[a.tier] - _TIER_ORDER[b.tier] || b.score - a.score);
 
     return hits.slice(0, limit).map(r => {
       const f = r.food;
       return {
         ...f,
-        // Ensure per-100g macros are at the top level (already stored that way)
-        kcal:            f.kcal,
         kj:              f.kj ?? (f.kcal != null ? +(f.kcal * 4.184).toFixed(0) : null),
-        pro:             f.pro,
-        cho:             f.cho,
-        fat:             f.fat,
-        // Micronutrients — unique to regional entries
+        // Micronutrients unique to regional entries
         iron:            f.iron    ?? null,
         zinc:            f.zinc    ?? null,
         vitA:            f.vitA    ?? null,
@@ -698,7 +691,7 @@
         sodium:          f.sodium  ?? null,
         sourceUsed:      'regional',
         dbSource:        `Regional FCT — ${f.source}`,
-        matchTier:       r.tier,           // 'exact' | 'alias' | 'token'
+        matchTier:       r.tier,
         confidenceScore: +r.score.toFixed(2),
         lastUpdated:     null,
         _raw:            f,

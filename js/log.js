@@ -167,38 +167,9 @@ const ThanziLog = (() => {
   // ── Barcode lookup ────────────────────────────────────────────────────────
 
   /**
-   * Look up a barcode via Open Food Facts.
-   * Returns a food object in ThanziFood format, or null if not found.
-   */
-  async function _lookupBarcode(barcode) {
-    try {
-      const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-      const data = await res.json();
-
-      if (data.status !== 1 || !data.product) return null;
-
-      const p  = data.product;
-      const n  = p.nutriments || {};
-
-      return {
-        name:       p.product_name || p.product_name_en || p.abbreviated_product_name || `Product ${barcode}`,
-        kcal:       Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || 0),
-        cho:        Math.round((n.carbohydrates_100g || 0) * 10) / 10,
-        pro:        Math.round((n.proteins_100g      || 0) * 10) / 10,
-        fat:        Math.round((n.fat_100g           || 0) * 10) / 10,
-        sourceUsed: 'OFF',
-        measures:   [],  // packaged food — default measures will apply
-        barcode,
-      };
-    } catch (err) {
-      console.error('ThanziLog: barcode lookup failed', err.message);
-      return null;
-    }
-  }
-
-  /**
    * Called by ThanziScanner when a barcode is detected.
-   * Shows loading state, hits OFF API, renders result.
+   * Delegates to ThanziFood.searchBarcode() which runs the full pipeline:
+   *   Chakudya /packaged → local registry → Open Food Facts v2
    */
   async function _onBarcodeScanned(barcode) {
     const input     = _el('food-search-input');
@@ -211,17 +182,16 @@ const ThanziLog = (() => {
       </div>`;
     container.style.display = 'block';
 
-    // 1. Try ThanziFood.search first (covers OFF layer natively)
     let food = null;
     try {
-      const result = await ThanziFood.search(barcode, false, false, 1);
-      const results = Array.isArray(result) ? result : (result ? [result] : []);
-      if (results.length > 0) food = results[0];
-    } catch { /* fall through */ }
-
-    // 2. Direct OFF lookup if food search didn't find it
-    if (!food) {
-      food = await _lookupBarcode(barcode);
+      food = await ThanziFood.searchBarcode(barcode);
+    } catch (err) {
+      container.innerHTML = `
+        <div class="sr-empty">
+          Lookup failed: ${err.message || 'Network error'}.<br>
+          <small>Try searching by name instead.</small>
+        </div>`;
+      return;
     }
 
     if (!food) {
@@ -233,7 +203,6 @@ const ThanziLog = (() => {
       return;
     }
 
-    // Show as single search result
     _renderSearchResults([food], true);
     input.value = food.name;
   }
