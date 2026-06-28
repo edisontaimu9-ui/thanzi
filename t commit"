@@ -1,0 +1,203 @@
+[33mcommit ae2e33eff7b1f8ce9d64056c6ce5ba9aa1e6bf34[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 21:10:31 2026 +0200
+
+    Fix settings.css path and goals.js load order
+
+[33mcommit 5e48954fc1d7afa3216fbdd66397e68ae48ebff9[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 20:34:57 2026 +0200
+
+    Wire Health & Goals, Notifications, Progress, Achievements tabs
+
+[33mcommit 346d4a4cb16ba2fe65acfb2140fea6433b8cfc9c[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 13:31:02 2026 +0200
+
+    Enrich home dashboard
+
+[33mcommit 42462d2e1bf18a086d4fc201d232498466b9570c[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 13:21:47 2026 +0200
+
+    Redesign settings panel
+
+[33mcommit 2c3b5e610208905190ec93d288e32bd5c856dc9e[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 13:11:01 2026 +0200
+
+    Wire Settings panel
+
+[33mcommit dd913fc707671897301358471f6f4c1292b46c89[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 12:53:12 2026 +0200
+
+    Add Goals panel
+
+[33mcommit bb4a75db65425000867aa74070acf95b43dc3784[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 12:38:44 2026 +0200
+
+    Add Weight panel
+
+[33mcommit 3db1eb3e3bfc3c375cae60c3ae6c0627f409a007[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 12:30:22 2026 +0200
+
+    Add Exercise panel
+
+[33mcommit 12e60ef27885ba6269d047e618373ff55f8056a1[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 12:13:42 2026 +0200
+
+    Wire Meal Templates panel — create, edit, delete, log-to-meal
+
+[33mcommit 410d71edd825f7b9d5c800cbd05fcfe761e32ed5[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 11:58:30 2026 +0200
+
+    Wire Custom Foods panel — CRUD + food search integration
+
+[33mcommit ac8f27d17eed72b13e1ad2a0ab672c31a04378da[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 11:37:25 2026 +0200
+
+    Wire Custom Foods panel
+
+[33mcommit 94325fb112f346e2ce3a292fae54261002d6a0f3[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 11:02:53 2026 +0200
+
+    Remove Meals from drawer (covered by food log nav)
+
+[33mcommit 859d0e41a58905b4e71eb4c531865216a47c98a7[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 10:53:30 2026 +0200
+
+    Update all files
+
+[33mcommit fe468a94cdf0a6f70df0586d7faee808382084ad[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 10:38:27 2026 +0200
+
+    Editable per-gram basis + household measures on selected-food-card
+
+[33mcommit 0269500a6716bf9944b4d56ff8797fea2c760b32[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 10:22:51 2026 +0200
+
+    Add natural-language quick-add to Log tab
+
+[33mcommit 74308a2c0f828e59a1e54c365a730f89a05f30aa[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 09:59:44 2026 +0200
+
+    Wire AI assistant panel into dashboard
+
+[33mcommit d89e012eecf4a42f3344cf08ee0700e737f4f5a0[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 09:21:58 2026 +0200
+
+    Fix hamburger button visibility
+
+[33mcommit 4607b3be190deac652dd0898b3865d6aa93e5474[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 09:11:25 2026 +0200
+
+    Fix hamburger: fixed top-right, correct CSS vars
+
+[33mcommit 5b950c1302544aeec147b532da08c56667bba758[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 09:03:32 2026 +0200
+
+    Fix: wire hamburger menu + dashboard routing
+
+[33mcommit 53e3e963c90a0c08901c33c764ff7c977a644aee[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:57:22 2026 +0200
+
+    Add side drawer mock (hamburger menu)
+
+[33mcommit ddd644143f9dfd69988233bf886e14e55d30401f[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:52:53 2026 +0200
+
+    Progress: replace SVG charts with Chart.js 4.5.1
+
+[33mcommit d24f55ea9e1dfbfbc667094e86e442e5e79fb47d[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:33:07 2026 +0200
+
+    Move logout to Profile tab
+
+[33mcommit ad89345c5230cc8d31009e9b0adb63ba2e7a8886[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:27:15 2026 +0200
+
+    Move theme toggle into header — fix logout overlap
+
+[33mcommit 813bbc512687327a8b7b53501575e88c69f3c392[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:19:20 2026 +0200
+
+    Add Progress panel — weight tracker, 7-day calorie & water charts
+
+[33mcommit 15eadc73e6d2d560a909c226bf42fbf64950e507[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 08:01:58 2026 +0200
+
+    Add dark/light toggle and Profile tab (BMI/BMR/TDEE, avatar, personal details)
+
+[33mcommit 7d815f0a9dbe2abf4058d24742d7b8a4c5aee0ee[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 07:50:47 2026 +0200
+
+    Add dark/light theme toggle
+
+[33mcommit 3dc86cf1c9412c0e06b1250929be39e8a1069578[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 07:33:13 2026 +0200
+
+    Add barcode scanner — camera + gallery, OFF lookup
+
+[33mcommit 9f284f359f63a0d90c4e28a58ab1ebe019e8229a[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 01:49:45 2026 +0200
+
+    Add Log screen — food search, meal logging, Appwrite persistence
+
+[33mcommit 1cb2f132f81e1b6ac20f8347667f89c6c314d00b[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 00:54:00 2026 +0200
+
+    Add Thanzi food database and search engine
+
+[33mcommit 8aebe1564837e92da884d5aa4ca515e209f0b5ab[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 00:42:41 2026 +0200
+
+    Add profile setup screen + ThanziNutrition integration
+
+[33mcommit 6d6d2731b658ab25e2668cf216ea5213aa0fa7ca[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 00:35:15 2026 +0200
+
+    Add ThanziNutrition engine
+
+[33mcommit 9b1379736595ccc2aa6ff1b47a19d57211946c7b[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Thu Jun 25 00:14:34 2026 +0200
+
+    Fix auth method name
+
+[33mcommit 4a05ac9ae0d6806127496ea1443531716be5b356[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Wed Jun 24 23:58:14 2026 +0200
+
+    Initial Thanzi scaffold - auth, config, UI
+
+[33mcommit 504542d899d8704badf1351bb16c74e8e9592518[m
+Author: Edison Taimu <edisontaimu9@gmail.com>
+Date:   Wed Jun 24 14:00:47 2026 +0200
+
+    Initial commit

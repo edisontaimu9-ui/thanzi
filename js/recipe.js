@@ -1,12 +1,21 @@
 /**
- * recipe.js — Thanzi Recipe Builder
+ * recipe.js — Thanzi AI Recipe Builder  (v2.0)
  *
- * Features:
- *  - Create recipes with ingredients (manual search or AI natural language parsing)
- *  - Auto-calculate macros per serving
- *  - Save to Appwrite (recipes collection)
- *  - Log a recipe as a meal to today's food log
- *  - Edit & delete saved recipes
+ * NEW in v2:
+ *  - "Describe a meal" flow: Claude generates full recipe (name, servings,
+ *    prep time, cook time, steps, ingredients with Malawian portions) then
+ *    each ingredient is auto-matched to the Thandizo food database.
+ *  - Extended nutrition panel: fibre, sodium, sugar per serving in addition
+ *    to kcal / carbs / protein / fat.
+ *  - Preparation steps panel (editable).
+ *  - Share recipe as text.
+ *  - Save as Custom Meal for direct logging.
+ *  - Full backward-compatible openWithData() API (used by Thandizo AI).
+ *
+ * Unchanged from v1:
+ *  - Manual ingredient search via ThanziFood.searchLocal()
+ *  - Appwrite persistence (load / save / edit / delete / log)
+ *  - ThanziLog.refresh() hook
  *
  * Dependencies: Appwrite SDK (IIFE), THANZI_CONFIG, ThanziFood, ThanziLog
  */
@@ -17,56 +26,366 @@ const ThanziRecipe = (() => {
   const _client = new Appwrite.Client()
     .setEndpoint(THANZI_CONFIG.endpoint)
     .setProject(THANZI_CONFIG.projectId);
-  const _db     = new Appwrite.Databases(_client);
-  const _auth   = new Appwrite.Account(_client);
+  const _db   = new Appwrite.Databases(_client);
+  const _auth = new Appwrite.Account(_client);
+
+  // ── Proxy endpoint (Groq via Cloudflare Worker) ────────────────────────────
+  const PROXY_URL = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
+  const PROXY_KEY = 'thanzi_app001';
+  const AI_MODEL  = 'llama-3.3-70b-versatile';
 
   // ── State ──────────────────────────────────────────────────────────────────
   const _s = {
     user:        null,
-    recipes:     [],       // loaded from Appwrite
-    editId:      null,     // null = new recipe, else = recipe $id being edited
-    ingredients: [],       // [{ name, qty, unit, calories, carbs, protein, fat }]
+    recipes:     [],
+    editId:      null,
+    ingredients: [],     // [{ name, qty, unit, calories, carbs, protein, fat, fibre, sodium, sugar, dbMatched }]
+    steps:       [],     // string[]
     searchTimer: null,
+    generating:  false,
   };
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── DOM helpers ────────────────────────────────────────────────────────────
   const _el  = id => document.getElementById(id);
   const _fmt = n  => isNaN(n) ? '0' : Number(n).toFixed(1);
+  const _today = () => new Date().toISOString().slice(0, 10);
 
-  function _today() {
-    return new Date().toISOString().slice(0, 10);
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function _toast(msg, type = 'info') {
+    const el = _el('st-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.className   = `st-toast st-toast--${type} st-toast--show`;
+    clearTimeout(_s._toastTimer);
+    _s._toastTimer = setTimeout(() => el.classList.remove('st-toast--show'), 3200);
   }
 
-  // ── Nutrition recalc ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // NUTRITION ENGINE
+  // ══════════════════════════════════════════════════════════════════════════
+
   function _recalc() {
-    const servings = Math.max(1, parseInt(_el('rb-servings').value) || 1);
+    const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
     const totals   = _s.ingredients.reduce((acc, ing) => {
       acc.calories += ing.calories || 0;
       acc.carbs    += ing.carbs    || 0;
       acc.protein  += ing.protein  || 0;
       acc.fat      += ing.fat      || 0;
+      acc.fibre    += ing.fibre    || 0;
+      acc.sodium   += ing.sodium   || 0;
+      acc.sugar    += ing.sugar    || 0;
       return acc;
-    }, { calories: 0, carbs: 0, protein: 0, fat: 0 });
+    }, { calories: 0, carbs: 0, protein: 0, fat: 0, fibre: 0, sodium: 0, sugar: 0 });
 
-    const perServing = {
-      calories: totals.calories / servings,
-      carbs:    totals.carbs    / servings,
-      protein:  totals.protein  / servings,
-      fat:      totals.fat      / servings,
-    };
+    const per = {};
+    Object.keys(totals).forEach(k => per[k] = totals[k] / servings);
 
-    _el('rb-nut-kcal').textContent    = Math.round(perServing.calories);
-    _el('rb-nut-carbs').textContent   = _fmt(perServing.carbs)   + 'g';
-    _el('rb-nut-protein').textContent = _fmt(perServing.protein) + 'g';
-    _el('rb-nut-fat').textContent     = _fmt(perServing.fat)     + 'g';
+    const set = (id, val) => { const e = _el(id); if (e) e.textContent = val; };
+    set('rb-nut-kcal',    Math.round(per.calories));
+    set('rb-nut-carbs',   _fmt(per.carbs)   + 'g');
+    set('rb-nut-protein', _fmt(per.protein) + 'g');
+    set('rb-nut-fat',     _fmt(per.fat)     + 'g');
+    set('rb-nut-fibre',   _fmt(per.fibre)   + 'g');
+    set('rb-nut-sodium',  Math.round(per.sodium) + 'mg');
+    set('rb-nut-sugar',   _fmt(per.sugar)   + 'g');
 
     const summary = _el('rb-nutrition-summary');
     if (summary) summary.style.display = _s.ingredients.length ? 'block' : 'none';
 
-    return { totals, perServing };
+    return { totals, per };
   }
 
-  // ── Render ingredient list ─────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // DATABASE MATCHING — map an AI ingredient name to Thandizo food DB
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Try to find `name` in the local food DB (Malawi FCT + UCT Exchange).
+   * If found, scale its per-100g macros to `qty` and `unit`.
+   * Returns a nutrition object if matched, else null.
+   */
+  function _matchToDatabase(name, qty, unit) {
+    if (typeof ThanziFood === 'undefined') return null;
+
+    const results = ThanziFood.searchLocal(name, 3);
+    if (!results || !results.length) return null;
+
+    const food = results[0]; // best match
+
+    // Resolve grams for the quantity
+    let grams = qty;
+    if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+      grams = qty;
+    } else if (unit === 'kg') {
+      grams = qty * 1000;
+    } else if (unit === 'ml' || unit === 'mL') {
+      grams = qty; // ~1g/ml for most liquids
+    } else if (unit === 'cup' || unit === 'cups') {
+      grams = qty * 240;
+    } else if (unit === 'tbsp' || unit === 'tablespoon') {
+      grams = qty * 15;
+    } else if (unit === 'tsp' || unit === 'teaspoon') {
+      grams = qty * 5;
+    } else if (unit === 'piece' || unit === 'pieces' || unit === 'pcs') {
+      grams = qty * 100;
+    } else if (unit === 'serving' || unit === 'srv') {
+      // Use the food's first measure if available
+      if (food.measures && food.measures[0]) {
+        const m = food.measures[0];
+        // Extract grams from label e.g. "1 cup (240g)" → 240
+        const match = m.lbl.match(/\((\d+(?:\.\d+)?)g\)/);
+        grams = match ? parseFloat(match[1]) : 100;
+      } else {
+        grams = 100;
+      }
+    } else {
+      grams = qty; // fallback
+    }
+
+    // food.kcal / food.pro / food.cho / food.fat are per 100g
+    const ratio = grams / 100;
+    return {
+      calories: (food.kcal  || food.calories || 0) * ratio,
+      carbs:    (food.cho   || food.carbs    || 0) * ratio,
+      protein:  (food.pro   || food.protein  || 0) * ratio,
+      fat:      (food.fat   || 0)                  * ratio,
+      fibre:    (food.fibre || food.fiber    || 0) * ratio,
+      sodium:   (food.sodium || 0)                 * ratio,
+      sugar:    (food.sugar  || 0)                 * ratio,
+      dbName:   food.name,
+      dbMatched: true,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AI RECIPE GENERATION
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calls the Groq proxy with a structured prompt.
+   * Returns parsed JSON or throws.
+   */
+  async function _callAI(systemPrompt, userPrompt, maxTokens = 1200) {
+    const res = await fetch(PROXY_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Thanzi-Key': PROXY_KEY,
+      },
+      body: JSON.stringify({
+        model:       AI_MODEL,
+        messages:    [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ],
+        temperature: 0.15,
+        max_tokens:  maxTokens,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`AI proxy error ${res.status}`);
+
+    const data      = await res.json();
+    const replyText = data?.choices?.[0]?.message?.content ?? '';
+    const cleaned   = replyText.replace(/```json[\s\S]*?```|```[\s\S]*?```/g, s =>
+      s.replace(/```json|```/g, '').trim()
+    ).trim();
+
+    // Extract JSON even if there's surrounding text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('No JSON in AI response');
+
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  /**
+   * Full recipe generation from a natural-language meal description.
+   * Steps:
+   *   1. AI generates complete recipe JSON
+   *   2. Each ingredient is matched against Thandizo DB
+   *   3. DB values override AI nutrition estimates where matched
+   *   4. Modal is populated with results
+   */
+  async function _generateRecipe() {
+    const input = (_el('rb-ai-generate-input')?.value || '').trim();
+    if (!input) return;
+
+    if (_s.generating) return;
+    _s.generating = true;
+
+    const btn = _el('rb-ai-generate-btn');
+    if (btn) {
+      btn.disabled   = true;
+      btn.innerHTML  = `<span class="rb-ai-spinner"></span> Generating…`;
+    }
+
+    // Show progress indicator in modal
+    _showGeneratingState(input);
+
+    try {
+      const systemPrompt = `You are a Malawian nutrition assistant. Generate realistic recipes using local Malawian ingredients and household measures common in Malawi (nsima, relish, cups, tablespoons, pieces). Use nutrition values typical for Sub-Saharan African foods. Always respond with ONLY a valid JSON object — no markdown, no explanation.`;
+
+      const userPrompt = `Generate a complete recipe for: "${input}"
+
+Respond ONLY with this exact JSON structure:
+{
+  "name": "Recipe name",
+  "description": "One sentence about the dish",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 30,
+  "steps": [
+    "Step 1 description",
+    "Step 2 description"
+  ],
+  "ingredients": [
+    {
+      "name": "ingredient name (simple, searchable)",
+      "qty": 200,
+      "unit": "g",
+      "calories": 246,
+      "carbs": 55,
+      "protein": 5.3,
+      "fat": 1.2,
+      "fibre": 2.1,
+      "sodium": 5,
+      "sugar": 0.5
+    }
+  ]
+}
+
+Rules:
+- Use realistic Malawian household portions (cups, tablespoons, pieces, grams)
+- Ingredient names should be simple and searchable (e.g. "nsima (thick, maize)" not "nsima flour mixture")
+- Nutrition values are for the STATED quantity (not per 100g)
+- Include 4–10 ingredients
+- Include 3–8 preparation steps
+- servings: integer 1–10
+- prepTime and cookTime: integer minutes`;
+
+      const recipe = await _callAI(systemPrompt, userPrompt, 1400);
+
+      if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) {
+        throw new Error('Invalid recipe structure from AI');
+      }
+
+      // Match each ingredient to Thandizo DB and override nutrition if matched
+      recipe.ingredients = recipe.ingredients.map(ing => {
+        const dbMatch = _matchToDatabase(ing.name, ing.qty, ing.unit);
+        if (dbMatch) {
+          return {
+            ...ing,
+            calories:  dbMatch.calories,
+            carbs:     dbMatch.carbs,
+            protein:   dbMatch.protein,
+            fat:       dbMatch.fat,
+            fibre:     dbMatch.fibre,
+            sodium:    dbMatch.sodium,
+            sugar:     dbMatch.sugar,
+            dbName:    dbMatch.dbName,
+            dbMatched: true,
+          };
+        }
+        return { ...ing, dbMatched: false };
+      });
+
+      // Populate modal with the generated recipe
+      _openModal(null, recipe);
+
+    } catch (err) {
+      console.error('[Recipe] Generation failed:', err);
+      _toast('Could not generate recipe: ' + err.message, 'error');
+      _hideGeneratingState();
+    } finally {
+      _s.generating = false;
+      if (btn) {
+        btn.disabled  = false;
+        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg> Generate`;
+      }
+    }
+  }
+
+  function _showGeneratingState(input) {
+    const overlay = _el('rb-modal-overlay');
+    if (!overlay) return;
+
+    _s.ingredients = [];
+    _s.steps       = [];
+
+    _el('rb-modal-title').textContent = 'Generating Recipe…';
+    _el('rb-recipe-name').value       = '';
+    _el('rb-servings').value          = 4;
+    _el('rb-ingredients').innerHTML   = `
+      <div class="rb-generating-indicator">
+        <div class="rb-generating-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <p>Crafting "<strong>${input}</strong>" with Malawian ingredients…</p>
+        <small>Matching to Thandizo food database…</small>
+      </div>`;
+    _el('rb-nutrition-summary').style.display = 'none';
+    _el('rb-steps-section').style.display     = 'none';
+    overlay.style.display    = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function _hideGeneratingState() {
+    _el('rb-modal-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // ── AI ingredient-only parse (kept from v1 — used in manual mode) ──────────
+  async function _aiParseIngredients() {
+    const text = (_el('rb-ai-input')?.value || '').trim();
+    if (!text) return;
+
+    const btn = _el('rb-ai-parse-btn');
+    btn.disabled   = true;
+    btn.textContent = 'Parsing…';
+
+    try {
+      const systemPrompt = 'You are a nutrition assistant. Always respond with only a valid JSON array. No markdown, no explanation.';
+      const userPrompt   = `Parse the following into a JSON array. For each ingredient give: name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat, fibre, sodium, sugar — all for the stated quantity. Use Malawian/Southern African food values. Return ONLY a valid JSON array:
+[{"name":"ingredient","qty":100,"unit":"g","calories":120,"carbs":25,"protein":3,"fat":1,"fibre":2,"sodium":5,"sugar":0.5}]
+
+Ingredients: ${text}`;
+
+      const arr = await _callAI(systemPrompt, userPrompt, 900);
+      if (!Array.isArray(arr) || !arr.length) throw new Error('No ingredients parsed');
+
+      arr.forEach(ing => {
+        const dbMatch = _matchToDatabase(ing.name, ing.qty, ing.unit);
+        _s.ingredients.push({
+          name:      ing.name     || 'Ingredient',
+          qty:       ing.qty      || 100,
+          unit:      ing.unit     || 'g',
+          calories:  dbMatch ? dbMatch.calories : (ing.calories || 0),
+          carbs:     dbMatch ? dbMatch.carbs    : (ing.carbs    || 0),
+          protein:   dbMatch ? dbMatch.protein  : (ing.protein  || 0),
+          fat:       dbMatch ? dbMatch.fat       : (ing.fat      || 0),
+          fibre:     dbMatch ? dbMatch.fibre    : (ing.fibre    || 0),
+          sodium:    dbMatch ? dbMatch.sodium   : (ing.sodium   || 0),
+          sugar:     dbMatch ? dbMatch.sugar    : (ing.sugar    || 0),
+          dbName:    dbMatch ? dbMatch.dbName   : null,
+          dbMatched: !!dbMatch,
+        });
+      });
+
+      _el('rb-ai-input').value = '';
+      _renderIngredients();
+
+    } catch (err) {
+      _toast('AI parse failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/></svg> AI Parse`;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // RENDER — INGREDIENTS
+  // ══════════════════════════════════════════════════════════════════════════
+
   function _renderIngredients() {
     const container = _el('rb-ingredients');
     if (!container) return;
@@ -78,21 +397,28 @@ const ThanziRecipe = (() => {
     }
 
     container.innerHTML = _s.ingredients.map((ing, i) => `
-      <div class="rb-ing-row" data-idx="${i}">
+      <div class="rb-ing-row ${ing.dbMatched ? 'rb-ing-row--matched' : ''}" data-idx="${i}">
         <div class="rb-ing-info">
           <span class="rb-ing-name">${ing.name}</span>
-          <span class="rb-ing-macros">${Math.round(ing.calories)} kcal · ${_fmt(ing.carbs)}g C · ${_fmt(ing.protein)}g P · ${_fmt(ing.fat)}g F</span>
+          ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Thandizo DB: ${ing.dbName || ''}">✓ DB</span>` : ''}
+          <span class="rb-ing-macros">
+            ${Math.round(ing.calories)} kcal ·
+            <span class="rb-c">${_fmt(ing.carbs)}g C</span> ·
+            <span class="rb-p">${_fmt(ing.protein)}g P</span> ·
+            <span class="rb-f">${_fmt(ing.fat)}g F</span>
+            ${ing.fibre ? ` · <span class="rb-fi">${_fmt(ing.fibre)}g Fi</span>` : ''}
+          </span>
         </div>
         <div class="rb-ing-qty-wrap">
-          <input class="rb-ing-qty" type="number" min="0.1" step="0.1" value="${ing.qty || 1}"
-            data-idx="${i}" title="Quantity (${ing.unit || 'serving'})">
+          <input class="rb-ing-qty" type="number" min="0.1" step="0.1"
+            value="${ing.qty || 1}" data-idx="${i}" title="Quantity (${ing.unit || 'serving'})">
           <span class="rb-ing-unit">${ing.unit || 'srv'}</span>
         </div>
-        <button class="rb-ing-remove" data-idx="${i}" title="Remove">✕</button>
+        <button class="rb-ing-remove" data-idx="${i}" aria-label="Remove ${ing.name}">✕</button>
       </div>
     `).join('');
 
-    // Qty change listeners
+    // Quantity change — scale nutrition proportionally
     container.querySelectorAll('.rb-ing-qty').forEach(input => {
       input.addEventListener('change', e => {
         const idx    = parseInt(e.target.dataset.idx);
@@ -100,19 +426,17 @@ const ThanziRecipe = (() => {
         const ing    = _s.ingredients[idx];
         const ratio  = newQty / (ing.qty || 1);
         ing.qty      = newQty;
-        ing.calories = (ing.calories || 0) * ratio;
-        ing.carbs    = (ing.carbs    || 0) * ratio;
-        ing.protein  = (ing.protein  || 0) * ratio;
-        ing.fat      = (ing.fat      || 0) * ratio;
+        ['calories','carbs','protein','fat','fibre','sodium','sugar'].forEach(k => {
+          ing[k] = (ing[k] || 0) * ratio;
+        });
+        _renderIngredients();
         _recalc();
       });
     });
 
-    // Remove listeners
     container.querySelectorAll('.rb-ing-remove').forEach(btn => {
       btn.addEventListener('click', e => {
-        const idx = parseInt(e.currentTarget.dataset.idx);
-        _s.ingredients.splice(idx, 1);
+        _s.ingredients.splice(parseInt(e.currentTarget.dataset.idx), 1);
         _renderIngredients();
         _recalc();
       });
@@ -121,37 +445,89 @@ const ThanziRecipe = (() => {
     _recalc();
   }
 
-  // ── Add ingredient from food search result ─────────────────────────────────
-  function _addIngredient(food) {
-    _s.ingredients.push({
-      name:     food.name || food.label || 'Food',
-      qty:      food.servingQty  || 100,
-      unit:     food.servingUnit || 'g',
-      calories: food.calories    || food.kcal || 0,
-      carbs:    food.carbs       || food.carbohydrates || 0,
-      protein:  food.protein     || 0,
-      fat:      food.fat         || food.totalFat || 0,
-    });
-    _renderIngredients();
-    _el('rb-ing-search').value = '';
-    _el('rb-ing-results').style.display = 'none';
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  // RENDER — STEPS
+  // ══════════════════════════════════════════════════════════════════════════
 
-  // ── Food search (uses ThanziFood.searchLocal) ──────────────────────────────
-  function _runSearch(query) {
-    const results = _el('rb-ing-results');
-    if (!query || query.length < 2) {
-      results.style.display = 'none';
+  function _renderSteps() {
+    const container = _el('rb-steps-list');
+    const section   = _el('rb-steps-section');
+    if (!container || !section) return;
+
+    if (!_s.steps.length) {
+      section.style.display = 'none';
       return;
     }
 
-    let hits = [];
-    if (typeof ThanziFood !== 'undefined') {
-      hits = ThanziFood.searchLocal(query, 8);
+    section.style.display = 'block';
+    container.innerHTML = _s.steps.map((step, i) => `
+      <div class="rb-step-row" data-idx="${i}">
+        <span class="rb-step-num">${i + 1}</span>
+        <div class="rb-step-text" contenteditable="true"
+          data-idx="${i}"
+          spellcheck="false">${step}</div>
+        <button class="rb-step-remove" data-idx="${i}" aria-label="Remove step">✕</button>
+      </div>
+    `).join('');
+
+    // Step text editing
+    container.querySelectorAll('.rb-step-text').forEach(el => {
+      el.addEventListener('blur', e => {
+        const idx = parseInt(e.target.dataset.idx);
+        _s.steps[idx] = e.target.textContent.trim();
+      });
+    });
+
+    // Step remove
+    container.querySelectorAll('.rb-step-remove').forEach(btn => {
+      btn.addEventListener('click', e => {
+        _s.steps.splice(parseInt(e.currentTarget.dataset.idx), 1);
+        _renderSteps();
+      });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FOOD SEARCH (manual ingredient add)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function _addIngredient(food) {
+    // Resolve a default qty from the first measure label if available
+    let qty  = 100;
+    let unit = 'g';
+    if (food.measures && food.measures[0]) {
+      const m     = food.measures[0];
+      const match = m.lbl.match(/\((\d+(?:\.\d+)?)g\)/);
+      if (match) { qty = parseFloat(match[1]); unit = 'g'; }
     }
 
+    _s.ingredients.push({
+      name:      food.name || food.label || 'Food',
+      qty:       food.servingQty  || qty,
+      unit:      food.servingUnit || unit,
+      calories:  food.calories    || food.kcal  || (food.kcal_per100 ? food.kcal_per100 * qty / 100 : 0),
+      carbs:     food.carbs       || food.cho   || 0,
+      protein:   food.protein     || food.pro   || 0,
+      fat:       food.fat         || 0,
+      fibre:     food.fibre       || food.fiber || 0,
+      sodium:    food.sodium      || 0,
+      sugar:     food.sugar       || 0,
+      dbName:    food.name,
+      dbMatched: true,
+    });
+    _renderIngredients();
+    _el('rb-ing-search').value         = '';
+    _el('rb-ing-results').style.display = 'none';
+  }
+
+  function _runSearch(query) {
+    const results = _el('rb-ing-results');
+    if (!query || query.length < 2) { results.style.display = 'none'; return; }
+
+    let hits = typeof ThanziFood !== 'undefined' ? ThanziFood.searchLocal(query, 8) : [];
+
     if (!hits.length) {
-      results.innerHTML = '<div class="rb-ing-result-item rb-ing-no-result">No local results — try AI Parse above</div>';
+      results.innerHTML = '<div class="rb-ing-result-item rb-ing-no-result">No local results</div>';
       results.style.display = 'block';
       return;
     }
@@ -159,97 +535,43 @@ const ThanziRecipe = (() => {
     results.innerHTML = hits.map((h, i) => `
       <div class="rb-ing-result-item" data-idx="${i}">
         <span class="rb-ing-result-name">${h.name}</span>
-        <span class="rb-ing-result-kcal">${Math.round(h.calories || h.kcal || 0)} kcal</span>
+        <span class="rb-ing-result-kcal">${Math.round(h.kcal || h.calories || 0)} kcal/100g</span>
       </div>
     `).join('');
     results.style.display = 'block';
 
     results.querySelectorAll('.rb-ing-result-item').forEach((el, i) => {
-      el.addEventListener('click', () => {
-        if (hits[i]) _addIngredient(hits[i]);
-      });
+      el.addEventListener('click', () => { if (hits[i]) _addIngredient(hits[i]); });
     });
   }
 
-  // ── AI ingredient parsing ──────────────────────────────────────────────────
-  async function _aiParseIngredients() {
-    const text = (_el('rb-ai-input').value || '').trim();
+  // ══════════════════════════════════════════════════════════════════════════
+  // ADD STEP
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function _addStep() {
+    const input = _el('rb-step-input');
+    if (!input) return;
+    const text = input.value.trim();
     if (!text) return;
-
-    const btn = _el('rb-ai-parse-btn');
-    btn.disabled    = true;
-    btn.textContent = 'Parsing…';
-
-    try {
-      const prompt = `Parse the following ingredient description into a JSON array. For each ingredient, provide name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat — all for the stated quantity. Prefer Malawian/Southern African food values. Return ONLY a valid JSON array, no markdown:
-[{"name":"ingredient name","qty":100,"unit":"g","calories":120,"carbs":25,"protein":3,"fat":1}]
-
-Ingredients: ${text}`;
-
-      const res = await fetch('https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions', {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Thanzi-Key': 'thanzi_app001',
-        },
-        body: JSON.stringify({
-          model:       'llama-3.3-70b-versatile',
-          messages:    [
-            { role: 'system', content: 'You are a nutrition assistant. Always respond with only a valid JSON array. No markdown, no explanation.' },
-            { role: 'user',   content: prompt },
-          ],
-          temperature: 0.1,
-          max_tokens:  800,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`Proxy error ${res.status}`);
-
-      const data      = await res.json();
-      const replyText = data?.choices?.[0]?.message?.content ?? '';
-      const cleaned   = replyText.replace(/```json|```/g, '').trim();
-
-      let arr;
-      try {
-        arr = JSON.parse(cleaned);
-      } catch {
-        const m = cleaned.match(/\[[\s\S]*\]/);
-        arr = m ? JSON.parse(m[0]) : [];
-      }
-
-      if (!Array.isArray(arr) || !arr.length) throw new Error('No ingredients parsed');
-
-      arr.forEach(ing => {
-        _s.ingredients.push({
-          name:     ing.name     || 'Ingredient',
-          qty:      ing.qty      || 100,
-          unit:     ing.unit     || 'g',
-          calories: ing.calories || 0,
-          carbs:    ing.carbs    || 0,
-          protein:  ing.protein  || 0,
-          fat:      ing.fat      || 0,
-        });
-      });
-
-      _el('rb-ai-input').value = '';
-      _renderIngredients();
-
-    } catch (err) {
-      alert('AI parsing failed: ' + err.message);
-    } finally {
-      btn.disabled    = false;
-      btn.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/></svg> AI Parse`;
-    }
+    _s.steps.push(text);
+    input.value = '';
+    _renderSteps();
   }
 
-  // ── Save recipe to Appwrite ────────────────────────────────────────────────
-  async function _saveRecipe() {
-    const name     = (_el('rb-recipe-name').value || '').trim();
-    const servings = Math.max(1, parseInt(_el('rb-servings').value) || 1);
+  // ══════════════════════════════════════════════════════════════════════════
+  // SAVE TO APPWRITE
+  // ══════════════════════════════════════════════════════════════════════════
 
-    if (!name)                   return alert('Please enter a recipe name.');
-    if (!_s.ingredients.length)  return alert('Add at least one ingredient.');
-    if (!_s.user)                return alert('Please sign in first.');
+  async function _saveRecipe() {
+    const name     = (_el('rb-recipe-name')?.value || '').trim();
+    const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
+    const prepTime = parseInt(_el('rb-prep-time')?.value) || 0;
+    const cookTime = parseInt(_el('rb-cook-time')?.value) || 0;
+
+    if (!name)                  { _toast('Enter a recipe name.', 'error'); return; }
+    if (!_s.ingredients.length) { _toast('Add at least one ingredient.', 'error'); return; }
+    if (!_s.user)               { _toast('Sign in to save recipes.', 'error'); return; }
 
     const btn     = _el('rb-save-btn');
     btn.disabled  = true;
@@ -261,11 +583,17 @@ Ingredients: ${text}`;
         userId:      _s.user.$id,
         name,
         servings,
+        prepTime,
+        cookTime,
         ingredients: JSON.stringify(_s.ingredients),
+        steps:       JSON.stringify(_s.steps),
         calories:    Math.round(totals.calories / servings),
         carbs:       parseFloat(_fmt(totals.carbs    / servings)),
         protein:     parseFloat(_fmt(totals.protein  / servings)),
         fat:         parseFloat(_fmt(totals.fat      / servings)),
+        fibre:       parseFloat(_fmt(totals.fibre    / servings)),
+        sodium:      Math.round(totals.sodium / servings),
+        sugar:       parseFloat(_fmt(totals.sugar    / servings)),
         createdAt:   new Date().toISOString(),
       };
 
@@ -276,6 +604,7 @@ Ingredients: ${text}`;
           _s.editId,
           doc
         );
+        _toast(`"${name}" updated.`, 'success');
       } else {
         await _db.createDocument(
           THANZI_CONFIG?.databaseId || 'thanzi-db',
@@ -283,20 +612,24 @@ Ingredients: ${text}`;
           Appwrite.ID.unique(),
           doc
         );
+        _toast(`"${name}" saved!`, 'success');
       }
 
       _closeModal();
       await _loadRecipes();
 
     } catch (err) {
-      alert('Failed to save recipe: ' + err.message);
+      _toast('Save failed: ' + err.message, 'error');
     } finally {
       btn.disabled    = false;
       btn.textContent = 'Save Recipe';
     }
   }
 
-  // ── Delete recipe ──────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // DELETE
+  // ══════════════════════════════════════════════════════════════════════════
+
   async function _deleteRecipe(id) {
     if (!confirm('Delete this recipe?')) return;
     try {
@@ -305,55 +638,101 @@ Ingredients: ${text}`;
         THANZI_CONFIG?.collections?.recipes || 'recipes',
         id
       );
+      _toast('Recipe deleted.', 'info');
       await _loadRecipes();
     } catch (err) {
-      alert('Delete failed: ' + err.message);
+      _toast('Delete failed: ' + err.message, 'error');
     }
   }
 
-  // ── Log recipe as meal ─────────────────────────────────────────────────────
-  async function _logRecipe(recipe) {
-    if (!_s.user) return alert('Please sign in first.');
+  // ══════════════════════════════════════════════════════════════════════════
+  // LOG RECIPE AS MEAL
+  // ══════════════════════════════════════════════════════════════════════════
 
-    const meal = prompt('Which meal? (breakfast / lunch / dinner / snack)', 'lunch');
+  async function _logRecipe(recipe) {
+    if (!_s.user) { _toast('Sign in to log meals.', 'error'); return; }
+
+    const meal = prompt('Which meal?\n(breakfast / lunch / dinner / snack)', 'lunch');
     if (!meal) return;
 
     try {
-      const doc = {
-        userId:    _s.user.$id,
-        date:      _today(),
-        meal:      meal.toLowerCase(),
-        name:      recipe.name,
-        calories:  recipe.calories,
-        carbs:     recipe.carbs,
-        protein:   recipe.protein,
-        fat:       recipe.fat,
-        qty:       1,
-        unit:      'serving',
-        source:    'recipe',
-      };
-
       await _db.createDocument(
         THANZI_CONFIG?.databaseId || 'thanzi-db',
         THANZI_CONFIG?.collections?.foodLogs || 'food_logs',
         Appwrite.ID.unique(),
-        doc
+        {
+          userId:   _s.user.$id,
+          date:     _today(),
+          meal:     meal.toLowerCase(),
+          name:     recipe.name,
+          calories: recipe.calories,
+          carbs:    recipe.carbs,
+          protein:  recipe.protein,
+          fat:      recipe.fat,
+          qty:      1,
+          unit:     'serving',
+          source:   'recipe',
+        }
       );
 
-      // Refresh log if available
       if (typeof ThanziLog !== 'undefined') ThanziLog.refresh?.();
-
-      alert(`✅ "${recipe.name}" logged to ${meal}!`);
+      _toast(`"${recipe.name}" logged to ${meal}!`, 'success');
 
     } catch (err) {
-      alert('Failed to log recipe: ' + err.message);
+      _toast('Log failed: ' + err.message, 'error');
     }
   }
 
-  // ── Load and render saved recipes ──────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // SHARE RECIPE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function _shareRecipe(recipe) {
+    let ings = [];
+    try { ings = JSON.parse(recipe.ingredients || '[]'); } catch { ings = []; }
+
+    let steps = [];
+    try { steps = JSON.parse(recipe.steps || '[]'); } catch { steps = []; }
+
+    const lines = [
+      `🍽️ ${recipe.name}`,
+      `Servings: ${recipe.servings}`,
+      recipe.prepTime ? `Prep: ${recipe.prepTime} min` : '',
+      recipe.cookTime ? `Cook: ${recipe.cookTime} min` : '',
+      '',
+      '📋 Ingredients:',
+      ...ings.map(i => `  • ${i.qty} ${i.unit} ${i.name}`),
+    ];
+
+    if (steps.length) {
+      lines.push('', '👨‍🍳 Steps:');
+      steps.forEach((s, i) => lines.push(`  ${i + 1}. ${s}`));
+    }
+
+    lines.push(
+      '',
+      '📊 Nutrition per serving:',
+      `  Calories: ${recipe.calories} kcal`,
+      `  Carbs: ${recipe.carbs}g | Protein: ${recipe.protein}g | Fat: ${recipe.fat}g`,
+      '',
+      'Shared via Thanzi — Know what you eat 🌿'
+    );
+
+    const text = lines.filter(Boolean).join('\n');
+
+    if (navigator.share) {
+      navigator.share({ title: recipe.name, text }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(text).then(() => _toast('Copied to clipboard!', 'success'));
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // LOAD & RENDER SAVED RECIPES
+  // ══════════════════════════════════════════════════════════════════════════
+
   async function _loadRecipes() {
     if (!_s.user) return;
-
     try {
       const res = await _db.listDocuments(
         THANZI_CONFIG?.databaseId || 'thanzi-db',
@@ -381,54 +760,106 @@ Ingredients: ${text}`;
       list.querySelectorAll('.rb-card').forEach(c => c.remove());
       return;
     }
-
     if (empty) empty.style.display = 'none';
-
-    // Remove old cards
     list.querySelectorAll('.rb-card').forEach(c => c.remove());
 
     _s.recipes.forEach(r => {
       const card = document.createElement('div');
       card.className = 'rb-card';
+
+      const timeParts = [];
+      if (r.prepTime) timeParts.push(`Prep ${r.prepTime}m`);
+      if (r.cookTime) timeParts.push(`Cook ${r.cookTime}m`);
+      const timeStr = timeParts.join(' · ');
+
       card.innerHTML = `
         <div class="rb-card-body">
           <div class="rb-card-name">${r.name}</div>
-          <div class="rb-card-meta">${r.servings} serving${r.servings > 1 ? 's' : ''}</div>
+          <div class="rb-card-meta">
+            ${r.servings} serving${r.servings > 1 ? 's' : ''}
+            ${timeStr ? ` · ${timeStr}` : ''}
+          </div>
           <div class="rb-card-macros">
-            <span>${r.calories} kcal</span>
+            <span class="rb-card-kcal">${r.calories} kcal</span>
             <span class="rb-c">C: ${r.carbs}g</span>
             <span class="rb-p">P: ${r.protein}g</span>
             <span class="rb-f">F: ${r.fat}g</span>
           </div>
         </div>
         <div class="rb-card-actions">
-          <button class="rb-card-log"  data-id="${r.$id}">Log</button>
-          <button class="rb-card-edit" data-id="${r.$id}">Edit</button>
-          <button class="rb-card-del"  data-id="${r.$id}">Delete</button>
+          <button class="rb-card-log"   data-id="${r.$id}" title="Log to food diary">Log</button>
+          <button class="rb-card-share" data-id="${r.$id}" title="Share recipe">Share</button>
+          <button class="rb-card-edit"  data-id="${r.$id}" title="Edit recipe">Edit</button>
+          <button class="rb-card-del"   data-id="${r.$id}" title="Delete recipe">Delete</button>
         </div>
       `;
 
-      card.querySelector('.rb-card-log').addEventListener('click', () => _logRecipe(r));
-      card.querySelector('.rb-card-edit').addEventListener('click', () => _openModal(r));
-      card.querySelector('.rb-card-del').addEventListener('click', () => _deleteRecipe(r.$id));
+      card.querySelector('.rb-card-log').addEventListener('click',   () => _logRecipe(r));
+      card.querySelector('.rb-card-share').addEventListener('click', () => _shareRecipe(r));
+      card.querySelector('.rb-card-edit').addEventListener('click',  () => _openModal(r));
+      card.querySelector('.rb-card-del').addEventListener('click',   () => _deleteRecipe(r.$id));
 
       list.appendChild(card);
     });
   }
 
-  // ── Modal open / close ─────────────────────────────────────────────────────
-  function _openModal(recipe = null) {
-    _s.editId      = recipe ? recipe.$id : null;
-    _s.ingredients = recipe ? JSON.parse(recipe.ingredients || '[]') : [];
+  // ══════════════════════════════════════════════════════════════════════════
+  // MODAL OPEN / CLOSE
+  // ══════════════════════════════════════════════════════════════════════════
 
-    _el('rb-modal-title').textContent  = recipe ? 'Edit Recipe' : 'New Recipe';
-    _el('rb-recipe-name').value        = recipe ? recipe.name     : '';
-    _el('rb-servings').value           = recipe ? recipe.servings : 1;
-    _el('rb-ai-input').value           = '';
-    _el('rb-ing-search').value         = '';
-    _el('rb-ing-results').style.display = 'none';
+  function _openModal(recipe = null, generatedRecipe = null) {
+    const source = generatedRecipe || recipe;
+
+    _s.editId      = recipe ? recipe.$id : null;
+    _s.ingredients = [];
+    _s.steps       = [];
+
+    if (source) {
+      // Populate ingredients
+      let ings = [];
+      if (generatedRecipe) {
+        ings = generatedRecipe.ingredients || [];
+      } else {
+        try { ings = JSON.parse(recipe.ingredients || '[]'); } catch { ings = []; }
+      }
+      _s.ingredients = ings.map(ing => ({
+        name:      ing.name     || 'Ingredient',
+        qty:       ing.qty      || 100,
+        unit:      ing.unit     || 'g',
+        calories:  ing.calories || 0,
+        carbs:     ing.carbs    || 0,
+        protein:   ing.protein  || 0,
+        fat:       ing.fat      || 0,
+        fibre:     ing.fibre    || 0,
+        sodium:    ing.sodium   || 0,
+        sugar:     ing.sugar    || 0,
+        dbName:    ing.dbName   || null,
+        dbMatched: ing.dbMatched || false,
+      }));
+
+      // Populate steps
+      if (generatedRecipe) {
+        _s.steps = generatedRecipe.steps || [];
+      } else {
+        try { _s.steps = JSON.parse(recipe.steps || '[]'); } catch { _s.steps = []; }
+      }
+    }
+
+    // Fill form fields
+    _el('rb-modal-title').textContent = recipe ? 'Edit Recipe' : 'New Recipe';
+    _el('rb-recipe-name').value       = source?.name     || '';
+    _el('rb-servings').value          = source?.servings || 4;
+    if (_el('rb-prep-time')) _el('rb-prep-time').value = source?.prepTime || '';
+    if (_el('rb-cook-time')) _el('rb-cook-time').value = source?.cookTime || '';
+    if (_el('rb-ai-input'))  _el('rb-ai-input').value  = '';
+    if (_el('rb-ing-search')) {
+      _el('rb-ing-search').value = '';
+      _el('rb-ing-results').style.display = 'none';
+    }
 
     _renderIngredients();
+    _renderSteps();
+
     _el('rb-modal-overlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -438,9 +869,13 @@ Ingredients: ${text}`;
     document.body.style.overflow = '';
     _s.editId      = null;
     _s.ingredients = [];
+    _s.steps       = [];
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // INIT
+  // ══════════════════════════════════════════════════════════════════════════
+
   async function init() {
     try {
       _s.user = await _auth.get();
@@ -448,8 +883,10 @@ Ingredients: ${text}`;
       _s.user = null;
     }
 
-    // Wire modal open/close
+    // Recipe list actions
     _el('rb-new-btn')?.addEventListener('click', () => _openModal());
+
+    // Modal close
     _el('rb-modal-close')?.addEventListener('click', _closeModal);
     _el('rb-cancel-btn')?.addEventListener('click', _closeModal);
     _el('rb-modal-overlay')?.addEventListener('click', e => {
@@ -459,24 +896,34 @@ Ingredients: ${text}`;
     // Save
     _el('rb-save-btn')?.addEventListener('click', _saveRecipe);
 
-    // AI parse
-    _el('rb-ai-parse-btn')?.addEventListener('click', _aiParseIngredients);
-
-    // Servings change → recalc
+    // Servings → recalc
     _el('rb-servings')?.addEventListener('input', _recalc);
+
+    // AI generate (full recipe from description)
+    _el('rb-ai-generate-btn')?.addEventListener('click', _generateRecipe);
+    _el('rb-ai-generate-input')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _generateRecipe(); }
+    });
+
+    // AI parse (ingredients only — manual mode)
+    _el('rb-ai-parse-btn')?.addEventListener('click', _aiParseIngredients);
 
     // Food search
     _el('rb-ing-search')?.addEventListener('input', e => {
       clearTimeout(_s.searchTimer);
       _s.searchTimer = setTimeout(() => _runSearch(e.target.value.trim()), 300);
     });
-
-    // Close search results on outside click
     document.addEventListener('click', e => {
       if (!e.target.closest('#rb-ing-search') && !e.target.closest('#rb-ing-results')) {
         const r = _el('rb-ing-results');
         if (r) r.style.display = 'none';
       }
+    });
+
+    // Add step button
+    _el('rb-step-add-btn')?.addEventListener('click', _addStep);
+    _el('rb-step-input')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); _addStep(); }
     });
 
     await _loadRecipes();
@@ -486,36 +933,12 @@ Ingredients: ${text}`;
     await _loadRecipes();
   }
 
-  /**
-   * Called by Thandizo AI when user asks for a recipe.
-   * Pre-fills the modal with AI-generated recipe data.
-   */
+  /** Called by Thandizo AI assistant to pre-fill the modal */
   function openWithData(data) {
     if (!data) return;
-    _s.editId      = null;
-    _s.ingredients = (data.ingredients || []).map(ing => ({
-      name:     ing.name     || 'Ingredient',
-      qty:      ing.qty      || 100,
-      unit:     ing.unit     || 'g',
-      calories: ing.calories || 0,
-      carbs:    ing.carbs    || 0,
-      protein:  ing.protein  || 0,
-      fat:      ing.fat      || 0,
-    }));
-
-    _el('rb-modal-title').textContent = 'New Recipe';
-    _el('rb-recipe-name').value       = data.name     || '';
-    _el('rb-servings').value          = data.servings || 1;
-    _el('rb-ai-input').value          = '';
-    _el('rb-ing-search').value        = '';
-    _el('rb-ing-results').style.display = 'none';
-
-    _renderIngredients();
-    _el('rb-modal-overlay').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    _openModal(null, data);
   }
 
-  // Auto-init on DOMContentLoaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
