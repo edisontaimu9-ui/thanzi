@@ -22,6 +22,7 @@ const ThanziAI = (() => {
   const PROXY_URL   = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
   const THANZI_KEY  = 'thanzi_app001';
   const AI_MODEL    = 'llama-3.3-70b-versatile';
+  const RAG_URL     = 'https://chakudya-api.edisontaimu9.workers.dev/rag/retrieve';
 
   const QUICK_ACTIONS = [
     { icon: '🍽️', label: 'Meal Ideas',     prompt: 'Suggest 3 meal ideas that fit my remaining macros for today.' },
@@ -232,15 +233,47 @@ Use Malawian/Southern African food portions where relevant. Be realistic with qu
     _scrollToBottom();
   }
 
+  // ── RAG retrieval from Chakudya API ───────────────────────────────────────
+
+  async function _retrieveRAG(query) {
+    try {
+      const res = await fetch(RAG_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, context: 'both', top_k: 5 }),
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const chunks = data?.data || data?.chunks || [];
+      if (!chunks.length) return '';
+      return chunks.map(c => c.content).join('\n');
+    } catch {
+      return ''; // RAG failure is non-fatal — AI still answers
+    }
+  }
+
   // ── Render proxy call ──────────────────────────────────────────────────────
 
   async function _callAI(userMessage) {
     // Add to history
     _history.push({ role: 'user', content: userMessage });
 
+    // Retrieve RAG context from Chakudya knowledge base
+    const ragContext = await _retrieveRAG(userMessage);
+
+    // Build system prompt — inject RAG if available
+    const systemContent = ragContext
+      ? `${_buildContext()}
+
+RELEVANT NUTRITION KNOWLEDGE (from Chakudya food database):
+${ragContext}
+
+Use the above knowledge to ground your answer in real Malawian food data where relevant.`
+      : _buildContext();
+
     // Build messages: system context + full conversation history
     const messages = [
-      { role: 'system', content: _buildContext() },
+      { role: 'system', content: systemContent },
       ..._history,
     ];
 
