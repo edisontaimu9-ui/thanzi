@@ -42,6 +42,23 @@
 
   /* Elevation */
   --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  /* Auth card — dark defaults */
+  --auth-card-bg:        #1c1f2e;
+  --auth-card-border:    rgba(45, 158, 107, 0.25);
+  --auth-card-shadow:    0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.3);
+  --auth-tab-track:      #13151f;
+  --auth-tab-border:     rgba(255,255,255,0.07);
+  --auth-input-bg:       #13151f;
+  --auth-input-border:   rgba(255,255,255,0.1);
+  --auth-input-focus-bg: #161924;
+  --auth-input-ph:       #4a5068;
+  --auth-divider-color:  #3a3f55;
+  --auth-divider-line:   rgba(255,255,255,0.07);
+  --auth-social-bg:      #13151f;
+  --auth-social-border:  rgba(255,255,255,0.1);
+  --auth-social-text:    #c8ccd8;
+  --auth-social-hover:   #161924;
 }
 
 [data-theme="light"] {
@@ -68,6 +85,23 @@
   --accent-active: #186e45;
 
   --shadow-dropdown: 0 8px 24px rgba(20, 30, 25, 0.12);
+
+  /* Auth card — light overrides */
+  --auth-card-bg:        #ffffff;
+  --auth-card-border:    #e1e5e2;
+  --auth-card-shadow:    0 20px 60px rgba(20,30,25,0.1), 0 4px 16px rgba(20,30,25,0.06);
+  --auth-tab-track:      #eef1ef;
+  --auth-tab-border:     #e1e5e2;
+  --auth-input-bg:       #eef1ef;
+  --auth-input-border:   #d5dbd7;
+  --auth-input-focus-bg: #f8faf9;
+  --auth-input-ph:       #a3aba6;
+  --auth-divider-color:  #b0b8b4;
+  --auth-divider-line:   #e1e5e2;
+  --auth-social-bg:      #eef1ef;
+  --auth-social-border:  #d5dbd7;
+  --auth-social-text:    #14181a;
+  --auth-social-hover:   #f8faf9;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -318,130 +352,60 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Dark mode auth overrides ─────────────────────────────────────────────
-   Scoped to dark only so light mode is unaffected.
-   Using :root:not([data-theme="light"]) covers the instant before JS sets
-   the attribute; [data-theme="dark"] covers after.
+/* ── Auth theme overrides — uses CSS vars set in :root / [data-theme="light"]
+   No hardcoded colours here, so toggling the theme always works instantly.
    ──────────────────────────────────────────────────────────────────────── */
-:root:not([data-theme="light"]) .auth-wrapper,
-[data-theme="dark"] .auth-wrapper {
+
+.auth-wrapper {
   background:
     radial-gradient(ellipse 80% 55% at 50% -10%,
-      rgba(45, 158, 107, 0.13) 0%, transparent 65%),
-    #0f1117;
+      rgba(var(--accent-rgb), 0.1) 0%, transparent 65%),
+    var(--bg-page);
 }
 
-:root:not([data-theme="light"]) .form-container,
-[data-theme="dark"] .form-container {
-  background: #1c1f2e;
-  border: 1.5px solid rgba(45, 158, 107, 0.25);
+.form-container {
+  background: var(--auth-card-bg);
+  border: 1.5px solid var(--auth-card-border);
   box-shadow:
-    0 0 0 1px rgba(45, 158, 107, 0.08),
     0 2px 0 rgba(255,255,255,0.03) inset,
-    0 24px 64px rgba(0, 0, 0, 0.55),
-    0 4px 16px rgba(0, 0, 0, 0.3);
+    var(--auth-card-shadow);
 }
 
-:root:not([data-theme="light"]) .auth-tabs,
-[data-theme="dark"] .auth-tabs {
-  background: #13151f;
-  border-color: rgba(255,255,255,0.07);
+.auth-tabs {
+  background: var(--auth-tab-track);
+  border-color: var(--auth-tab-border);
 }
 
-:root:not([data-theme="light"]) .auth-input,
-[data-theme="dark"] .auth-input {
-  background: #13151f;
-  border-color: rgba(255,255,255,0.1);
-  color: #e8eaf0;
+.auth-input {
+  background: var(--auth-input-bg);
+  border-color: var(--auth-input-border);
+  color: var(--text-1);
 }
-:root:not([data-theme="light"]) .auth-input:focus,
-[data-theme="dark"] .auth-input:focus {
-  border-color: #2d9e6b;
-  background: #161924;
-  box-shadow: 0 0 0 3px rgba(45, 158, 107, 0.15);
+.auth-input:focus {
+  border-color: var(--accent);
+  background: var(--auth-input-focus-bg);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
 }
-:root:not([data-theme="light"]) .auth-input::placeholder,
-[data-theme="dark"] .auth-input::placeholder {
-  color: #4a5068;
+.auth-input::placeholder {
+  color: var(--auth-input-ph);
 }
 
-:root:not([data-theme="light"]) .auth-divider,
-[data-theme="dark"] .auth-divider {
-  color: #3a3f55;
+.auth-divider {
+  color: var(--auth-divider-color);
 }
-:root:not([data-theme="light"]) .auth-divider::before,
-:root:not([data-theme="light"]) .auth-divider::after,
-[data-theme="dark"] .auth-divider::before,
-[data-theme="dark"] .auth-divider::after {
-  background: rgba(255,255,255,0.07);
+.auth-divider::before,
+.auth-divider::after {
+  background: var(--auth-divider-line);
 }
 
-:root:not([data-theme="light"]) .google-login-button,
-[data-theme="dark"] .google-login-button {
-  background: #13151f;
-  border-color: rgba(255,255,255,0.1);
-  color: #c8ccd8;
+.google-login-button {
+  background: var(--auth-social-bg);
+  border-color: var(--auth-social-border);
+  color: var(--auth-social-text);
 }
-:root:not([data-theme="light"]) .google-login-button:hover,
-[data-theme="dark"] .google-login-button:hover {
-  border-color: #2d9e6b;
-  background: #161924;
-}
-
-/* ── Light mode auth overrides ────────────────────────────────────────────
-   Restores clean white card appearance for light theme.
-   ──────────────────────────────────────────────────────────────────────── */
-[data-theme="light"] .auth-wrapper {
-  background:
-    radial-gradient(ellipse 80% 55% at 50% -10%,
-      rgba(31, 143, 92, 0.07) 0%, transparent 65%),
-    #f4f6f5;
-}
-
-[data-theme="light"] .form-container {
-  background: #ffffff;
-  border: 1.5px solid #e1e5e2;
-  box-shadow:
-    0 2px 0 rgba(255,255,255,0.9) inset,
-    0 20px 60px rgba(20, 30, 25, 0.1),
-    0 4px 16px rgba(20, 30, 25, 0.06);
-}
-
-[data-theme="light"] .auth-tabs {
-  background: #eef1ef;
-  border-color: #e1e5e2;
-}
-
-[data-theme="light"] .auth-input {
-  background: #eef1ef;
-  border-color: #d5dbd7;
-  color: #14181a;
-}
-[data-theme="light"] .auth-input:focus {
-  border-color: #1f8f5c;
-  background: #f8faf9;
-  box-shadow: 0 0 0 3px rgba(31, 143, 92, 0.12);
-}
-[data-theme="light"] .auth-input::placeholder {
-  color: #a3aba6;
-}
-
-[data-theme="light"] .auth-divider {
-  color: #b0b8b4;
-}
-[data-theme="light"] .auth-divider::before,
-[data-theme="light"] .auth-divider::after {
-  background: #e1e5e2;
-}
-
-[data-theme="light"] .google-login-button {
-  background: #eef1ef;
-  border-color: #d5dbd7;
-  color: #14181a;
-}
-[data-theme="light"] .google-login-button:hover {
-  border-color: #1f8f5c;
-  background: #f8faf9;
+.google-login-button:hover {
+  border-color: var(--accent);
+  background: var(--auth-social-hover);
 }
 
 /* DASHBOARD */
