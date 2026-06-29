@@ -50,11 +50,31 @@ const ThanziAuth = (() => {
     }
   };
 
+  // Fixed: use origin+pathname so stale query params never pollute the OAuth redirect URL
   const loginWithGoogle = () => {
-    const successUrl = window.location.href;
-    const failureUrl = window.location.href;
-    account.createOAuth2Session('google', successUrl, failureUrl);
+    const base = window.location.origin + window.location.pathname;
+    account.createOAuth2Session('google', base, base);
   };
 
-  return { register, login, logout, getUser, updateName, loginWithGoogle };
+  // Handles the Appwrite OAuth callback in SDK v13+.
+  // After the Google redirect, Appwrite appends ?userId=...&secret=... to the URL.
+  // We must call account.createSession(userId, secret) to exchange them for a real
+  // session — without this, account.get() finds nothing and the user appears logged out.
+  const handleOAuthCallback = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('userId');
+    const secret = params.get('secret');
+
+    if (userId && secret) {
+      try {
+        await account.createSession(userId, secret);
+      } catch (e) {
+        // Session may already exist if the page reloaded — safe to ignore
+      }
+      // Clean the URL so the params don't re-trigger on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
+  return { register, login, logout, getUser, updateName, loginWithGoogle, handleOAuthCallback };
 })();

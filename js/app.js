@@ -354,6 +354,13 @@ const ThanziApp = (() => {
   const init = async () => {
     initTheme();
 
+    // Exchange OAuth callback params for a real session (Appwrite SDK v13+).
+    // After Google sign-in, Appwrite redirects back with ?userId=...&secret=...
+    // in the URL. handleOAuthCallback() calls account.createSession(userId, secret)
+    // to finalise the session, then strips the params from the URL. Without this,
+    // account.get() below finds no session and the user appears logged out.
+    await ThanziAuth.handleOAuthCallback();
+
     const user = await ThanziAuth.getUser();
 
     if (user) {
