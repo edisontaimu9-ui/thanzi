@@ -318,6 +318,75 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Dark mode auth overrides ─────────────────────────────────────────────
+   The default dark palette has very low contrast between page (#0f1117) and
+   card (#1a1a2e). These rules make the auth card pop clearly in dark mode.
+   ──────────────────────────────────────────────────────────────────────── */
+:root .auth-wrapper,
+[data-theme="dark"] .auth-wrapper {
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%,
+      rgba(45, 158, 107, 0.13) 0%, transparent 65%),
+    #0f1117;
+}
+
+:root .form-container,
+[data-theme="dark"] .form-container {
+  background: #1c1f2e;
+  border: 1.5px solid rgba(45, 158, 107, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(45, 158, 107, 0.08),
+    0 2px 0 rgba(255,255,255,0.03) inset,
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+:root .auth-tabs,
+[data-theme="dark"] .auth-tabs {
+  background: #13151f;
+  border-color: rgba(255,255,255,0.07);
+}
+
+:root .auth-input,
+[data-theme="dark"] .auth-input {
+  background: #13151f;
+  border-color: rgba(255,255,255,0.1);
+  color: #e8eaf0;
+}
+:root .auth-input:focus,
+[data-theme="dark"] .auth-input:focus {
+  border-color: #2d9e6b;
+  background: #161924;
+  box-shadow: 0 0 0 3px rgba(45, 158, 107, 0.15);
+}
+:root .auth-input::placeholder,
+[data-theme="dark"] .auth-input::placeholder {
+  color: #4a5068;
+}
+
+:root .auth-divider,
+[data-theme="dark"] .auth-divider {
+  color: #3a3f55;
+}
+:root .auth-divider::before,
+:root .auth-divider::after,
+[data-theme="dark"] .auth-divider::before,
+[data-theme="dark"] .auth-divider::after {
+  background: rgba(255,255,255,0.07);
+}
+
+:root .google-login-button,
+[data-theme="dark"] .google-login-button {
+  background: #13151f;
+  border-color: rgba(255,255,255,0.1);
+  color: #c8ccd8;
+}
+:root .google-login-button:hover,
+[data-theme="dark"] .google-login-button:hover {
+  border-color: #2d9e6b;
+  background: #161924;
+}
+
 /* DASHBOARD */
 /* ── Dashboard top bar ───────────────────────────────────────────────────── */
 .dash-topbar {
