@@ -49,6 +49,71 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/thanzi/screenshots/01-home.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Track calories, macros and water at a glance"
+    },
+    {
+      "src": "/thanzi/screenshots/02-quick-add.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Log meals in plain language with Quick Add"
+    },
+    {
+      "src": "/thanzi/screenshots/03-ai-thandizo.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Ask Thandizo, your AI nutrition assistant, for meal ideas"
+    },
+    {
+      "src": "/thanzi/screenshots/04-achievements.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Earn achievements as you build healthy habits"
+    },
+    {
+      "src": "/thanzi/screenshots/05-exercise.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Log exercise with natural language"
+    },
+    {
+      "src": "/thanzi/screenshots/06-progress.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Visualize calorie and water trends over time"
+    },
+    {
+      "src": "/thanzi/screenshots/07-profile.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "View your BMI, BMR and TDEE"
+    },
+    {
+      "src": "/thanzi/screenshots/08-goals.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Set personalized weight and calorie goals"
+    },
+    {
+      "src": "/thanzi/screenshots/09-notifications.jpg",
+      "sizes": "1080x2460",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Customize meal and water reminders"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Log Food",
