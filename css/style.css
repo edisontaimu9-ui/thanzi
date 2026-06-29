@@ -114,22 +114,185 @@ body {
 [data-theme="light"] .icon-sun  { display: none; }
 [data-theme="light"] .icon-moon { display: block; }
 
-/* AUTH */
-.auth-container {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 40px 20px;
+/* ── AUTH ────────────────────────────────────────────────────────────────── */
+
+/* Full-screen centering wrapper */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  gap: 20px;
+}
+
+/* Brand (logo + tagline above the card) */
+.auth-brand {
   text-align: center;
 }
-.logo { font-size: 2.5rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
-.tagline { color: var(--text-3); margin-bottom: 32px; font-size: 0.95rem; }
-.auth-tabs { display: flex; margin-bottom: 24px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
-.tab { flex: 1; padding: 12px; background: transparent; color: var(--text-3); border: none; cursor: pointer; font-size: 0.95rem; }
-.tab.active { background: var(--accent); color: var(--on-accent); }
-input { width: 100%; padding: 14px; margin-bottom: 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-1); font-size: 1rem; }
-input::placeholder { color: var(--text-5); }
-button#login-btn, button#register-btn { width: 100%; padding: 14px; background: var(--accent); color: var(--on-accent); border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; }
-.error { color: var(--danger); margin-top: 12px; font-size: 0.9rem; }
+.logo {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.tagline {
+  color: var(--text-3);
+  font-size: 0.93rem;
+}
+
+/* ── Card ── */
+.form-container {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  box-sizing: border-box;
+}
+
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  margin-bottom: 22px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  padding: 11px;
+  background: transparent;
+  color: var(--text-3);
+  border: none;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 500;
+  transition: background 0.18s, color 0.18s;
+}
+.tab.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+/* Inputs */
+.auth-input {
+  width: 100%;
+  padding: 13px 16px;
+  margin-bottom: 14px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-1);
+  font-size: 0.97rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.18s;
+}
+.auth-input:focus {
+  border-color: var(--accent);
+}
+.auth-input::placeholder {
+  color: var(--text-5);
+}
+
+/* Forgot password */
+.page-link {
+  text-align: right;
+  margin: -6px 0 14px;
+}
+.page-link-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-3);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.page-link-label:hover {
+  color: var(--accent);
+}
+
+/* Main CTA button */
+.form-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(var(--accent-rgb), 0.35);
+  transition: background 0.18s, box-shadow 0.18s;
+}
+.form-btn:hover  { background: var(--accent-active); }
+.form-btn:active { box-shadow: none; transform: scale(0.98); }
+
+/* Error message */
+.error {
+  color: var(--danger);
+  margin-top: 10px;
+  font-size: 0.88rem;
+  min-height: 1.2em;
+}
+
+/* "or" divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--text-4);
+  font-size: 0.8rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Social buttons */
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+.google-login-button:hover {
+  border-color: var(--accent);
+  background: var(--bg-surface);
+}
+.google-login-button:active {
+  transform: scale(0.98);
+}
+.google-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
 
 /* DASHBOARD */
 /* ── Dashboard top bar ───────────────────────────────────────────────────── */

@@ -50,5 +50,11 @@ const ThanziAuth = (() => {
     }
   };
 
-  return { register, login, logout, getUser, updateName };
+  const loginWithGoogle = () => {
+    const successUrl = window.location.href;
+    const failureUrl = window.location.href;
+    account.createOAuth2Session('google', successUrl, failureUrl);
+  };
+
+  return { register, login, logout, getUser, updateName, loginWithGoogle };
 })();

@@ -334,6 +334,12 @@ const ThanziApp = (() => {
       }
     });
 
+    // Google OAuth
+    const googleBtn = document.getElementById('google-oauth-btn');
+    if (googleBtn) {
+      googleBtn.addEventListener('click', () => ThanziAuth.loginWithGoogle());
+    }
+
     // Logout
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await ThanziAuth.logout();
