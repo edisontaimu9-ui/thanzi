@@ -128,6 +128,48 @@
 .qm-badge--ai    { background: rgba(var(--purple-rgb), 0.2); color: var(--purple); }
 .qm-badge--error { background: rgba(231,76,60,0.15); color: var(--danger); }
 
+/* Thandizo's conversational acknowledgement */
+.qm-reply {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 12px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  background: rgba(var(--accent-rgb), 0.08);
+  border-bottom: 1px solid var(--border-soft);
+  line-height: 1.4;
+}
+.qm-reply-icon { flex-shrink: 0; font-size: 0.95rem; }
+
+/* Clarification prompt — shown when an item is genuinely ambiguous */
+.qm-clarify {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.qm-clarify-q {
+  font-size: 0.84rem;
+  color: var(--text-1);
+  margin-bottom: 8px;
+}
+.qm-clarify-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qm-chip {
+  padding: 6px 12px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.qm-chip:active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
 .qm-remove {
   background: transparent; border: none; color: var(--text-6);
   font-size: 0.85rem; cursor: pointer; padding: 4px 6px;

@@ -32,6 +32,8 @@ const ThanziLog = (() => {
     searching:    false,
     quickItems:   [],
     quickBusy:    false,
+    quickReply:   '',
+    quickPending: [],
   };
 
   // ── Fallback household measures ───────────────────────────────────────────
@@ -43,13 +45,7 @@ const ThanziLog = (() => {
     { label: '1 piece',   g: 80  },
   ];
 
-  // ── Quick-add natural language parsing tables ────────────────────────────
-  const WORD_NUM = {
-    a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
-    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
-    couple: 2, few: 3, several: 3, half: 0.5,
-  };
-
+  // ── Quick-add unit conversion table ──────────────────────────────────────
   const UNIT_GRAMS = {
     cup: 240, cups: 240,
     tbsp: 15, tablespoon: 15, tablespoons: 15,
@@ -321,48 +317,60 @@ const ThanziLog = (() => {
     if (q) await _searchFullAsync(q);
   }
 
-  // ── Quick Add — natural language meal entry ─────────────────────────────
+  // ── Quick Add — AI-powered natural language meal logger ─────────────────
   //
-  // Splits a free-text meal description ("2 eggs and toast") into individual
-  // food clauses, tries to resolve each against the local Malawi/regional
-  // food database first, and only falls back to the AI backend for items it
-  // can't confidently match. Calorie/macro values for AI items are estimated
-  // directly for the stated quantity (not per-100g), so no further scaling
-  // is needed before saving.
+  // Flow:
+  //   1. Pull grounding context from Chakudya's RAG/semantic layer so
+  //      Thandizo recognises Malawian foods, Chichewa names, recipes,
+  //      synonyms and common misspellings.
+  //   2. Thandizo (AI) parses the free-text description into discrete food
+  //      items (name, qty, unit) and flags any item that's genuinely
+  //      ambiguous, with a short clarifying question + tap-able options.
+  //   3. Each item is resolved against Chakudya FIRST — it's the primary,
+  //      highest-confidence source. Only items Chakudya can't confidently
+  //      match fall back to a single batched AI macro-estimate call.
+  //   4. Ambiguous items pause for a one-tap clarification instead of
+  //      guessing, then get resolved the same Chakudya-first way.
+  //   5. The parsed meal is always shown for confirmation before saving.
 
-  const _CLAUSE_SPLIT = /\s*,\s*|\s*;\s*|\s+and\s+|\s+with\s+|\s+plus\s+|\s*\+\s*/i;
+  const _RAG_URL      = 'https://chakudya-api.edisontaimu9.workers.dev/rag/retrieve';
+  const _AI_PROXY_URL = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
+  const _AI_KEY       = 'thanzi_app001';
+  const _AI_MODEL     = 'llama-3.3-70b-versatile';
 
-  function _parseClause(clauseRaw) {
-    let text = clauseRaw.trim();
-    let qty  = 1;
-
-    const numMatch = text.match(/^(\d+(?:\.\d+)?)\s+/);
-    if (numMatch) {
-      qty  = parseFloat(numMatch[1]);
-      text = text.slice(numMatch[0].length);
-    } else {
-      const wordMatch = text.match(/^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|couple|few|several|half)\s+(?:a\s+)?(?:of\s+)?/i);
-      if (wordMatch) {
-        qty  = WORD_NUM[wordMatch[1].toLowerCase()] ?? 1;
-        text = text.slice(wordMatch[0].length);
-      }
-    }
-
-    let unit = null;
-    const unitNames = Object.keys(UNIT_GRAMS).sort((a, b) => b.length - a.length).join('|');
-    const unitMatch = text.match(new RegExp(`^(${unitNames})\\s+(?:of\\s+)?`, 'i'));
-    if (unitMatch) {
-      unit = unitMatch[1].toLowerCase();
-      text = text.slice(unitMatch[0].length);
-    }
-
-    text = text.replace(/^(a|an|the)\s+/i, '').trim();
-    return { raw: clauseRaw.trim(), qty, unit, name: text };
+  /** Normalise a food name for comparison. */
+  function _normName(s) {
+    return (s || '').toLowerCase().trim().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  /** Estimate a total gram weight for a parsed clause, using a detected unit,
-   *  the matched food's own count-based measure (e.g. "2 eggs (100g)"), or a
-   *  generic per-item fallback. */
+  /** How well does a search hit match the name Thandizo extracted? */
+  function _classifyMatch(query, hit) {
+    if (!hit || !hit.name) return null;
+    const nq = _normName(query), nh = _normName(hit.name);
+    if (!nq || !nh) return null;
+    if (nq === nh) return 'exact';
+    if (nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1) return 'alias';
+    const qTokens = nq.split(' ').filter(Boolean);
+    const hTokens = nh.split(' ').filter(Boolean);
+    if (qTokens.some(t => hTokens.includes(t))) return 'token';
+    return null;
+  }
+
+  /** True if a local search hit is confident enough to use without AI estimation.
+   *  Chakudya hits are trusted at token-level too — it's the primary, curated
+   *  source — while other sources (FDC/OFF) need a tighter match or higher score. */
+  function _isGoodLocalMatch(hit, query) {
+    if (!hit) return false;
+    const tier = _classifyMatch(query, hit);
+    if (!tier) return false;
+    const fromChakudya = hit.sourceUsed === 'Chakudya' ||
+      hit.dbSource === 'Chakudya API' || hit.dbSource === 'Chakudya Packaged DB';
+    if (tier === 'exact' || tier === 'alias') return true;
+    return fromChakudya || (hit.confidenceScore || 0) >= 0.5; // tier === 'token'
+  }
+
+  /** Estimate a total gram weight, using a detected unit, the matched food's
+   *  own count-based measure (e.g. "2 eggs (100g)"), or a generic fallback. */
   function _estimateGrams(qty, unit, rawFood) {
     if (unit && UNIT_GRAMS[unit]) return qty * UNIT_GRAMS[unit];
 
@@ -379,19 +387,80 @@ const ThanziLog = (() => {
     return qty * 80; // generic "1 piece" default
   }
 
-  /** True if a local search hit is confident enough to use without AI. */
-  function _isGoodLocalMatch(hit) {
-    if (!hit) return false;
-    return hit.matchTier === 'exact' || hit.matchTier === 'alias' ||
-      (hit.matchTier === 'token' && hit.confidenceScore >= 0.35);
+  /** Pull grounding context from Chakudya's RAG/semantic layer — never blocks
+   *  the flow; an empty result just means Thandizo parses without it. */
+  async function _retrieveRAG(query) {
+    try {
+      const res = await fetch(_RAG_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, context: 'foods', top_k: 6 }),
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const chunks = data?.data || data?.chunks || [];
+      if (!chunks.length) return '';
+      return chunks.map(c => c.content || c.text || '').filter(Boolean).join('\n');
+    } catch (_e) {
+      return '';
+    }
   }
 
-  /** One-shot call to the AI backend for items the local DB couldn't resolve.
-   *  Asks for calories/macros for each item AS WRITTEN (exact stated
-   *  quantity) — not per 100g — so results can be used directly. */
-  /** One-shot call to the AI backend for items the local DB couldn't resolve.
-   *  Asks for calories/macros for each item AS WRITTEN (exact stated
-   *  quantity) — not per 100g — so results can be used directly. */
+  /** Thandizo's NLU pass — free text → structured items, flags ambiguity. */
+  async function _parseMealNLU(text, ragContext) {
+    const prompt = `Parse this meal description into individual food items: "${text}"
+${ragContext ? `\nRelevant Malawian food knowledge (use this to recognise local foods, Chichewa names, and correct spelling):\n${ragContext}\n` : ''}
+For EACH distinct food item, return:
+- name: canonical food name (fix obvious spelling mistakes; keep recognised Malawian/Chichewa names as-is, e.g. nsima, chambo, dagaa, matemba, nchunga)
+- qty: the stated or clearly implied quantity (number, default 1)
+- unit: a unit if mentioned ("cup","plate","piece","slice","bowl","g", etc.) else null
+- ambiguous: true ONLY if the item is genuinely unclear in a way that meaningfully changes its nutrition (e.g. "soup" or "porridge" with no type stated). Do NOT mark common, well-understood foods as ambiguous.
+- clarify: if ambiguous, one short specific question, else null
+- options: if ambiguous, 2-4 short tap-able answers, else []
+
+Also include "reply": one short, friendly sentence (casual, Malawian, but professional) acknowledging what you understood.
+
+Respond with ONLY valid JSON, no markdown:
+{"reply":"...","items":[{"name":"...","qty":1,"unit":null,"ambiguous":false,"clarify":null,"options":[]}]}`;
+
+    const res = await fetch(_AI_PROXY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Thanzi-Key': _AI_KEY },
+      body: JSON.stringify({
+        model:       _AI_MODEL,
+        messages:    [
+          { role: 'system', content: "You are Thandizo, Thanzi's nutrition assistant. You always respond with only valid JSON — no markdown, no commentary." },
+          { role: 'user',   content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens:  700,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => String(res.status));
+      throw new Error('Proxy error (' + res.status + '): ' + errText);
+    }
+
+    const data  = await res.json();
+    const reply = data?.choices?.[0]?.message?.content ?? '';
+    const clean = String(reply).replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (_e) {
+      const m = clean.match(/\{[\s\S]*\}/);
+      parsed = m ? JSON.parse(m[0]) : null;
+    }
+    if (!parsed || !Array.isArray(parsed.items)) {
+      throw new Error("Couldn't understand that meal — try rephrasing");
+    }
+    return parsed;
+  }
+
+  /** One-shot AI macro estimate for items Chakudya couldn't confidently match.
+   *  Asks for calories/macros for the EXACT stated quantity (not per 100g). */
   async function _estimateViaAI(rawItems) {
     const prompt = `For each numbered food item below, estimate the calories, carbohydrates (g), protein (g), and fat (g) for that EXACT stated quantity. Prefer foods common in Malawi and Southern Africa (e.g. "porridge" means maize porridge, "greens" means leafy vegetables).
 Respond with ONLY a valid JSON array, no markdown, no commentary:
@@ -402,14 +471,11 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
     let res;
     try {
-      res = await fetch('https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions', {
+      res = await fetch(_AI_PROXY_URL, {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Thanzi-Key': 'thanzi_app001',
-        },
+        headers: { 'Content-Type': 'application/json', 'X-Thanzi-Key': _AI_KEY },
         body: JSON.stringify({
-          model:       'llama-3.3-70b-versatile',
+          model:       _AI_MODEL,
           messages:    [
             { role: 'system', content: 'You are a nutrition estimation engine. Always respond with only a valid JSON array. No markdown, no explanation.' },
             { role: 'user',   content: prompt },
@@ -429,7 +495,7 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
     let data;
     try { data = await res.json(); }
-    catch { throw new Error('Invalid JSON from proxy'); }
+    catch (_e) { throw new Error('Invalid JSON from proxy'); }
 
     const replyText = data?.choices?.[0]?.message?.content ?? null;
     if (!replyText) throw new Error('Empty AI response');
@@ -438,7 +504,7 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     let arr;
     try {
       arr = JSON.parse(cleaned);
-    } catch {
+    } catch (_e) {
       const m = cleaned.match(/\[[\s\S]*\]/);
       if (m) arr = JSON.parse(m[0]);
       else throw new Error('Could not parse AI response as JSON');
@@ -448,93 +514,182 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     return arr;
   }
 
+  /** Resolve a single parsed item against Chakudya. Returns a resolved item
+   *  object, or null if it should fall back to the batched AI estimate. */
+  async function _resolveItem(item) {
+    const raw  = await ThanziFood.search(item.name, { multi: true, limit: 3 });
+    const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    const top  = hits[0];
+
+    if (_isGoodLocalMatch(top, item.name)) {
+      const grams  = _estimateGrams(item.qty, item.unit, top._raw || top);
+      const scaled = _scale(top, grams);
+      return {
+        raw: item.raw || item.name, name: top.name, source: 'local',
+        quantity: Math.round(grams * 10) / 10,
+        calories: scaled.calories, carbs: scaled.carbs,
+        protein: scaled.protein, fat: scaled.fat,
+      };
+    }
+    return null;
+  }
+
   async function _quickAddMeal() {
     if (_state.quickBusy) return;
     const input = _el('quick-meal-input');
     const text  = input.value.trim();
     if (!text) return;
 
-    _state.quickBusy = true;
+    _state.quickBusy    = true;
+    _state.quickReply   = '';
+    _state.quickPending = [];
     const btn = _el('quick-meal-btn');
     btn.disabled    = true;
-    btn.textContent = 'Parsing…';
+    btn.textContent = 'Thinking…';
 
-    const clauses = text.split(_CLAUSE_SPLIT).map(s => s.trim()).filter(Boolean);
-    const resolved = [];
-    const needsAI  = [];
+    try {
+      const ragContext = await _retrieveRAG(text);
+      const parsed      = await _parseMealNLU(text, ragContext);
+      _state.quickReply = parsed.reply || '';
 
-    for (const clause of clauses) {
-      const { qty, unit, name } = _parseClause(clause);
-      if (!name) continue;
+      const resolved = [];
+      const needsAI  = [];
+      const pending  = [];
 
-      const raw = await ThanziFood.search(name, { multi: true, limit: 3 });
-      const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
-      const top  = hits[0];
+      for (const item of parsed.items) {
+        if (!item || !item.name) continue;
+        item.qty = typeof item.qty === 'number' && item.qty > 0 ? item.qty : 1;
 
-      if (_isGoodLocalMatch(top)) {
-        const grams  = _estimateGrams(qty, unit, top._raw || top);
-        const scaled = _scale(top, grams);
-        resolved.push({
-          raw: clause, name: top.name, source: 'Chakudya',
-          quantity: Math.round(grams * 10) / 10,
-          calories: scaled.calories, carbs: scaled.carbs,
-          protein: scaled.protein, fat: scaled.fat,
-        });
-      } else {
-        const grams = _estimateGrams(qty, unit, null);
-        needsAI.push({ raw: clause, name, quantity: Math.round(grams * 10) / 10 });
-      }
-    }
+        if (item.ambiguous && item.clarify) {
+          pending.push(item);
+          continue;
+        }
 
-    if (needsAI.length) {
-      try {
-        const aiResults = await _estimateViaAI(needsAI.map(i => i.raw));
-        aiResults.forEach((r, i) => {
-          const meta = needsAI[i];
-          if (!meta) return;
-          resolved.push({
-            raw: meta.raw, name: r.name || meta.name, source: 'ai',
-            quantity: meta.quantity,
-            calories: Math.round(r.calories || 0),
-            carbs:    Math.round((r.carbs   || 0) * 10) / 10,
-            protein:  Math.round((r.protein || 0) * 10) / 10,
-            fat:      Math.round((r.fat     || 0) * 10) / 10,
+        const hit = await _resolveItem(item);
+        if (hit) {
+          resolved.push(hit);
+        } else {
+          const grams = _estimateGrams(item.qty, item.unit, null);
+          needsAI.push({
+            raw: `${item.qty} ${item.unit || ''} ${item.name}`.replace(/\s+/g, ' ').trim(),
+            name: item.name,
+            quantity: Math.round(grams * 10) / 10,
           });
-        });
-      } catch (err) {
-        console.error('ThanziLog: AI estimate failed', err.message);
-        needsAI.forEach(meta => {
-          resolved.push({
-            raw: meta.raw, name: meta.name, source: 'error',
-            quantity: meta.quantity, calories: null, carbs: null, protein: null, fat: null,
-          });
-        });
+        }
       }
-    }
 
-    _state.quickItems = resolved;
-    _renderQuickPreview(resolved);
+      if (needsAI.length) {
+        try {
+          const aiResults = await _estimateViaAI(needsAI.map(i => i.raw));
+          aiResults.forEach((r, i) => {
+            const meta = needsAI[i];
+            if (!meta) return;
+            resolved.push({
+              raw: meta.raw, name: r.name || meta.name, source: 'ai',
+              quantity: meta.quantity,
+              calories: Math.round(r.calories || 0),
+              carbs:    Math.round((r.carbs   || 0) * 10) / 10,
+              protein:  Math.round((r.protein || 0) * 10) / 10,
+              fat:      Math.round((r.fat     || 0) * 10) / 10,
+            });
+          });
+        } catch (err) {
+          console.error('ThanziLog: AI estimate failed', err.message);
+          needsAI.forEach(meta => {
+            resolved.push({
+              raw: meta.raw, name: meta.name, source: 'error',
+              quantity: meta.quantity, calories: null, carbs: null, protein: null, fat: null,
+            });
+          });
+        }
+      }
+
+      _state.quickItems   = resolved;
+      _state.quickPending = pending;
+      _renderQuickPreview(resolved);
+    } catch (err) {
+      console.error('ThanziLog: quick-add parse error', err.message);
+      _state.quickReply   = `Sorry, I couldn't quite catch that. (${err.message})`;
+      _state.quickItems   = [];
+      _state.quickPending = [];
+      _renderQuickPreview([]);
+    }
 
     btn.disabled    = false;
     btn.textContent = 'Add';
     _state.quickBusy = false;
   }
 
+  /** A tapped clarification option (or the default "skip") resolves that one
+   *  item the same Chakudya-first way and folds it into the preview. */
+  async function _resolveClarification(idx, choice) {
+    const pending = _state.quickPending || [];
+    const item = pending[idx];
+    if (!item) return;
+
+    pending.splice(idx, 1);
+    const fullName = `${choice} ${item.name}`.trim();
+
+    let resolvedItem = await _resolveItem({ ...item, name: fullName });
+    if (!resolvedItem) {
+      const grams = _estimateGrams(item.qty, item.unit, null);
+      try {
+        const aiResults = await _estimateViaAI([`${item.qty} ${item.unit || ''} ${fullName}`.replace(/\s+/g, ' ').trim()]);
+        const r = aiResults[0] || {};
+        resolvedItem = {
+          raw: fullName, name: r.name || fullName, source: 'ai',
+          quantity: Math.round(grams * 10) / 10,
+          calories: Math.round(r.calories || 0),
+          carbs:    Math.round((r.carbs   || 0) * 10) / 10,
+          protein:  Math.round((r.protein || 0) * 10) / 10,
+          fat:      Math.round((r.fat     || 0) * 10) / 10,
+        };
+      } catch (_e) {
+        resolvedItem = {
+          raw: fullName, name: fullName, source: 'error',
+          quantity: Math.round(grams * 10) / 10, calories: null, carbs: null, protein: null, fat: null,
+        };
+      }
+    }
+
+    _state.quickItems.push(resolvedItem);
+    _renderQuickPreview(_state.quickItems);
+  }
+
   function _renderQuickPreview(items) {
     const wrap = _el('quick-meal-preview');
     if (!wrap) return;
 
-    if (!items.length) {
+    const reply   = _state.quickReply   || '';
+    const pending = _state.quickPending || [];
+
+    if (!items.length && !pending.length && !reply) {
       wrap.style.display = 'none';
       wrap.innerHTML = '';
       return;
     }
 
-    const totalKcal = items.reduce((s, it) => s + (it.calories || 0), 0);
+    const totalKcal  = items.reduce((s, it) => s + (it.calories || 0), 0);
     const badgeLabel = { local: 'MW', ai: 'AI', error: '⚠' };
 
-    wrap.innerHTML = `
-      ${items.map((it, i) => `
+    let html = '';
+
+    if (reply) {
+      html += `<div class="qm-reply"><span class="qm-reply-icon">🍃</span><span>${reply}</span></div>`;
+    }
+
+    pending.forEach((p, i) => {
+      html += `
+        <div class="qm-clarify" data-pi="${i}">
+          <div class="qm-clarify-q">${p.clarify}</div>
+          <div class="qm-clarify-opts">
+            ${(p.options || []).map(o => `<button class="qm-chip" data-pi="${i}" data-opt="${o}">${o}</button>`).join('')}
+          </div>
+        </div>`;
+    });
+
+    if (items.length) {
+      html += items.map((it, i) => `
         <div class="qm-item" data-i="${i}">
           <div class="qm-item-left">
             <span class="qm-name">${it.name}</span>
@@ -546,12 +701,16 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
             <button class="qm-remove" data-i="${i}" aria-label="Remove">✕</button>
           </div>
         </div>
-      `).join('')}
-      <div class="qm-footer">
-        <span class="qm-total">${totalKcal} kcal total</span>
-        <button id="quick-log-all-btn" class="qm-log-all-btn">Log All</button>
-      </div>
-    `;
+      `).join('');
+
+      html += `
+        <div class="qm-footer">
+          <span class="qm-total">${totalKcal} kcal total</span>
+          <button id="quick-log-all-btn" class="qm-log-all-btn">Log All</button>
+        </div>`;
+    }
+
+    wrap.innerHTML = html;
     wrap.style.display = 'block';
 
     wrap.querySelectorAll('.qm-remove').forEach(b => {
@@ -559,6 +718,10 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
         _state.quickItems.splice(parseInt(b.dataset.i, 10), 1);
         _renderQuickPreview(_state.quickItems);
       });
+    });
+
+    wrap.querySelectorAll('.qm-chip').forEach(b => {
+      b.addEventListener('click', () => _resolveClarification(parseInt(b.dataset.pi, 10), b.dataset.opt));
     });
 
     _el('quick-log-all-btn')?.addEventListener('click', _confirmQuickLog);
