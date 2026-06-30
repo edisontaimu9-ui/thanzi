@@ -343,17 +343,65 @@ const ThanziLog = (() => {
     return (s || '').toLowerCase().trim().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  /** How well does a search hit match the name Thandizo extracted? */
+  // Generic filler words that shouldn't count as a meaningful match on their
+  // own — e.g. "thick porridge" being a substring of "Cassava Thick Porridge"
+  // must NOT be treated as a match for "nsima" just because both happen to
+  // be described as a "porridge".
+  const _GENERIC_WORDS = new Set([
+    'thick', 'thin', 'porridge', 'food', 'meal', 'dish', 'mixed', 'plain',
+    'cooked', 'fresh', 'dried', 'whole', 'of', 'with', 'and', 'a', 'the',
+  ]);
+
+  function _meaningfulTokens(tokens) {
+    return tokens.filter(t => t.length > 2 && !_GENERIC_WORDS.has(t));
+  }
+
+  /** How well does a search hit match the name Thandizo extracted?
+   *  Requires overlap on MEANINGFUL (non-generic) tokens — a shared generic
+   *  word like "porridge" alone is never enough to call it an alias/match. */
   function _classifyMatch(query, hit) {
     if (!hit || !hit.name) return null;
     const nq = _normName(query), nh = _normName(hit.name);
     if (!nq || !nh) return null;
     if (nq === nh) return 'exact';
-    if (nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1) return 'alias';
-    const qTokens = nq.split(' ').filter(Boolean);
-    const hTokens = nh.split(' ').filter(Boolean);
-    if (qTokens.some(t => hTokens.includes(t))) return 'token';
+
+    const qTokens = _meaningfulTokens(nq.split(' ').filter(Boolean));
+    const hTokens = _meaningfulTokens(nh.split(' ').filter(Boolean));
+    if (!qTokens.length || !hTokens.length) return null;
+
+    const overlap = qTokens.filter(t => hTokens.includes(t)).length;
+    const containment = nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1;
+
+    // "Alias" requires substring containment AND at least one shared
+    // meaningful token — not just shared filler words like "thick porridge".
+    if (containment && overlap > 0) return 'alias';
+    if (overlap > 0) return 'token';
     return null;
+  }
+
+  /** Score a match tier for ranking candidates against each other. */
+  function _tierScore(tier) {
+    return tier === 'exact' ? 3 : tier === 'alias' ? 2 : tier === 'token' ? 1 : 0;
+  }
+
+  // ── Known Malawian nsima variants — disambiguated up front so a vague
+  // search term never accidentally lands on an unrelated dish (e.g. a
+  // cassava-based porridge). "Plain nsima" with no qualifier defaults to
+  // the most commonly eaten variant: nsima yaufa woyera (refined maize meal).
+  const _NSIMA_VARIANTS = [
+    { test: /mgaiwa/i,                                   canonical: 'Nsima ya mgaiwa' },
+    { test: /gilamilu|de\s*-?hulled/i,                    canonical: 'Nsima ya ufa gilamilu' },
+    { test: /(ufa\s*)?woyera|refined|white\s*maize/i,     canonical: 'Nsima yaufa woyera' },
+    { test: /\bnsima\b/i,                                 canonical: 'Nsima yaufa woyera' }, // most common default
+  ];
+
+  /** If the item name refers to nsima, resolve it to the precise canonical
+   *  Chakudya entry name up front, instead of relying on fuzzy search ranking. */
+  function _resolveCanonicalName(name) {
+    for (const v of _NSIMA_VARIANTS) {
+      if (v.test.test(name)) return v.canonical;
+    }
+    return name;
   }
 
   /** True if a local search hit is confident enough to use without AI estimation.
@@ -411,7 +459,7 @@ const ThanziLog = (() => {
     const prompt = `Parse this meal description into individual food items: "${text}"
 ${ragContext ? `\nRelevant Malawian food knowledge (use this to recognise local foods, Chichewa names, and correct spelling):\n${ragContext}\n` : ''}
 For EACH distinct food item, return:
-- name: canonical food name (fix obvious spelling mistakes; keep recognised Malawian/Chichewa names as-is, e.g. nsima, chambo, dagaa, matemba, nchunga)
+- name: canonical food name (fix obvious spelling mistakes; keep recognised Malawian/Chichewa names as-is, e.g. nsima, chambo, dagaa, matemba, nchunga — NEVER translate "nsima" into generic English like "porridge"; if a type/qualifier is given, e.g. "mgaiwa nsima", "nsima ya ufa woyera", "gilamilu", keep that exact qualifier word in the name)
 - qty: the stated or clearly implied quantity (number, default 1)
 - unit: a unit if mentioned ("cup","plate","piece","slice","bowl","g", etc.) else null
 - ambiguous: true ONLY if the item is genuinely unclear in a way that meaningfully changes its nutrition (e.g. "soup" or "porridge" with no type stated). Do NOT mark common, well-understood foods as ambiguous.
@@ -517,15 +565,29 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
   /** Resolve a single parsed item against Chakudya. Returns a resolved item
    *  object, or null if it should fall back to the batched AI estimate. */
   async function _resolveItem(item) {
-    const raw  = await ThanziFood.search(item.name, { multi: true, limit: 3 });
-    const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
-    const top  = hits[0];
+    // Known-ambiguous foods (e.g. nsima) are resolved to their precise
+    // canonical entry up front, so search ranking quirks can't substitute
+    // an unrelated dish (e.g. cassava porridge) for the real one.
+    const searchName = _resolveCanonicalName(item.name);
 
-    if (_isGoodLocalMatch(top, item.name)) {
-      const grams  = _estimateGrams(item.qty, item.unit, top._raw || top);
-      const scaled = _scale(top, grams);
+    const raw  = await ThanziFood.search(searchName, { multi: true, limit: 5 });
+    const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    if (!hits.length) return null;
+
+    // Rank ALL returned candidates against the search name instead of
+    // trusting whatever the API put first — pick the best meaningful match.
+    let best = null, bestScore = -1;
+    for (const hit of hits) {
+      const tier = _classifyMatch(searchName, hit);
+      const score = _tierScore(tier);
+      if (score > bestScore) { bestScore = score; best = hit; }
+    }
+
+    if (best && _isGoodLocalMatch(best, searchName)) {
+      const grams  = _estimateGrams(item.qty, item.unit, best._raw || best);
+      const scaled = _scale(best, grams);
       return {
-        raw: item.raw || item.name, name: top.name, source: 'local',
+        raw: item.raw || item.name, name: best.name, source: 'local',
         quantity: Math.round(grams * 10) / 10,
         calories: scaled.calories, carbs: scaled.carbs,
         protein: scaled.protein, fat: scaled.fat,
@@ -691,15 +753,22 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     if (items.length) {
       html += items.map((it, i) => `
         <div class="qm-item" data-i="${i}">
-          <div class="qm-item-left">
+          <div class="qm-item-top">
             <span class="qm-name">${it.name}</span>
-            <span class="qm-sub">${it.calories != null ? `${it.quantity}g (est.)` : 'Not recognized — remove or search manually'}</span>
+            <div class="qm-item-actions">
+              <span class="qm-badge qm-badge--${it.source}">${badgeLabel[it.source] || ''}</span>
+              <button class="qm-remove" data-i="${i}" aria-label="Remove">✕</button>
+            </div>
           </div>
-          <div class="qm-item-right">
-            ${it.calories != null ? `<span class="qm-kcal">${it.calories} kcal</span>` : ''}
-            <span class="qm-badge qm-badge--${it.source}">${badgeLabel[it.source] || ''}</span>
-            <button class="qm-remove" data-i="${i}" aria-label="Remove">✕</button>
-          </div>
+          ${it.calories != null ? `
+          <div class="qm-item-stats">
+            <span class="qm-amount">${it.quantity}g</span>
+            <span class="qm-kcal">${it.calories} kcal</span>
+            <span class="qm-macro qm-macro--c">C ${it.carbs ?? 0}g</span>
+            <span class="qm-macro qm-macro--p">P ${it.protein ?? 0}g</span>
+            <span class="qm-macro qm-macro--f">F ${it.fat ?? 0}g</span>
+          </div>` : `
+          <div class="qm-sub">Not recognized — remove or search manually</div>`}
         </div>
       `).join('');
 

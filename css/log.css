@@ -104,20 +104,43 @@
 
 .qm-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   padding: 11px 12px;
   border-bottom: 1px solid var(--border-soft);
-  gap: 10px;
 }
 .qm-item:last-child { border-bottom: none; }
 
-.qm-item-left  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.qm-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.qm-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.qm-item-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.qm-name { font-size: 0.88rem; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; text-transform: capitalize; }
+.qm-name { font-size: 0.88rem; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; text-transform: capitalize; font-weight: 600; }
 .qm-sub  { font-size: 0.72rem; color: var(--text-4); }
-.qm-kcal { font-size: 0.8rem; color: var(--text-2); white-space: nowrap; }
+
+.qm-item-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.qm-amount { font-size: 0.74rem; color: var(--text-4); }
+.qm-kcal   { font-size: 0.8rem; color: var(--text-1); font-weight: 700; white-space: nowrap; }
+.qm-macro  {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-inset);
+  white-space: nowrap;
+}
+.qm-macro--c { color: #e8a23a; }
+.qm-macro--p { color: var(--accent); }
+.qm-macro--f { color: var(--purple); }
 
 .qm-badge {
   font-size: 0.62rem; font-weight: 700;
