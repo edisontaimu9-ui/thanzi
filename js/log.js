@@ -358,50 +358,53 @@ const ThanziLog = (() => {
 
   /** How well does a search hit match the name Thandizo extracted?
    *  Requires overlap on MEANINGFUL (non-generic) tokens — a shared generic
-   *  word like "porridge" alone is never enough to call it an alias/match. */
-  function _classifyMatch(query, hit) {
+   *  word like "porridge" alone is never enough to call it an alias/match.
+   *  Returns { tier, overlap } or null if there's no meaningful match. */
+  function _matchInfo(query, hit) {
     if (!hit || !hit.name) return null;
     const nq = _normName(query), nh = _normName(hit.name);
     if (!nq || !nh) return null;
-    if (nq === nh) return 'exact';
+    if (nq === nh) return { tier: 'exact', overlap: 99 };
 
     const qTokens = _meaningfulTokens(nq.split(' ').filter(Boolean));
     const hTokens = _meaningfulTokens(nh.split(' ').filter(Boolean));
     if (!qTokens.length || !hTokens.length) return null;
 
     const overlap = qTokens.filter(t => hTokens.includes(t)).length;
+    if (overlap === 0) return null;
+
     const containment = nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1;
-
-    // "Alias" requires substring containment AND at least one shared
-    // meaningful token — not just shared filler words like "thick porridge".
-    if (containment && overlap > 0) return 'alias';
-    if (overlap > 0) return 'token';
-    return null;
+    return { tier: containment ? 'alias' : 'token', overlap };
   }
 
-  /** Score a match tier for ranking candidates against each other. */
-  function _tierScore(tier) {
-    return tier === 'exact' ? 3 : tier === 'alias' ? 2 : tier === 'token' ? 1 : 0;
+  function _classifyMatch(query, hit) {
+    const m = _matchInfo(query, hit);
+    return m ? m.tier : null;
   }
 
-  // ── Known Malawian nsima variants — disambiguated up front so a vague
-  // search term never accidentally lands on an unrelated dish (e.g. a
-  // cassava-based porridge). "Plain nsima" with no qualifier defaults to
-  // the most commonly eaten variant: nsima yaufa woyera (refined maize meal).
-  const _NSIMA_VARIANTS = [
-    { test: /mgaiwa/i,                                   canonical: 'Nsima ya mgaiwa' },
-    { test: /gilamilu|de\s*-?hulled/i,                    canonical: 'Nsima ya ufa gilamilu' },
-    { test: /(ufa\s*)?woyera|refined|white\s*maize/i,     canonical: 'Nsima yaufa woyera' },
-    { test: /\bnsima\b/i,                                 canonical: 'Nsima yaufa woyera' }, // most common default
-  ];
+  /** Rank score for a candidate — tier dominates, overlap count breaks ties
+   *  between candidates of the same tier (e.g. "Nsima ya mgaiwa" should
+   *  outrank "Nsima yaufa woyera" when the query says "mgaiwa nsima"). */
+  function _matchScore(query, hit) {
+    const m = _matchInfo(query, hit);
+    if (!m) return -1;
+    const tierBase = m.tier === 'exact' ? 100 : m.tier === 'alias' ? 50 : 10;
+    let score = tierBase + m.overlap;
+    if (_isPreferredNsimaVariant(query, hit.name)) score += 1; // small default bias
+    return score;
+  }
 
-  /** If the item name refers to nsima, resolve it to the precise canonical
-   *  Chakudya entry name up front, instead of relying on fuzzy search ranking. */
-  function _resolveCanonicalName(name) {
-    for (const v of _NSIMA_VARIANTS) {
-      if (v.test.test(name)) return v.canonical;
-    }
-    return name;
+  // ── Known Malawian nsima variants — used only as a tie-break preference
+  // when the QUERY is generic "nsima" with no qualifier and several Chakudya
+  // entries could match. We never rewrite the search query itself: Chakudya
+  // does literal/substring search, so guessing a "canonical" name and
+  // searching for THAT instead of what the user said can silently return
+  // zero results.
+  function _isPreferredNsimaVariant(query, hitName) {
+    const nq = _normName(query);
+    const hasQualifier = /mgaiwa|gilamilu|woyera|refined|dehulled|de\s*-?\s*hulled/i.test(nq);
+    if (!/\bnsima\b/.test(nq) || hasQualifier) return false; // only for bare "nsima"
+    return /woyera|refined/i.test(hitName); // most common variant
   }
 
   /** True if a local search hit is confident enough to use without AI estimation.
@@ -563,27 +566,27 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
   }
 
   /** Resolve a single parsed item against Chakudya. Returns a resolved item
-   *  object, or null if it should fall back to the batched AI estimate. */
+   *  object, or null if it should fall back to the batched AI estimate.
+   *  Searches with the food name AS WRITTEN — same call the normal search
+   *  box uses — since Chakudya is the primary (and only) lookup layer and
+   *  does literal/substring matching: rewriting the query to a guessed
+   *  "canonical" name can return zero hits even when the food exists. */
   async function _resolveItem(item) {
-    // Known-ambiguous foods (e.g. nsima) are resolved to their precise
-    // canonical entry up front, so search ranking quirks can't substitute
-    // an unrelated dish (e.g. cassava porridge) for the real one.
-    const searchName = _resolveCanonicalName(item.name);
-
-    const raw  = await ThanziFood.search(searchName, { multi: true, limit: 5 });
+    const raw  = await ThanziFood.search(item.name, { multi: true, limit: 8 });
     const hits = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     if (!hits.length) return null;
 
-    // Rank ALL returned candidates against the search name instead of
-    // trusting whatever the API put first — pick the best meaningful match.
+    // Rank ALL returned candidates instead of trusting whatever the API put
+    // first — pick the best meaningful match (overlap count breaks ties,
+    // e.g. preferring "Nsima ya mgaiwa" over "Nsima yaufa woyera" when the
+    // query says "mgaiwa nsima").
     let best = null, bestScore = -1;
     for (const hit of hits) {
-      const tier = _classifyMatch(searchName, hit);
-      const score = _tierScore(tier);
+      const score = _matchScore(item.name, hit);
       if (score > bestScore) { bestScore = score; best = hit; }
     }
 
-    if (best && _isGoodLocalMatch(best, searchName)) {
+    if (best && _isGoodLocalMatch(best, item.name)) {
       const grams  = _estimateGrams(item.qty, item.unit, best._raw || best);
       const scaled = _scale(best, grams);
       return {

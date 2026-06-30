@@ -88,27 +88,39 @@ const ThanziRecipe = (() => {
   }
 
   /** How well does a search hit match the ingredient name? Requires overlap
-   *  on MEANINGFUL (non-generic) tokens. */
-  function _classifyMatch(query, hit) {
+   *  on MEANINGFUL (non-generic) tokens. Returns { tier, overlap } or null. */
+  function _matchInfo(query, hit) {
     if (!hit || !hit.name) return null;
     const nq = _normName(query), nh = _normName(hit.name);
     if (!nq || !nh) return null;
-    if (nq === nh) return 'exact';
+    if (nq === nh) return { tier: 'exact', overlap: 99 };
 
     const qTokens = _meaningfulTokens(nq.split(' ').filter(Boolean));
     const hTokens = _meaningfulTokens(nh.split(' ').filter(Boolean));
     if (!qTokens.length || !hTokens.length) return null;
 
     const overlap = qTokens.filter(t => hTokens.includes(t)).length;
-    const containment = nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1;
+    if (overlap === 0) return null;
 
-    if (containment && overlap > 0) return 'alias';
-    if (overlap > 0) return 'token';
-    return null;
+    const containment = nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1;
+    return { tier: containment ? 'alias' : 'token', overlap };
   }
 
-  function _tierScore(tier) {
-    return tier === 'exact' ? 3 : tier === 'alias' ? 2 : tier === 'token' ? 1 : 0;
+  function _classifyMatch(query, hit) {
+    const m = _matchInfo(query, hit);
+    return m ? m.tier : null;
+  }
+
+  /** Rank score for a candidate — tier dominates, overlap count breaks ties
+   *  between candidates of the same tier (e.g. "Nsima ya mgaiwa" should
+   *  outrank "Nsima yaufa woyera" when the ingredient says "mgaiwa nsima"). */
+  function _matchScore(query, hit) {
+    const m = _matchInfo(query, hit);
+    if (!m) return -1;
+    const tierBase = m.tier === 'exact' ? 100 : m.tier === 'alias' ? 50 : 10;
+    let score = tierBase + m.overlap;
+    if (_isPreferredNsimaVariant(query, hit.name)) score += 1;
+    return score;
   }
 
   function _isGoodMatch(hit, query) {
@@ -121,21 +133,16 @@ const ThanziRecipe = (() => {
     return fromChakudya || (hit.confidenceScore || 0) >= 0.5;
   }
 
-  // Known Malawian nsima variants — disambiguated up front so a vague
-  // ingredient name never lands on an unrelated dish. Plain "nsima" with no
-  // qualifier defaults to the most commonly eaten variant.
-  const _NSIMA_VARIANTS = [
-    { test: /mgaiwa/i,                               canonical: 'Nsima ya mgaiwa' },
-    { test: /gilamilu|de\s*-?hulled/i,                canonical: 'Nsima ya ufa gilamilu' },
-    { test: /(ufa\s*)?woyera|refined|white\s*maize/i, canonical: 'Nsima yaufa woyera' },
-    { test: /\bnsima\b/i,                             canonical: 'Nsima yaufa woyera' },
-  ];
-
-  function _resolveCanonicalName(name) {
-    for (const v of _NSIMA_VARIANTS) {
-      if (v.test.test(name)) return v.canonical;
-    }
-    return name;
+  // ── Nsima variant preference — used ONLY as a tie-break bonus among
+  // candidates Chakudya already returned for a bare "nsima" query, never to
+  // rewrite the search text itself. Chakudya does literal/substring search,
+  // so guessing a "canonical" name and searching for THAT instead of what
+  // was written can silently return zero results.
+  function _isPreferredNsimaVariant(query, hitName) {
+    const nq = _normName(query);
+    const hasQualifier = /mgaiwa|gilamilu|woyera|refined|dehulled|de\s*-?\s*hulled/i.test(nq);
+    if (!/\bnsima\b/.test(nq) || hasQualifier) return false;
+    return /woyera|refined/i.test(hitName);
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -204,31 +211,30 @@ const ThanziRecipe = (() => {
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Try to find `name` in the local food DB (Chakudya — Malawi FCT + packaged —
-   * is primary, with USDA FDC / Open Food Facts as fallback inside ThanziFood).
-   * If found, scale its per-100g macros to `qty` and `unit`.
+   * Try to find `name` in Chakudya — Thanzi's primary (and only) food data
+   * layer, with USDA FDC / Open Food Facts as fallback inside ThanziFood.
+   * Searches with the name AS WRITTEN — same call the manual search box
+   * uses — since Chakudya does literal/substring search and a guessed
+   * "canonical" name can silently return zero hits even when the food
+   * exists. If found, scales its per-100g macros to `qty` and `unit`.
    * Returns a nutrition object if matched, else null.
    */
   async function _matchToDatabase(name, qty, unit) {
     if (typeof ThanziFood === 'undefined') return null;
 
-    // Known-ambiguous ingredients (e.g. nsima) resolve to their precise
-    // canonical entry up front, so search ranking quirks can't substitute
-    // an unrelated dish (e.g. cassava porridge) for the real one.
-    const searchName = _resolveCanonicalName(name);
-
-    const raw = await ThanziFood.search(searchName, { multi: true, limit: 5 });
+    const raw = await ThanziFood.search(name, { multi: true, limit: 8 });
     const results = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     if (!results.length) return null;
 
     // Rank ALL returned candidates instead of trusting whichever the API
-    // put first — pick the best meaningful match.
+    // put first — pick the best meaningful match (overlap count breaks
+    // ties between same-tier candidates).
     let food = null, bestScore = -1;
     for (const hit of results) {
-      const score = _tierScore(_classifyMatch(searchName, hit));
+      const score = _matchScore(name, hit);
       if (score > bestScore) { bestScore = score; food = hit; }
     }
-    if (!food || !_isGoodMatch(food, searchName)) return null;
+    if (!food || !_isGoodMatch(food, name)) return null;
 
     // Resolve grams for the quantity
     let grams = qty;
