@@ -1,8 +1,19 @@
 /**
- * recipe.js — Thanzi AI Recipe Builder  (v2.0)
+ * recipe.js — Thanzi AI Recipe Builder  (v2.1)
+ *
+ * NEW in v2.1:
+ *  - Chakudya RAG/semantic grounding: both full-recipe generation and
+ *    manual ingredient parsing pull relevant Malawian food knowledge from
+ *    Chakudya before calling the AI, so ingredient names, synonyms and
+ *    Chichewa terms are recognised correctly (incl. nsima variants).
+ *  - Ingredient-to-database matching is now Chakudya-first and rank-aware:
+ *    every candidate Chakudya returns is scored and the best meaningful
+ *    match is used (instead of blindly trusting whichever result came
+ *    first), with a curated nsima disambiguation table so a vague
+ *    ingredient name can never land on an unrelated dish.
  *
  * NEW in v2:
- *  - "Describe a meal" flow: Claude generates full recipe (name, servings,
+ *  - "Describe a meal" flow: AI generates full recipe (name, servings,
  *    prep time, cook time, steps, ingredients with Malawian portions) then
  *    each ingredient is auto-matched to the Malawi Food Composition Table (MFCT).
  *  - Extended nutrition panel: fibre, sodium, sugar per serving in addition
@@ -33,6 +44,99 @@ const ThanziRecipe = (() => {
   const PROXY_URL = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
   const PROXY_KEY = 'thanzi_app001';
   const AI_MODEL  = 'llama-3.3-70b-versatile';
+
+  // ── Chakudya RAG / semantic knowledge base ─────────────────────────────────
+  const RAG_URL = 'https://chakudya-api.edisontaimu9.workers.dev/rag/retrieve';
+
+  /** Pull grounding context from Chakudya's RAG/semantic layer so recipe
+   *  generation and ingredient parsing recognise Malawian foods, Chichewa
+   *  names, recipes and common misspellings. Never blocks the flow. */
+  async function _retrieveRAG(query) {
+    try {
+      const res = await fetch(RAG_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, context: 'both', top_k: 6 }),
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const chunks = data?.data || data?.chunks || [];
+      if (!chunks.length) return '';
+      return chunks.map(c => c.content || c.text || '').filter(Boolean).join('\n');
+    } catch (_e) {
+      return '';
+    }
+  }
+
+  // ── Ingredient-matching helpers (Chakudya-first, same logic as Quick Add) ──
+
+  /** Normalise a food name for comparison. */
+  function _normName(s) {
+    return (s || '').toLowerCase().trim().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  // Generic filler words that shouldn't count as a meaningful match on their
+  // own — prevents e.g. "thick porridge" matching an unrelated cassava dish
+  // just because both happen to be described as a "porridge".
+  const _GENERIC_WORDS = new Set([
+    'thick', 'thin', 'porridge', 'food', 'meal', 'dish', 'mixed', 'plain',
+    'cooked', 'fresh', 'dried', 'whole', 'of', 'with', 'and', 'a', 'the',
+  ]);
+
+  function _meaningfulTokens(tokens) {
+    return tokens.filter(t => t.length > 2 && !_GENERIC_WORDS.has(t));
+  }
+
+  /** How well does a search hit match the ingredient name? Requires overlap
+   *  on MEANINGFUL (non-generic) tokens. */
+  function _classifyMatch(query, hit) {
+    if (!hit || !hit.name) return null;
+    const nq = _normName(query), nh = _normName(hit.name);
+    if (!nq || !nh) return null;
+    if (nq === nh) return 'exact';
+
+    const qTokens = _meaningfulTokens(nq.split(' ').filter(Boolean));
+    const hTokens = _meaningfulTokens(nh.split(' ').filter(Boolean));
+    if (!qTokens.length || !hTokens.length) return null;
+
+    const overlap = qTokens.filter(t => hTokens.includes(t)).length;
+    const containment = nh.indexOf(nq) !== -1 || nq.indexOf(nh) !== -1;
+
+    if (containment && overlap > 0) return 'alias';
+    if (overlap > 0) return 'token';
+    return null;
+  }
+
+  function _tierScore(tier) {
+    return tier === 'exact' ? 3 : tier === 'alias' ? 2 : tier === 'token' ? 1 : 0;
+  }
+
+  function _isGoodMatch(hit, query) {
+    if (!hit) return false;
+    const tier = _classifyMatch(query, hit);
+    if (!tier) return false;
+    const fromChakudya = hit.sourceUsed === 'Chakudya' ||
+      hit.dbSource === 'Chakudya API' || hit.dbSource === 'Chakudya Packaged DB';
+    if (tier === 'exact' || tier === 'alias') return true;
+    return fromChakudya || (hit.confidenceScore || 0) >= 0.5;
+  }
+
+  // Known Malawian nsima variants — disambiguated up front so a vague
+  // ingredient name never lands on an unrelated dish. Plain "nsima" with no
+  // qualifier defaults to the most commonly eaten variant.
+  const _NSIMA_VARIANTS = [
+    { test: /mgaiwa/i,                               canonical: 'Nsima ya mgaiwa' },
+    { test: /gilamilu|de\s*-?hulled/i,                canonical: 'Nsima ya ufa gilamilu' },
+    { test: /(ufa\s*)?woyera|refined|white\s*maize/i, canonical: 'Nsima yaufa woyera' },
+    { test: /\bnsima\b/i,                             canonical: 'Nsima yaufa woyera' },
+  ];
+
+  function _resolveCanonicalName(name) {
+    for (const v of _NSIMA_VARIANTS) {
+      if (v.test.test(name)) return v.canonical;
+    }
+    return name;
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
   const _s = {
@@ -100,18 +204,31 @@ const ThanziRecipe = (() => {
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Try to find `name` in the local food DB (Malawi FCT + UCT Exchange).
+   * Try to find `name` in the local food DB (Chakudya — Malawi FCT + packaged —
+   * is primary, with USDA FDC / Open Food Facts as fallback inside ThanziFood).
    * If found, scale its per-100g macros to `qty` and `unit`.
    * Returns a nutrition object if matched, else null.
    */
   async function _matchToDatabase(name, qty, unit) {
     if (typeof ThanziFood === 'undefined') return null;
 
-    const raw = await ThanziFood.search(name, { multi: true, limit: 3 });
+    // Known-ambiguous ingredients (e.g. nsima) resolve to their precise
+    // canonical entry up front, so search ranking quirks can't substitute
+    // an unrelated dish (e.g. cassava porridge) for the real one.
+    const searchName = _resolveCanonicalName(name);
+
+    const raw = await ThanziFood.search(searchName, { multi: true, limit: 5 });
     const results = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     if (!results.length) return null;
 
-    const food = results[0]; // best match
+    // Rank ALL returned candidates instead of trusting whichever the API
+    // put first — pick the best meaningful match.
+    let food = null, bestScore = -1;
+    for (const hit of results) {
+      const score = _tierScore(_classifyMatch(searchName, hit));
+      if (score > bestScore) { bestScore = score; food = hit; }
+    }
+    if (!food || !_isGoodMatch(food, searchName)) return null;
 
     // Resolve grams for the quantity
     let grams = qty;
@@ -224,10 +341,12 @@ const ThanziRecipe = (() => {
     _showGeneratingState(input);
 
     try {
-      const systemPrompt = `You are a Malawian nutrition assistant. Generate realistic recipes using local Malawian ingredients and household measures common in Malawi (nsima, relish, cups, tablespoons, pieces). Use nutrition values typical for Sub-Saharan African foods. Always respond with ONLY a valid JSON object — no markdown, no explanation.`;
+      const ragContext = await _retrieveRAG(input);
+
+      const systemPrompt = `You are Thandizo, Thanzi's Malawian nutrition assistant. Generate realistic recipes using local Malawian ingredients and household measures common in Malawi (nsima, relish, cups, tablespoons, pieces). Use nutrition values typical for Sub-Saharan African foods. Never translate "nsima" into a generic English word like "porridge" — keep it as "nsima" and preserve any qualifier given (e.g. "mgaiwa nsima", "nsima ya ufa woyera"). Always respond with ONLY a valid JSON object — no markdown, no explanation.`;
 
       const userPrompt = `Generate a complete recipe for: "${input}"
-
+${ragContext ? `\nRelevant Malawian food knowledge (use this to ground ingredient names, portions and authenticity — Chakudya, Thanzi's Malawi food database):\n${ragContext}\n` : ''}
 Respond ONLY with this exact JSON structure:
 {
   "name": "Recipe name",
@@ -288,7 +407,7 @@ Rules:
           };
         }
         return { ...ing, dbMatched: false };
-      });
+      }));
 
       // Populate modal with the generated recipe
       _openModal(null, recipe);
@@ -345,8 +464,12 @@ Rules:
     btn.textContent = 'Parsing…';
 
     try {
-      const systemPrompt = 'You are a nutrition assistant. Always respond with only a valid JSON array. No markdown, no explanation.';
-      const userPrompt   = `Parse the following into a JSON array. For each ingredient give: name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat, fibre, sodium, sugar — all for the stated quantity. Use Malawian/Southern African food values. Return ONLY a valid JSON array:
+      const ragContext = await _retrieveRAG(text);
+
+      const systemPrompt = 'You are Thandizo, a Malawian nutrition assistant. Never translate "nsima" into a generic English word like "porridge" — keep it as "nsima" and preserve any qualifier given (e.g. "mgaiwa nsima"). Always respond with only a valid JSON array. No markdown, no explanation.';
+      const userPrompt   = `Parse the following into a JSON array. For each ingredient give: name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat, fibre, sodium, sugar — all for the stated quantity. Use Malawian/Southern African food values.
+${ragContext ? `\nRelevant Malawian food knowledge (Chakudya, Thanzi's Malawi food database):\n${ragContext}\n` : ''}
+Return ONLY a valid JSON array:
 [{"name":"ingredient","qty":100,"unit":"g","calories":120,"carbs":25,"protein":3,"fat":1,"fibre":2,"sodium":5,"sugar":0.5}]
 
 Ingredients: ${text}`;
@@ -401,7 +524,7 @@ Ingredients: ${text}`;
       <div class="rb-ing-row ${ing.dbMatched ? 'rb-ing-row--matched' : ''}" data-idx="${i}">
         <div class="rb-ing-info">
           <span class="rb-ing-name">${ing.name}</span>
-          ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Malawi FCT: ${ing.dbName || ''}">✓ DB</span>` : ''}
+          ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Chakudya: ${ing.dbName || ''}">✓ MW</span>` : ''}
           <span class="rb-ing-macros">
             ${Math.round(ing.calories)} kcal ·
             <span class="rb-c">${_fmt(ing.carbs)}g C</span> ·
