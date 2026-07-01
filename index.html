@@ -47,6 +47,7 @@
   <link rel="stylesheet" href="css/recipe.css">
   <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/diary.css">
 </head>
 <body>
 
@@ -295,7 +296,7 @@
           <textarea
             id="quick-meal-input"
             rows="1"
-            placeholder="e.g. 2 eggs and toast, nsima with beans and greens"
+            placeholder="e.g. nsima with chambo and pumpkin leaves, 2 boiled eggs and tea"
             autocorrect="off"
             spellcheck="false"
           ></textarea>
@@ -354,6 +355,14 @@
       </div>
 
     </div><!-- /log-panel -->
+
+    <!-- Diary Panel — rendered entirely by ThanziDiary (js/diary.js) -->
+    <div id="diary-panel" class="dash-panel" style="display:none"></div>
+    <!-- /diary-panel -->
+
+    <!-- Nutrient Targets Panel — opened from Diary settings gear, rendered by ThanziDiary -->
+    <div id="nutrient-targets-panel" class="dash-panel" style="display:none"></div>
+    <!-- /nutrient-targets-panel -->
 
     <!-- Progress Panel -->
     <div id="progress-panel" class="dash-panel" style="display:none">
@@ -1249,6 +1258,7 @@
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
       <button class="nav-btn active" id="nav-home">🏠<span>Home</span></button>
+      <button class="nav-btn"        id="nav-diary">📔<span>Diary</span></button>
       <button class="nav-btn"        id="nav-log">➕<span>Log</span></button>
       <button class="nav-btn"        id="nav-progress">📈<span>Progress</span></button>
       <button class="nav-btn"        id="nav-profile">👤<span>Profile</span></button>
@@ -1351,6 +1361,14 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         Dashboard
+      </button>
+
+      <button class="drawer-nav-item" data-nav="diary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+        </svg>
+        Diary
       </button>
 
       <button class="drawer-nav-item" data-nav="ai">
@@ -1585,6 +1603,7 @@
   <script src="js/weight.js"></script>
   <script src="js/custom-foods.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/diary.js"></script>
 
   <!-- ── Service Worker registration ──────────────────────────────────────── -->
   <script>

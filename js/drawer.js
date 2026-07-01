@@ -1,6 +1,6 @@
 /**
  * drawer.js — Thanzi Side Drawer
- * Wired: dashboard
+ * Wired: dashboard, diary
  * Stubs: ai, meals, custom-foods, meal-templates, exercise, weight, goals
  */
 const ThanziDrawer = (() => {
@@ -45,6 +45,7 @@ const ThanziDrawer = (() => {
   const _routes = {
     // ✅ Wired
     dashboard: () => document.getElementById('nav-home').click(),
+    diary:     () => document.getElementById('nav-diary').click(),
 
     ai: () => {
       document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');

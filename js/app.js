@@ -199,6 +199,15 @@ const ThanziApp = (() => {
       showPanel('home-panel');
     });
 
+    // diary → diary-panel; refresh energy/consumed/expenditure + diversity each time the tab is opened
+    document.getElementById('nav-diary').addEventListener('click', () => {
+      _setActiveNav('nav-diary');
+      showPanel('diary-panel');
+      if (typeof ThanziDiary !== 'undefined') {
+        ThanziDiary.refresh();
+      }
+    });
+
     // log → log-panel; refresh entries each time the tab is opened
     document.getElementById('nav-log').addEventListener('click', async () => {
       _setActiveNav('nav-log');
