@@ -36,6 +36,45 @@
   cursor: pointer;
 }
 
+.dy-settings-wrap {
+  position: relative;
+}
+
+.dy-settings-menu {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0,0,0,.4));
+  min-width: 190px;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.dy-settings-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: .85rem;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.dy-settings-menu-item:hover {
+  background: var(--bg-inset);
+}
+
+.dy-settings-menu-item + .dy-settings-menu-item {
+  border-top: 1px solid var(--border-soft);
+}
+
 /* ── Section card (shared by Energy / Consumed / Expenditure / Diversity) ─── */
 .dy-card {
   background: var(--bg-surface);

@@ -576,12 +576,22 @@ const ThanziDiary = (() => {
     panel.innerHTML = `
       <div class="dy-page-header">
         <span class="dy-page-title">Diary</span>
-        <button class="dy-settings-btn" id="diary-settings-btn" aria-label="Diary settings" title="Nutrient Targets">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.36.22.75.22 1.15V10.85c0 .4-.08.79-.22 1.15z"/>
-          </svg>
-        </button>
+        <div class="dy-settings-wrap">
+          <button class="dy-settings-btn" id="diary-settings-btn" aria-label="Diary settings" title="Diary settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.36.22.75.22 1.15V10.85c0 .4-.08.79-.22 1.15z"/>
+            </svg>
+          </button>
+          <div class="dy-settings-menu" id="diary-settings-menu" style="display:none">
+            <button class="dy-settings-menu-item" id="diary-menu-targets">
+              <span>🎯</span> Nutrient Targets
+            </button>
+            <button class="dy-settings-menu-item" id="diary-menu-health">
+              <span>🔗</span> Health Sync
+            </button>
+          </div>
+        </div>
       </div>
 
       ${_renderEnergySummary(fig)}
@@ -634,7 +644,22 @@ const ThanziDiary = (() => {
     });
 
     const settingsBtn = document.getElementById('diary-settings-btn');
-    if (settingsBtn) settingsBtn.addEventListener('click', openNutrientTargets);
+    const settingsMenu = document.getElementById('diary-settings-menu');
+    if (settingsBtn && settingsMenu) {
+      settingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none';
+      });
+      document.addEventListener('click', () => { settingsMenu.style.display = 'none'; }, { once: true });
+    }
+    document.getElementById('diary-menu-targets')?.addEventListener('click', () => {
+      settingsMenu.style.display = 'none';
+      openNutrientTargets();
+    });
+    document.getElementById('diary-menu-health')?.addEventListener('click', () => {
+      settingsMenu.style.display = 'none';
+      openHealthSync();
+    });
 
     const tipClose = document.getElementById('diary-empty-tip-close');
     if (tipClose) {
@@ -815,40 +840,28 @@ const ThanziDiary = (() => {
     if (diary) diary.style.display = 'block';
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────
-
   /**
-   * Called by log.js's _syncDashboard() whenever the food log changes,
-   * mirroring the ThanziApp.updateNutrition(totals) hook. Pass the same
-   * totals object: { kcal, carbs, protein, fat }, plus the raw logs array
-   * so diversity can be inferred from foodName when structured history
-   * isn't available.
+   * Opens the Health Sync panel (ThanziHealthPanel, health-panel.js).
+   * Diary hides itself the same way it does for Nutrient Targets; the
+   * Health panel's own "back" affordance should call closeHealthSync().
    */
-  function updateFromLogs(totals, logs) {
-    _totals = totals || _totals;
-    _hasLoggedToday = !!(logs && logs.length);
-    if (document.getElementById('diary-panel')?.style.display !== 'none') {
-      _render();
+  function openHealthSync() {
+    const diary = document.getElementById('diary-panel');
+    if (diary) diary.style.display = 'none';
+    if (typeof ThanziHealthPanel !== 'undefined') {
+      ThanziHealthPanel.open();
+    } else {
+      // Health module not loaded — fail safe by reopening Diary
+      if (diary) diary.style.display = 'block';
+      console.warn('ThanziDiary: ThanziHealthPanel is not loaded (missing health-panel.js?)');
     }
   }
 
-  function refresh() {
-    _loadPrefs();
-    _loadTargets();
-    _loadPins();
-    _loadPlan();
-    _render();
+  function closeHealthSync() {
+    const diary = document.getElementById('diary-panel');
+    const hp = document.getElementById('health-panel');
+    if (hp) hp.style.display = 'none';
+    if (diary) diary.style.display = 'block';
   }
 
-  function init() {
-    _loadPrefs();
-    _loadTargets();
-    _loadPins();
-    _loadPlan();
-  }
-
-  return { init, refresh, updateFromLogs, openNutrientTargets, closeNutrientTargets };
-
-})();
-
-document.addEventListener('DOMContentLoaded', ThanziDiary.init);
+  // ── Public API ────────────────────────────                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
