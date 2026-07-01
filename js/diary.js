@@ -864,4 +864,40 @@ const ThanziDiary = (() => {
     if (diary) diary.style.display = 'block';
   }
 
-  // ── Public API ────────────────────────────                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+  // ── Public API ──────────────────────────────────────────────────────────
+
+  /**
+   * Called by log.js's _syncDashboard() whenever the food log changes,
+   * mirroring the ThanziApp.updateNutrition(totals) hook. Pass the same
+   * totals object: { kcal, carbs, protein, fat }, plus the raw logs array
+   * so diversity can be inferred from foodName when structured history
+   * isn't available.
+   */
+  function updateFromLogs(totals, logs) {
+    _totals = totals || _totals;
+    _hasLoggedToday = !!(logs && logs.length);
+    if (document.getElementById('diary-panel')?.style.display !== 'none') {
+      _render();
+    }
+  }
+
+  function refresh() {
+    _loadPrefs();
+    _loadTargets();
+    _loadPins();
+    _loadPlan();
+    _render();
+  }
+
+  function init() {
+    _loadPrefs();
+    _loadTargets();
+    _loadPins();
+    _loadPlan();
+  }
+
+  return { init, refresh, updateFromLogs, openNutrientTargets, closeNutrientTargets, openHealthSync, closeHealthSync };
+
+})();
+
+document.addEventListener('DOMContentLoaded', ThanziDiary.init);
