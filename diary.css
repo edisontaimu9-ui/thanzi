@@ -1,0 +1,733 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   diary.css — Thanzi Diary Panel
+   Uses CSS var tokens from style.css. Follows .hd-card / .st-card conventions.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+#diary-panel {
+  padding: 0 0 96px;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.dy-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px 4px;
+  margin-bottom: 14px;
+}
+
+.dy-page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.4px;
+}
+
+.dy-settings-btn {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.dy-settings-wrap {
+  position: relative;
+}
+
+.dy-settings-menu {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0,0,0,.4));
+  min-width: 190px;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.dy-settings-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: .85rem;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.dy-settings-menu-item:hover {
+  background: var(--bg-inset);
+}
+
+.dy-settings-menu-item + .dy-settings-menu-item {
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ── Section card (shared by Energy / Consumed / Expenditure / Diversity) ─── */
+.dy-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 18px 16px;
+  margin-bottom: 16px;
+}
+
+.dy-card-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Breakdown list (BMR / Baseline / Exercise) ─────────────────────────── */
+.dy-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dy-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dy-breakdown-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dy-breakdown-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dy-breakdown-dot.bmr      { background: var(--accent); }
+.dy-breakdown-dot.baseline { background: var(--blue); }
+.dy-breakdown-dot.exercise { background: var(--orange); }
+
+.dy-breakdown-label {
+  font-size: .85rem;
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.dy-breakdown-right {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dy-breakdown-kcal {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.dy-breakdown-pct {
+  font-size: .72rem;
+  color: var(--text-3);
+}
+
+.dy-breakdown-pending {
+  font-size: .78rem;
+  color: var(--text-4);
+  font-style: italic;
+}
+
+/* ── Ring ─────────────────────────────────────────────────────────────────
+   Reuses .ring / .ring-bg / .ring-fill / .ring-text from style.css so all
+   rings across the app stay visually consistent. Diary adds a wrapper for
+   centering + a caption line beneath. */
+.dy-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4px 0 18px;
+}
+
+.dy-ring-caption {
+  font-size: .78rem;
+  color: var(--text-3);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.dy-ring-caption strong {
+  color: var(--text-1);
+}
+
+/* ── Running total table ────────────────────────────────────────────────── */
+.dy-table {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+
+.dy-table-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: .85rem;
+}
+
+.dy-table-row + .dy-table-row {
+  border-top: 1px solid var(--border-soft);
+}
+
+.dy-table-label {
+  color: var(--text-2);
+}
+
+.dy-table-value {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.dy-table-value.pos { color: var(--blue); }
+.dy-table-value.neg { color: var(--orange); }
+
+.dy-table-row--total {
+  padding-top: 10px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border) !important;
+}
+
+.dy-table-row--total .dy-table-label { font-weight: 700; color: var(--text-1); }
+.dy-table-row--total .dy-table-value { font-size: 1rem; color: var(--accent); }
+
+/* ── Display preference toggle ──────────────────────────────────────────── */
+.dy-pref {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.dy-pref-title {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+}
+
+.dy-pref-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.dy-pref-option:last-child { margin-bottom: 0; }
+
+.dy-pref-option:hover { border-color: var(--accent); }
+
+.dy-pref-option.checked {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), .06);
+}
+
+.dy-pref-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 1px;
+  position: relative;
+  transition: border-color .15s ease;
+}
+
+.dy-pref-option.checked .dy-pref-radio {
+  border-color: var(--accent);
+}
+
+.dy-pref-option.checked .dy-pref-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.dy-pref-text { flex: 1; min-width: 0; }
+
+.dy-pref-name {
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 2px;
+}
+
+.dy-pref-explainer {
+  font-size: .75rem;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* ── Macro breakdown (Consumed ring card) ───────────────────────────────── */
+.dy-macros {
+  display: flex;
+  gap: 10px;
+}
+
+.dy-macro-cell {
+  flex: 1;
+  background: var(--bg-inset);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.dy-macro-name {
+  font-size: .72rem;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+
+.dy-macro-grams {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-1);
+  display: block;
+}
+
+.dy-macro-kcal {
+  font-size: .72rem;
+  color: var(--text-3);
+  display: block;
+  margin-top: 2px;
+}
+
+.dy-macro-pct {
+  font-size: .72rem;
+  color: var(--accent);
+  font-weight: 600;
+  display: block;
+  margin-top: 4px;
+}
+
+.dy-macro-pending {
+  font-size: .76rem;
+  color: var(--text-4);
+  font-style: italic;
+}
+
+.dy-macro-cell[data-macro="protein"] .dy-macro-pct { color: var(--blue); }
+.dy-macro-cell[data-macro="carbs"]   .dy-macro-pct { color: var(--accent); }
+.dy-macro-cell[data-macro="fat"]     .dy-macro-pct { color: var(--orange); }
+
+/* ── Diversity card ─────────────────────────────────────────────────────── */
+.dy-diversity-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dy-diversity-count {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.dy-diversity-label {
+  font-size: .82rem;
+  color: var(--text-3);
+}
+
+.dy-diversity-sub {
+  font-size: .76rem;
+  color: var(--text-4);
+  margin-top: -8px;
+  margin-bottom: 14px;
+}
+
+.dy-groups {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.dy-group-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-soft);
+  font-size: .72rem;
+  color: var(--text-3);
+}
+
+.dy-group-chip.hit {
+  color: var(--text-1);
+  border-color: transparent;
+}
+
+.dy-group-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.dy-group-chip.hit .dy-group-dot { background: var(--dy-group-color, var(--accent)); }
+
+.dy-insight {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--bg-inset);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.dy-insight-icon { font-size: 1.05rem; line-height: 1.3; flex-shrink: 0; }
+
+.dy-insight-text {
+  font-size: .82rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Empty-state callout pointing at bottom nav Log button ─────────────── */
+.dy-empty-tip {
+  position: fixed;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-1);
+  color: var(--bg-page);
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+  z-index: 40;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  animation: dy-tip-bounce 1.8s ease-in-out infinite;
+}
+
+.dy-empty-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--text-1);
+}
+
+@keyframes dy-tip-bounce {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -4px); }
+}
+
+.dy-empty-tip-close {
+  background: none;
+  border: none;
+  color: var(--bg-page);
+  opacity: .6;
+  font-size: .8rem;
+  margin-left: 8px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Nutrient Targets sub-page
+   ───────────────────────────────────────────────────────────────────────── */
+#nutrient-targets-panel {
+  padding: 0 0 96px;
+}
+
+.nt-page-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  margin-bottom: 16px;
+}
+
+.nt-back-btn {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.nt-page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
+}
+
+.nt-page-sub {
+  font-size: .78rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* Category card, collapsible */
+.nt-category {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin: 0 16px 12px;
+  overflow: hidden;
+}
+
+.nt-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nt-category-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nt-category-icon {
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), .15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nt-category-name {
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.nt-category-count {
+  font-size: .72rem;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.nt-chevron {
+  color: var(--text-3);
+  transition: transform .2s ease;
+  flex-shrink: 0;
+}
+
+.nt-category.open .nt-chevron { transform: rotate(180deg); }
+
+.nt-category-body {
+  display: none;
+  border-top: 1px solid var(--border-soft);
+}
+
+.nt-category.open .nt-category-body { display: block; }
+
+.nt-nutrient-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.nt-nutrient-row:last-child { border-bottom: none; }
+
+.nt-nutrient-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nt-pin-btn {
+  background: none;
+  border: none;
+  color: var(--text-4);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  padding: 2px;
+}
+
+.nt-pin-btn.pinned { color: var(--accent); }
+
+.nt-nutrient-name {
+  font-size: .85rem;
+  color: var(--text-1);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nt-nutrient-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nt-nutrient-input {
+  width: 72px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: var(--text-1);
+  font-size: .85rem;
+  text-align: right;
+}
+
+.nt-nutrient-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.nt-nutrient-unit {
+  font-size: .75rem;
+  color: var(--text-3);
+  width: 34px;
+}
+
+/* Highlighted nutrients section */
+.nt-highlight-section {
+  margin: 4px 16px 20px;
+}
+
+.nt-highlight-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+
+.nt-highlight-sub {
+  font-size: .76rem;
+  color: var(--text-4);
+  margin-bottom: 12px;
+}
+
+.nt-highlight-empty {
+  font-size: .8rem;
+  color: var(--text-4);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.nt-highlight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nt-highlight-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(var(--accent-rgb), .12);
+  color: var(--accent);
+  border-radius: 20px;
+  padding: 6px 8px 6px 12px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.nt-highlight-chip button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  opacity: .7;
+  cursor: pointer;
+  display: flex;
+  padding: 2px;
+}
+
+.nt-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-1);
+  color: var(--bg-page);
+  font-size: .8rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 24px;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.nt-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
