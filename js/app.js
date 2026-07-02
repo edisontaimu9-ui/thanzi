@@ -336,10 +336,32 @@ const ThanziApp = (() => {
       const password = document.getElementById('reg-password').value;
       const result   = await ThanziAuth.register(name, email, password);
 
-      if (result.success) {
+      if (!result.success) {
+        document.getElementById('auth-error').textContent = result.error;
+        return;
+      }
+
+      if (result.sessionFailed) {
+        // Account was created but no session — most likely the deployed
+        // origin isn't registered as a Web Platform in Appwrite, so the
+        // session cookie was rejected. Send them to login instead of
+        // profile-screen, since getUser() would fail there anyway.
+        document.getElementById('auth-error').textContent =
+          'Account created! Please log in to continue.';
+        document.getElementById('login-tab').click();
+        return;
+      }
+
+      // Verify the session actually persisted before moving on — avoids
+      // routing to profile-screen only to bounce back to auth-screen on
+      // the next reload if the cookie didn't stick.
+      const user = await ThanziAuth.getUser();
+      if (user) {
         showScreen('profile-screen');
       } else {
-        document.getElementById('auth-error').textContent = result.error;
+        document.getElementById('auth-error').textContent =
+          'Account created, but we couldn\'t start your session. Please log in.';
+        document.getElementById('login-tab').click();
       }
     });
 

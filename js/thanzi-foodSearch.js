@@ -274,8 +274,22 @@
   function _offShape(p, barcode = null) {
     const nm   = p.nutriments || {};
     const n    = _offN(nm);
-    const kcal = n('energy-kcal_100g')
-               ?? (nm['energy_100g'] != null ? +(parseFloat(nm['energy_100g']) / 4.184).toFixed(1) : null);
+    // Try per-100g kcal first, then per-100g kJ→kcal, then fall back to
+    // per-serving fields. Some packaged products in OFF only carry
+    // serving-level nutriments (no *_100g fields at all), which previously
+    // caused kcal to resolve to null and display as 0.
+    let kcal = n('energy-kcal_100g');
+    if (kcal == null && nm['energy_100g'] != null) {
+      kcal = +(parseFloat(nm['energy_100g']) / 4.184).toFixed(1);
+    }
+    if (kcal == null) kcal = n('energy-kcal_serving');
+    if (kcal == null && nm['energy_serving'] != null) {
+      kcal = +(parseFloat(nm['energy_serving']) / 4.184).toFixed(1);
+    }
+    if (kcal == null) kcal = n('energy-kcal');
+    if (kcal == null && nm['energy'] != null) {
+      kcal = +(parseFloat(nm['energy']) / 4.184).toFixed(1);
+    }
     const rawCat = p.categories_tags?.[0] || p.food_groups_tags?.[0] || '';
     return {
       id:              barcode ? 'off_' + barcode : 'off_' + _norm(p.product_name || ''),
@@ -365,6 +379,10 @@
       r = await fetch(
         'https://world.openfoodfacts.org/api/v2/product/'
         + encodeURIComponent(barcode.trim())
+        // 'nutriments' returns the whole nutriments object (all energy keys
+        // included — per-100g, per-serving, and unprefixed). Listing
+        // individual nutriment subfields here would silently drop the
+        // serving-level fallback fields the parser now relies on.
         + '.json?fields=product_name,product_name_en,brands,categories_tags,'
         + 'food_groups_tags,nutrition_data_per,product_quantity_unit,nutriments',
         { signal: ctrl.signal, headers: { Accept: 'application/json' } }

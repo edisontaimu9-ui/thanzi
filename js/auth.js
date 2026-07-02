@@ -8,10 +8,21 @@ const ThanziAuth = (() => {
   const register = async (name, email, password) => {
     try {
       await account.create(Appwrite.ID.unique(), email, password, name);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+
+    // Account was created — now try to establish a session. If this step
+    // fails (e.g. current origin isn't a registered Web Platform in the
+    // Appwrite console), the account still exists, so tell the caller the
+    // account was made but ask them to log in manually rather than showing
+    // a generic register error.
+    try {
       await account.createEmailSession(email, password);
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message };
+      console.warn('[ThanziAuth] Account created but session failed:', err.code, err.message);
+      return { success: true, sessionFailed: true, error: err.message };
     }
   };
 
@@ -36,7 +47,14 @@ const ThanziAuth = (() => {
   const getUser = async () => {
     try {
       return await account.get();
-    } catch {
+    } catch (err) {
+      // Surface the real reason in dev tools instead of failing silently.
+      // The most common cause of "auth screen reappears after register/login"
+      // is that the deployed origin (e.g. your GitHub Pages URL) isn't listed
+      // as a Web Platform in the Appwrite console — Appwrite refuses to set
+      // the session cookie for unregistered origins, so account.get() always
+      // 401s even though createEmailSession() reported success.
+      console.warn('[ThanziAuth] getUser() failed:', err.code, err.message);
       return null;
     }
   };
