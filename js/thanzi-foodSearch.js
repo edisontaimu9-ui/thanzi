@@ -182,7 +182,7 @@
       // /packaged returns { data: [product] }
       const d = Array.isArray(json.data) ? json.data[0] : json.data;
       if (!d) return null;
-      const kcal = d.kcal ?? null;
+      const kcal = d.energy_kcal ?? d.kcal ?? null;
       return {
         id:              'mwp_' + (d.id || barcode),
         name:            d.product_name || d.food_name || barcode,
