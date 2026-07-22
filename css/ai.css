@@ -157,6 +157,29 @@
   word-break: break-word;
 }
 
+.ai-msg-bubble strong {
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.ai-msg-bubble em {
+  font-style: italic;
+}
+
+.ai-msg-bubble code {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.ai-msg-bubble .ai-md-h {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 1.02em;
+}
+
 .ai-msg--user .ai-msg-bubble {
   background: var(--accent);
   border-color: var(--accent);

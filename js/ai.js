@@ -123,6 +123,46 @@ INSTRUCTIONS:
 
   // ── Render helpers ─────────────────────────────────────────────────────────
 
+  // ── Minimal markdown rendering for assistant replies ────────────────────────
+  // Groq output uses plain markdown (**bold**, *italic*, `code`, headings,
+  // "1. "/"- " lists). We render that to real HTML instead of showing raw
+  // asterisks — but everything is HTML-escaped FIRST, so no markup coming
+  // out of the model (or, worse, echoed back from user input) can inject
+  // real tags. Only the specific patterns below get turned into elements.
+
+  function _escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function _renderMarkdownLite(text) {
+    let safe = _escapeHtml(text);
+
+    // Headings (###, ##, #) → bold heading line
+    safe = safe.replace(/^#{1,3}\s+(.+)$/gm, '<strong class="ai-md-h">$1</strong>');
+
+    // Bold: **text** or __text__ (before italics, so single * below is unambiguous)
+    safe = safe.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/__([^_\n]+?)__/g, '<strong>$1</strong>');
+
+    // Italic: *text* or _text_
+    safe = safe.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+    safe = safe.replace(/(^|[^_])_([^_\n]+?)_(?!_)/g, '$1<em>$2</em>');
+
+    // Inline code: `code`
+    safe = safe.replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+
+    // Bullet list markers: "- item" / "* item" → "• item"
+    safe = safe.replace(/^[-*]\s+(.+)$/gm, '• $1');
+
+    // Line breaks last, so the line-based rules above still see real newlines
+    safe = safe.replace(/\n/g, '<br>');
+
+    return safe;
+  }
+
   function _appendMessage(role, text, isError = false) {
     const el = _messagesEl();
     if (!el) return;
@@ -139,7 +179,11 @@ INSTRUCTIONS:
 
     const bubble = document.createElement('div');
     bubble.className = 'ai-msg-bubble';
-    bubble.textContent = text;   // textContent — safe, no XSS
+    if (role === 'assistant') {
+      bubble.innerHTML = _renderMarkdownLite(text); // pre-escaped inside — see _renderMarkdownLite
+    } else {
+      bubble.textContent = text; // user messages: always plain, no formatting
+    }
 
     const time = document.createElement('div');
     time.className = 'ai-msg-time';
