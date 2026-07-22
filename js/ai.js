@@ -4,6 +4,15 @@
  * Calls the Render proxy (thanzi-proxy.onrender.com/groq) which
  * proxies to Groq on the server side, keeping API keys off the client.
  *
+ * Nutrition/calorie lookups (e.g. "how many calories in Twisties?") are
+ * grounded against the Chakudya Nutrition Registry (CNR) with a 3-step
+ * cascade, stopping at the first hit:
+ *   1. POST /rag/retrieve  — curated semantic knowledge base
+ *   2. GET  /foods         — whole-food / Malawi FCT database
+ *   3. GET  /packaged      — packaged/branded product database
+ * Steps 2–3 reuse ThanziFood.search(), which already implements the
+ * /foods → /packaged fallback internally.
+ *
  * Public API:
  *   ThanziAI.init(user, getAppState)   — call from app.js after dashboard init
  *   ThanziAI.onFocus()                 — called when the AI panel opens (from drawer)
@@ -252,23 +261,103 @@ Use Malawian/Southern African food portions where relevant. Be realistic with qu
     }
   }
 
+  // ── Nutrition/calorie lookup detection ──────────────────────────────────────
+  // Recognises direct "what's the nutrition value of X" style questions so we
+  // know when to fall through to structured CNR data (steps 2–3 of the
+  // cascade), rather than running food/packaged searches on every message.
+
+  const _NUTRITION_TRIGGERS = [
+    /how many calories/i,
+    /calories?\s+(in|for|of|does|do)\b/i,
+    /kcal\s+(in|for|of)\b/i,
+    /nutrition(al)?\s+(facts|info|information|value|content)/i,
+    /macros?\s+(in|for|of)\b/i,
+    /how\s+much\s+(protein|fat|carbs?|sugar|sodium|fibre|fiber)\s+(is\s+)?(in|does)\b/i,
+  ];
+
+  function _isNutritionQuery(text) {
+    return _NUTRITION_TRIGGERS.some(r => r.test(text));
+  }
+
+  /** Strip the question wrapper to leave (roughly) just the food name, since
+   *  CNR /foods and /packaged do literal/substring search — passing the
+   *  whole sentence would often return nothing. */
+  function _extractFoodQuery(text) {
+    return text
+      .replace(/how many calories\s+(are|is)?\s*(in|for|does|do)?\s*/i, '')
+      .replace(/calories?\s+(in|for|of|does|do)\s*/i, '')
+      .replace(/kcal\s+(in|for|of)\s*/i, '')
+      .replace(/nutrition(al)?\s+(facts|info|information|value|content)\s*(for|of|in)?\s*/i, '')
+      .replace(/macros?\s+(in|for|of)\s*/i, '')
+      .replace(/how\s+much\s+(protein|fat|carbs?|sugar|sodium|fibre|fiber)\s+(is\s+)?(in|does)\s*/i, '')
+      .replace(/\bhave\b/gi, '')
+      .replace(/[?.!]+\s*$/, '')
+      .trim();
+  }
+
+  /**
+   * Ground a nutrition/calorie question in real data, trying sources in
+   * order and stopping at the first hit:
+   *   1. RAG semantic knowledge base
+   *   2. CNR /foods (whole-food / Malawi FCT)
+   *   3. CNR /packaged (branded/packaged products) — e.g. "Twisties"
+   *
+   * @returns {Promise<{source: string, text: string}|null>}
+   */
+  async function _lookupNutritionData(query) {
+    // 1 — RAG
+    const rag = await _retrieveRAG(query);
+    if (rag) return { source: 'rag', text: rag };
+
+    // 2 & 3 — CNR structured data. ThanziFood.search() already tries
+    // GET /foods first and falls back to GET /packaged internally, so one
+    // call here covers both remaining steps of the cascade.
+    if (typeof ThanziFood !== 'undefined') {
+      const results = await ThanziFood.search(query, { multi: true, limit: 3 });
+      if (Array.isArray(results) && results.length) {
+        const text = results.map(f => {
+          const label = f.brand ? `${f.name} (${f.brand})` : f.name;
+          const bits  = [`${f.kcal ?? '?'} kcal`];
+          if (f.pro != null) bits.push(`${f.pro}g protein`);
+          if (f.cho != null) bits.push(`${f.cho}g carbs`);
+          if (f.fat != null) bits.push(`${f.fat}g fat`);
+          return `${label} — ${bits.join(', ')} per 100g (Chakudya Nutrition Registry)`;
+        }).join('\n');
+        return { source: 'chakudya', text };
+      }
+    }
+
+    return null;
+  }
+
   // ── Render proxy call ──────────────────────────────────────────────────────
 
   async function _callAI(userMessage) {
     // Add to history
     _history.push({ role: 'user', content: userMessage });
 
-    // Retrieve RAG context from Chakudya knowledge base
-    const ragContext = await _retrieveRAG(userMessage);
+    // For explicit nutrition/calorie lookups, run the full cascade
+    // (RAG → CNR /foods → CNR /packaged) against just the food name.
+    // For everything else, RAG alone is enough general context.
+    let knowledge = null;
+    if (_isNutritionQuery(userMessage)) {
+      const foodQuery = _extractFoodQuery(userMessage) || userMessage;
+      knowledge = await _lookupNutritionData(foodQuery);
+    } else {
+      const rag = await _retrieveRAG(userMessage);
+      if (rag) knowledge = { source: 'rag', text: rag };
+    }
 
-    // Build system prompt — inject RAG if available
-    const systemContent = ragContext
+    // Build system prompt — inject grounding knowledge if available
+    const systemContent = knowledge
       ? `${_buildContext()}
 
-RELEVANT NUTRITION KNOWLEDGE (from Chakudya food database):
-${ragContext}
+RELEVANT NUTRITION KNOWLEDGE (source: ${
+        knowledge.source === 'rag' ? 'Chakudya knowledge base' : 'Chakudya Nutrition Registry — structured food data'
+      }):
+${knowledge.text}
 
-Use the above knowledge to ground your answer in real Malawian food data where relevant.`
+Use the above knowledge to ground your answer in real Malawian food data where relevant. If it directly answers the user's question (e.g. a calorie or nutrition-value lookup), state the figures plainly and note they're from the Chakudya Nutrition Registry.`
       : _buildContext();
 
     // Build messages: system context + full conversation history
