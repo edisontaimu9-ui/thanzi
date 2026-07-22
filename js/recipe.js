@@ -211,9 +211,10 @@ const ThanziRecipe = (() => {
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Try to find `name` in Chakudya — Thanzi's primary (and only) food data
-   * layer, with USDA FDC / Open Food Facts as fallback inside ThanziFood.
-   * Searches with the name AS WRITTEN — same call the manual search box
+   * Try to find `name` in the Chakudya Nutrition Registry (CNR) — Thanzi's
+   * sole food data source, via GET /foods (with /packaged as fallback)
+   * inside ThanziFood. Searches with the name AS WRITTEN — same call the
+   * manual search box
    * uses — since Chakudya does literal/substring search and a guessed
    * "canonical" name can silently return zero hits even when the food
    * exists. If found, scales its per-100g macros to `qty` and `unit`.

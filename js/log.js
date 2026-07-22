@@ -164,8 +164,8 @@ const ThanziLog = (() => {
 
   /**
    * Called by ThanziScanner when a barcode is detected.
-   * Delegates to ThanziFood.searchBarcode() which runs the full pipeline:
-   *   Chakudya /packaged → local registry → Open Food Facts v2
+   * Delegates to ThanziFood.searchBarcode() — Chakudya Nutrition Registry
+   * GET /packaged?barcode= exact lookup.
    */
   async function _onBarcodeScanned(barcode) {
     const input     = _el('food-search-input');
@@ -219,7 +219,7 @@ const ThanziLog = (() => {
       return;
     }
 
-    const sourceLabel = { local: 'MW', regional: 'AF', FDC: 'US', OFF: 'PKG', combined: '✓', custom: '★ Mine' };
+    const sourceLabel = { Chakudya: 'MW', local: 'MW', custom: '★ Mine' };
 
     container.innerHTML = results.map((f, i) => `
       <div class="sr-item" data-idx="${i}">
@@ -408,8 +408,8 @@ const ThanziLog = (() => {
   }
 
   /** True if a local search hit is confident enough to use without AI estimation.
-   *  Chakudya hits are trusted at token-level too — it's the primary, curated
-   *  source — while other sources (FDC/OFF) need a tighter match or higher score. */
+   *  Chakudya (CNR) hits are trusted at token-level too, since it's the sole,
+   *  curated source — non-Chakudya hits need a tighter match or higher score. */
   function _isGoodLocalMatch(hit, query) {
     if (!hit) return false;
     const tier = _classifyMatch(query, hit);
