@@ -13,6 +13,19 @@
  * Steps 2–3 reuse ThanziFood.search(), which already implements the
  * /foods → /packaged fallback internally.
  *
+ * Memory & chat history — two separate, deliberately different concerns:
+ *   - Chat history: the visible conversation transcript, persisted to
+ *     localStorage per user so reopening the AI panel (or reloading the
+ *     app) restores where you left off. Cleared by the user at will.
+ *   - Long-term memory: durable facts Thandizo learns about the user
+ *     (dietary restrictions, preferences, goals) via the Chakudya CNR's
+ *     existing memory endpoints (POST /memory/write, GET /memory/recall),
+ *     keyed by a STABLE per-user id instead of the per-page-load session
+ *     id those endpoints were originally built for (see comment above
+ *     MEMORY_SESSION_PREFIX). This survives "Clear chat" on purpose —
+ *     clearing the transcript shouldn't make Thandizo forget you're
+ *     vegetarian.
+ *
  * Public API:
  *   ThanziAI.init(user, getAppState)   — call from app.js after dashboard init
  *   ThanziAI.onFocus()                 — called when the AI panel opens (from drawer)
@@ -26,12 +39,28 @@ const ThanziAI = (() => {
   let _history     = [];     // [{ role: 'user'|'assistant', content: string }]
   let _busy        = false;
   let _inited      = false;
+  let _memSessionId = null;  // stable per-user key used with /memory/write & /memory/recall
 
   // ── Proxy config ───────────────────────────────────────────────────────────
   const PROXY_URL   = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
   const THANZI_KEY  = 'thanzi_app001';
   const AI_MODEL    = 'llama-3.3-70b-versatile';
   const RAG_URL     = 'https://chakudya-api.edisontaimu9.workers.dev/rag/retrieve';
+
+  // Chakudya's memory system (Write → Consolidate → Recall) was built for
+  // Oasis AI's per-visit clinical scratchpad, scoped by a session_id that's
+  // regenerated every page load. For Thandizo we want the opposite — a
+  // durable, cross-visit profile — so we reuse the same three endpoints but
+  // key them with a session_id derived from the user's own $id, which stays
+  // constant across every login/reopen. Nothing on the backend needs to
+  // change for this; session_id is just an opaque string to those endpoints.
+  const MEMORY_WRITE_URL  = 'https://chakudya-api.edisontaimu9.workers.dev/memory/write';
+  const MEMORY_RECALL_URL = 'https://chakudya-api.edisontaimu9.workers.dev/memory/recall';
+  const MEMORY_SESSION_PREFIX = 'thanzi_user_';
+
+  // Chat history persistence (separate from long-term memory — see header)
+  const HISTORY_STORAGE_PREFIX = 'thanzi_ai_history_';
+  const HISTORY_MAX_MESSAGES   = 40;
 
   const QUICK_ACTIONS = [
     { icon: '🍽️', label: 'Meal Ideas',     prompt: 'Suggest 3 meal ideas that fit my remaining macros for today.' },
@@ -61,7 +90,7 @@ const ThanziAI = (() => {
   // ── Build nutrition context string sent to AI ──────────────────────────────
 
   function _buildContext() {
-    const firstName = _user ? _user.name.split(' ')[0] : 'the user';
+    const firstName = (_user && _user.name && _user.name.trim().split(' ')[0]) || 'the user';
     const s = _getAppState ? _getAppState() : {};
 
     const remaining = {
@@ -330,11 +359,60 @@ Use Malawian/Southern African food portions where relevant. Be realistic with qu
     return null;
   }
 
+  // ── Long-term memory (Chakudya /memory/write, /memory/recall) ──────────────
+
+  /** Patterns that indicate the user is stating something worth remembering
+   *  long-term (preferences, restrictions, goals) rather than just chatting. */
+  const _MEMORABLE_TRIGGERS = [
+    /\bi\s*(am|'m)\s+(vegetarian|vegan|pescatarian|diabetic|lactose\s?intolerant|gluten[- ]free)\b/i,
+    /\bi\s+(don'?t|do\s+not|can'?t|cannot)\s+eat\b/i,
+    /\bi'?m\s+allergic\s+to\b/i,
+    /\bi\s+(hate|dislike|really\s+like|love|prefer)\b/i,
+    /\bmy\s+goal\s+is\b/i,
+    /\bremember\s+(that\s+)?i\b/i,
+    /\bi\s+usually\s+(eat|skip|avoid)\b/i,
+  ];
+
+  function _isMemorable(text) {
+    return _MEMORABLE_TRIGGERS.some(r => r.test(text));
+  }
+
+  /** Recall the most relevant remembered facts about this user for `query`. */
+  async function _recallMemory(query) {
+    if (!_memSessionId) return '';
+    try {
+      const url = MEMORY_RECALL_URL
+        + '?session_id=' + encodeURIComponent(_memSessionId)
+        + '&query='      + encodeURIComponent(query)
+        + '&top_k=5';
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const rows = data?.data || [];
+      if (!rows.length) return '';
+      return rows.map(r => r.content).join('\n');
+    } catch {
+      return ''; // recall failure is non-fatal — AI still answers
+    }
+  }
+
+  /** Write one raw fact for later recall/consolidation. Fire-and-forget —
+   *  never blocks or fails the current reply. */
+  function _writeMemory(content) {
+    if (!_memSessionId || !content) return;
+    fetch(MEMORY_WRITE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: _memSessionId, content, kind: 'fact' }),
+    }).catch(() => {}); // non-fatal
+  }
+
   // ── Render proxy call ──────────────────────────────────────────────────────
 
   async function _callAI(userMessage) {
     // Add to history
     _history.push({ role: 'user', content: userMessage });
+    _persistHistory();
 
     // For explicit nutrition/calorie lookups, run the full cascade
     // (RAG → CNR /foods → CNR /packaged) against just the food name.
@@ -348,17 +426,36 @@ Use Malawian/Southern African food portions where relevant. Be realistic with qu
       if (rag) knowledge = { source: 'rag', text: rag };
     }
 
-    // Build system prompt — inject grounding knowledge if available
-    const systemContent = knowledge
-      ? `${_buildContext()}
+    // Recall anything Thandizo has learned about this user before, and —
+    // if this message itself states a preference/restriction/goal — write
+    // it for future recall. Both run against the durable per-user memory,
+    // independent of the (clearable) chat transcript.
+    const memoryContext = await _recallMemory(userMessage);
+    if (_isMemorable(userMessage)) _writeMemory(userMessage);
 
-RELEVANT NUTRITION KNOWLEDGE (source: ${
-        knowledge.source === 'rag' ? 'Chakudya knowledge base' : 'Chakudya Nutrition Registry — structured food data'
-      }):
-${knowledge.text}
+    // Build system prompt — inject grounding knowledge + remembered facts
+    const sections = [_buildContext()];
 
-Use the above knowledge to ground your answer in real Malawian food data where relevant. If it directly answers the user's question (e.g. a calorie or nutrition-value lookup), state the figures plainly and note they're from the Chakudya Nutrition Registry.`
-      : _buildContext();
+    if (memoryContext) {
+      sections.push(
+        `WHAT YOU KNOW ABOUT THIS USER (remembered from past conversations):\n${memoryContext}\n\n` +
+        `Apply this naturally where relevant (e.g. don't suggest foods they've said they avoid) ` +
+        `without explicitly announcing that you "remember" it every time.`
+      );
+    }
+
+    if (knowledge) {
+      sections.push(
+        `RELEVANT NUTRITION KNOWLEDGE (source: ${
+          knowledge.source === 'rag' ? 'Chakudya knowledge base' : 'Chakudya Nutrition Registry — structured food data'
+        }):\n${knowledge.text}\n\n` +
+        `Use the above knowledge to ground your answer in real Malawian food data where relevant. ` +
+        `If it directly answers the user's question (e.g. a calorie or nutrition-value lookup), state the ` +
+        `figures plainly and note they're from the Chakudya Nutrition Registry.`
+      );
+    }
+
+    const systemContent = sections.join('\n\n');
 
     // Build messages: system context + full conversation history
     const messages = [
@@ -395,6 +492,7 @@ Use the above knowledge to ground your answer in real Malawian food data where r
     _history.push({ role: 'assistant', content: reply });
     // Keep history bounded to last 20 turns to avoid large payloads
     if (_history.length > 20) _history = _history.slice(_history.length - 20);
+    _persistHistory();
 
     return reply;
   }
@@ -435,6 +533,7 @@ Use the above knowledge to ground your answer in real Malawian food data where r
       _appendMessage('assistant', `Sorry, I couldn't reach the AI right now. Please try again.\n\n(${err.message})`, true);
       // Remove failed user message from history so retry is clean
       _history.pop();
+      _persistHistory();
     } finally {
       _busy = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -442,10 +541,54 @@ Use the above knowledge to ground your answer in real Malawian food data where r
     }
   }
 
-  // ── Welcome message ────────────────────────────────────────────────────────
+  // ── Chat history persistence ────────────────────────────────────────────────
+  // Separate from long-term memory (see header comment) — this is just the
+  // visible transcript, restored on reopen so conversations don't vanish
+  // every time the AI panel closes or the app reloads.
+
+  function _historyKey() {
+    return _user ? HISTORY_STORAGE_PREFIX + _user.$id : null;
+  }
+
+  function _persistHistory() {
+    const key = _historyKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(_history.slice(-HISTORY_MAX_MESSAGES)));
+    } catch (_e) { /* storage full/unavailable — non-fatal */ }
+  }
+
+  function _loadHistory() {
+    const key = _historyKey();
+    if (!key) return null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length ? parsed : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function _clearChat() {
+    _history = [];
+    const key = _historyKey();
+    if (key) { try { localStorage.removeItem(key); } catch (_e) {} }
+
+    const el = _messagesEl();
+    if (el) el.innerHTML = '';
+
+    const qs = _quickSectionEl();
+    if (qs) qs.style.display = '';
+
+    _showWelcome();
+  }
+
+
 
   function _showWelcome() {
-    const firstName = _user ? _user.name.split(' ')[0] : 'there';
+    const firstName = (_user && _user.name && _user.name.trim().split(' ')[0]) || 'there';
     const welcome = `Hi ${firstName}! 👋 I'm Thandizo, your Thanzi nutrition assistant.
 
 I can help you with:
@@ -459,6 +602,7 @@ Try a quick action below or just ask me anything!`;
 
     _appendMessage('assistant', welcome);
     _history.push({ role: 'assistant', content: welcome });
+    _persistHistory();
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
@@ -466,6 +610,7 @@ Try a quick action below or just ask me anything!`;
   function init(user, getAppState) {
     _user        = user;
     _getAppState = getAppState;
+    _memSessionId = user ? MEMORY_SESSION_PREFIX + user.$id : null;
 
     if (_inited) return;
     _inited = true;
@@ -505,8 +650,26 @@ Try a quick action below or just ask me anything!`;
       sendBtn.addEventListener('click', () => sendMessage(input ? input.value : ''));
     }
 
-    // Show welcome
-    _showWelcome();
+    // Clear chat
+    const clearBtn = document.getElementById('ai-clear-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (confirm('Clear this conversation? Thandizo will still remember your preferences and goals.')) {
+          _clearChat();
+        }
+      });
+    }
+
+    // Restore a previous conversation if one exists for this user, otherwise
+    // start fresh with the welcome message.
+    const restored = _loadHistory();
+    if (restored) {
+      _history = restored;
+      restored.forEach(msg => _appendMessage(msg.role, msg.content));
+      _hideQuickActions();
+    } else {
+      _showWelcome();
+    }
   }
 
   // Called when the AI panel is opened from the drawer
