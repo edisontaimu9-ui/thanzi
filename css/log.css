@@ -364,14 +364,24 @@
 /* ── Selected food card ───────────────────────────────────────────────────── */
 
 #selected-food-card {
+  position: relative;
   background: var(--bg-surface);
   border: 1px solid var(--accent);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 16px;
 }
-#selected-food-name    { font-size: 1rem; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+#selected-food-name    { font-size: 1rem; font-weight: 600; color: var(--text-1); margin-bottom: 4px; padding-right: 28px; }
 #selected-food-per100  { font-size: 0.78rem; color: var(--text-4); margin-bottom: 14px; }
+
+.selected-food-close {
+  position: absolute; top: 12px; right: 12px;
+  background: transparent; border: none; color: var(--text-6);
+  font-size: 0.85rem; cursor: pointer; padding: 4px 6px;
+  border-radius: 6px; line-height: 1; transition: color 0.15s, background 0.15s;
+}
+.selected-food-close:hover  { color: var(--danger); background: rgba(231,76,60,0.1); }
+.selected-food-close:active { color: var(--danger); }
 
 /* Portion row */
 .portion-row {
