@@ -475,39 +475,46 @@ const ThanziApp = (() => {
   const init = async () => {
     initTheme();
 
-    // Exchange OAuth callback params for a real session (Appwrite SDK v13+).
-    // After Google sign-in, Appwrite redirects back with ?userId=...&secret=...
-    // in the URL. handleOAuthCallback() calls account.createSession(userId, secret)
-    // to finalise the session, then strips the params from the URL. Without this,
-    // account.get() below finds no session and the user appears logged out.
-    await ThanziAuth.handleOAuthCallback();
+    try {
+      // Exchange OAuth callback params for a real session (Appwrite SDK v13+).
+      // After Google sign-in, Appwrite redirects back with ?userId=...&secret=...
+      // in the URL. handleOAuthCallback() calls account.createSession(userId, secret)
+      // to finalise the session, then strips the params from the URL. Without this,
+      // account.get() below finds no session and the user appears logged out.
+      await ThanziAuth.handleOAuthCallback();
 
-    const user = await ThanziAuth.getUser();
+      const user = await ThanziAuth.getUser();
 
-    if (user) {
-      // Guests get full access for 14 days; once expired, block the app
-      // behind the upgrade screen. Their data isn't touched — upgrading
-      // converts this same session into a permanent account.
-      if (ThanziAuth.isGuest(user)) {
-        const trial = await ThanziAuth.getTrialStatus();
-        if (trial.expired) {
-          showUpgradeScreen(true);
-          bindEvents();
-          return;
+      if (user) {
+        // Guests get full access for 14 days; once expired, block the app
+        // behind the upgrade screen. Their data isn't touched — upgrading
+        // converts this same session into a permanent account.
+        if (ThanziAuth.isGuest(user)) {
+          const trial = await ThanziAuth.getTrialStatus();
+          if (trial.expired) {
+            showUpgradeScreen(true);
+            bindEvents();
+            return;
+          }
         }
-      }
 
-      const profile = localStorage.getItem('thanzi_profile_' + user.$id);
+        const profile = localStorage.getItem('thanzi_profile_' + user.$id);
 
-      if (profile) {
-        applyPlan(JSON.parse(profile));
-        showScreen('dashboard-screen');
-        await initDashboard(user);
-        bindNav();
+        if (profile) {
+          applyPlan(JSON.parse(profile));
+          showScreen('dashboard-screen');
+          await initDashboard(user);
+          bindNav();
+        } else {
+          showScreen('profile-screen');
+        }
       } else {
-        showScreen('profile-screen');
+        showScreen('auth-screen');
       }
-    } else {
+    } catch (err) {
+      // Whatever went wrong (network blip, bad session, etc.), never leave
+      // the splash screen stuck — fall back to the login form.
+      console.warn('[ThanziApp] init() routing failed, falling back to auth screen:', err);
       showScreen('auth-screen');
     }
 

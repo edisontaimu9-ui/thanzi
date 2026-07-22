@@ -148,6 +148,50 @@ body {
 [data-theme="light"] .icon-sun  { display: none; }
 [data-theme="light"] .icon-moon { display: block; }
 
+/* ── SPLASH ──────────────────────────────────────────────────────────────── */
+
+.splash-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%,
+      rgba(var(--accent-rgb), 0.08) 0%, transparent 70%),
+    var(--bg-page);
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.splash-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.25);
+}
+
+.splash-spinner {
+  width: 22px;
+  height: 22px;
+  margin-top: 22px;
+  border: 2.5px solid rgba(var(--accent-rgb), 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: splash-spin 0.8s linear infinite;
+}
+
+@keyframes splash-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── AUTH ────────────────────────────────────────────────────────────────── */
 
 /* Full-screen wrapper with subtle radial glow behind the card */
