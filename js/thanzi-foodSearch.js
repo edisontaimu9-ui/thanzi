@@ -204,7 +204,10 @@
       measures:        item.measure
                          ? [{ lbl: item.measure, weight: item.weight_g,
                               kcal, pro: item.protein_g, cho: item.carbs_g, fat: item.fat_g }]
-                         : null,
+                         : (item.serving_size_g
+                             ? [{ lbl: `1 serving (${item.serving_size_g}g)`, weight: item.serving_size_g,
+                                  kcal, pro: item.protein_g, cho: item.carbs_g, fat: item.fat_g }]
+                             : null),
       sourceUsed:      isLocal ? 'Chakudya' : 'Chakudya-lookup:' + (apiSource || 'external'),
       barcodeSource:   barcode ? (isLocal ? 'Chakudya' : 'Chakudya-lookup') : undefined,
       barcodeMatch:    barcode ? 'exact' : undefined,

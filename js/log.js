@@ -37,12 +37,14 @@ const ThanziLog = (() => {
   };
 
   // ── Fallback household measures ───────────────────────────────────────────
+  // Field names (lbl/weight) match what ThanziFood producers (thanzi-foodSearch.js)
+  // put on food.measures, so these can be merged with food-specific measures below.
   const DEFAULT_MEASURES = [
-    { label: '1 serving', g: 100 },
-    { label: '1 cup',     g: 240 },
-    { label: '1 tbsp',    g: 15  },
-    { label: '1 tsp',     g: 5   },
-    { label: '1 piece',   g: 80  },
+    { lbl: '1 serving',           weight: 100 },
+    { lbl: '1 cup (chikombe)',    weight: 240 },
+    { lbl: '1 tablespoon',        weight: 15  },
+    { lbl: '1 teaspoon',          weight: 5   },
+    { lbl: '1 piece',             weight: 80  },
   ];
 
   // ── Quick-add unit conversion table ──────────────────────────────────────
@@ -93,15 +95,29 @@ const ThanziLog = (() => {
     const qtyInput = _el('portion-qty');
     select.innerHTML = '';
 
-    const measures = (food.measures && food.measures.length > 0)
-      ? food.measures
-      : DEFAULT_MEASURES;
+    // Food-specific measures from Chakudya (e.g. "1 cup chunks (206g)" for
+    // cassava) come first, then the generic household set (cup/chikombe,
+    // tbsp, tsp, piece, serving) is always appended too — so a household
+    // measure is available for every food, whether it's a text-search hit,
+    // a barcode/packaged item, or an external-cascade result.
+    const foodMeasures = Array.isArray(food.measures) ? food.measures : [];
+    const combined     = [...foodMeasures, ...DEFAULT_MEASURES];
 
-    measures.forEach(m => {
-      if (!m.g || m.g <= 0) return;
-      const opt       = document.createElement('option');
-      opt.value       = m.g;
-      opt.textContent = `${m.label} (${m.g}g)`;
+    const seen = new Set();
+    combined.forEach(m => {
+      const label  = m.lbl ?? m.label;
+      const weight = m.weight ?? m.g;
+      if (!label || !weight || weight <= 0) return;
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const opt   = document.createElement('option');
+      opt.value   = weight;
+      // Avoid double-appending "(206g)" when the label already states it
+      opt.textContent = /\(\s*\d+(?:\.\d+)?\s*(?:g|ml)\s*\)/i.test(label)
+        ? label
+        : `${label} (${weight}g)`;
       select.appendChild(opt);
     });
 
