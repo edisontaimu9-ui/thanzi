@@ -444,13 +444,21 @@ const ThanziApp = (() => {
       trialBannerCta.addEventListener('click', () => showUpgradeScreen(false));
     }
 
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', async () => {
+    // Logout — shared handler for the settings-panel Sign Out button and
+    // the "Not you? Log out" link on the profile-setup screen.
+    const doLogout = async () => {
       await ThanziAuth.logout();
       _logInited = false;
       _currentUser = null;
       showScreen('auth-screen');
-    });
+    };
+
+    document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+    const profileLogoutLink = document.getElementById('profile-logout-link');
+    if (profileLogoutLink) {
+      profileLogoutLink.addEventListener('click', doLogout);
+    }
   };
 
   // ── Trial upgrade screen ─────────────────────────────────────────────────

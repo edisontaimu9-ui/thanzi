@@ -714,6 +714,30 @@ button#logout-btn:hover, .profile-logout-btn:hover {
   padding: 32px 20px 80px;
 }
 
+.profile-not-you {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+  color: var(--text-4);
+}
+
+.profile-logout-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.profile-logout-link:hover  { opacity: 0.85; }
+.profile-logout-link:active { opacity: 0.65; }
+
 .profile-container h2 {
   font-size: 1.5rem;
   font-weight: 700;
