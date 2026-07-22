@@ -93,8 +93,8 @@ const ThanziApp = (() => {
     let greeting = 'Good morning';
     if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
     else if (hour >= 17) greeting = 'Good evening';
-    document.getElementById('greeting').textContent =
-      `${greeting}, ${name.split(' ')[0]}`;
+    const firstName = (name || '').trim().split(' ')[0] || 'Guest';
+    document.getElementById('greeting').textContent = `${greeting}, ${firstName}`;
   };
 
   const updateRing = () => {
@@ -149,6 +149,25 @@ const ThanziApp = (() => {
     }
   };
 
+  // ── Guest trial banner ───────────────────────────────────────────────────
+
+  const updateTrialBanner = async (user) => {
+    const banner = document.getElementById('trial-banner');
+    if (!banner) return;
+
+    if (!ThanziAuth.isGuest(user)) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    const { daysLeft } = await ThanziAuth.getTrialStatus();
+    const text = daysLeft <= 1
+      ? "Last day of your free trial — create an account to keep your data"
+      : `${daysLeft} days left in your free trial — create an account anytime`;
+    document.getElementById('trial-banner-text').textContent = text;
+    banner.style.display = 'flex';
+  };
+
   // ── Dashboard init ───────────────────────────────────────────────────────
 
   const initDashboard = async (user) => {
@@ -156,6 +175,7 @@ const ThanziApp = (() => {
     updateGreeting(user.name);
     updateRing();
     updateWater();
+    updateTrialBanner(user);
 
     // Init the log module — also loads today's logs and syncs the ring
     if (typeof ThanziLog !== 'undefined') {
@@ -371,6 +391,59 @@ const ThanziApp = (() => {
       googleBtn.addEventListener('click', () => ThanziAuth.loginWithGoogle());
     }
 
+    // Continue as Guest — no account required, starts the 14-day trial
+    document.getElementById('guest-btn').addEventListener('click', async () => {
+      const result = await ThanziAuth.loginAsGuest();
+      if (!result.success) {
+        document.getElementById('auth-error').textContent = result.error;
+        return;
+      }
+      const user = await ThanziAuth.getUser();
+      if (user) {
+        showScreen('profile-screen');
+      } else {
+        document.getElementById('auth-error').textContent =
+          'Could not start a guest session. Please try again.';
+      }
+    });
+
+    // Trial upgrade — converts the active guest session into a real account
+    // in place, so every log/recipe row already tied to this $id stays put.
+    document.getElementById('trial-upgrade-btn').addEventListener('click', async () => {
+      const name     = document.getElementById('trial-name').value;
+      const email    = document.getElementById('trial-email').value;
+      const password = document.getElementById('trial-password').value;
+      const result   = await ThanziAuth.upgradeGuestAccount(name, email, password);
+
+      if (!result.success) {
+        document.getElementById('trial-error').textContent = result.error;
+        return;
+      }
+
+      const user = await ThanziAuth.getUser();
+      if (!user) {
+        document.getElementById('trial-error').textContent =
+          'Account created, but we couldn\'t verify your session. Please reload and log in.';
+        return;
+      }
+
+      const profile = localStorage.getItem('thanzi_profile_' + user.$id);
+      if (profile) {
+        applyPlan(JSON.parse(profile));
+        showScreen('dashboard-screen');
+        await initDashboard(user);
+        bindNav();
+      } else {
+        showScreen('profile-screen');
+      }
+    });
+
+    // Trial banner CTA — lets a guest upgrade voluntarily before expiry
+    const trialBannerCta = document.getElementById('trial-banner-cta');
+    if (trialBannerCta) {
+      trialBannerCta.addEventListener('click', () => showUpgradeScreen(false));
+    }
+
     // Logout
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await ThanziAuth.logout();
@@ -378,6 +451,23 @@ const ThanziApp = (() => {
       _currentUser = null;
       showScreen('auth-screen');
     });
+  };
+
+  // ── Trial upgrade screen ─────────────────────────────────────────────────
+  //
+  // Shared by two paths: a guest whose 14-day trial has expired (blocked,
+  // forced to upgrade) and a guest who taps the trial banner to upgrade
+  // early, voluntarily, while still inside the trial window.
+  const showUpgradeScreen = (expired) => {
+    document.getElementById('trial-expired-title').textContent = expired
+      ? 'Your free trial has ended'
+      : 'Create your Thanzi account';
+    document.getElementById('trial-expired-sub').textContent = expired
+      ? 'Your 14-day guest trial is over. Create a free account to keep going — ' +
+        'all your logged meals and recipes are saved and will carry right over.'
+      : 'Save your progress permanently — all your logged meals and recipes carry over.';
+    document.getElementById('trial-error').textContent = '';
+    showScreen('trial-expired-screen');
   };
 
   // ── App init ─────────────────────────────────────────────────────────────
@@ -395,6 +485,18 @@ const ThanziApp = (() => {
     const user = await ThanziAuth.getUser();
 
     if (user) {
+      // Guests get full access for 14 days; once expired, block the app
+      // behind the upgrade screen. Their data isn't touched — upgrading
+      // converts this same session into a permanent account.
+      if (ThanziAuth.isGuest(user)) {
+        const trial = await ThanziAuth.getTrialStatus();
+        if (trial.expired) {
+          showUpgradeScreen(true);
+          bindEvents();
+          return;
+        }
+      }
+
       const profile = localStorage.getItem('thanzi_profile_' + user.$id);
 
       if (profile) {

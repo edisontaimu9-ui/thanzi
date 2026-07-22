@@ -1,0 +1,872 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   style.css — Thanzi core theme & layout
+   Theme system: variables defined here in :root (dark, default) and overridden
+   under [data-theme="light"]. log.css consumes the same variables.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --bg-page:    #0f1117;
+  --bg-surface: #1a1a2e;
+  --bg-inset:   #0f1117;
+
+  /* Borders */
+  --border:      #2a2a2a;
+  --border-soft: #23233a;
+
+  /* Text — 1 (most prominent) through 6 (faintest) */
+  --text-1: #ffffff;
+  --text-2: #aaaaaa;
+  --text-3: #888888;
+  --text-4: #666666;
+  --text-5: #555555;
+  --text-6: #444444;
+
+  /* Brand accent (green) */
+  --accent:        #2d9e6b;
+  --accent-rgb:    45, 158, 107;
+  --accent-active: #249059;
+
+  /* Fixed text color for use on solid accent fills — stays white in both themes */
+  --on-accent: #ffffff;
+
+  /* Secondary accents (Flat-UI palette; look good on both light & dark, so these
+     don't change between themes) */
+  --blue:        #3498db;
+  --blue-rgb:    52, 152, 219;
+  --danger:      #e74c3c;
+  --purple:      #9b59b6;
+  --purple-rgb:  155, 89, 182;
+  --orange:      #e67e22;
+  --orange-rgb:  230, 126, 34;
+
+  /* Elevation */
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  /* Auth card — dark defaults */
+  --auth-card-bg:        #1c1f2e;
+  --auth-card-border:    rgba(45, 158, 107, 0.25);
+  --auth-card-shadow:    0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.3);
+  --auth-tab-track:      #13151f;
+  --auth-tab-border:     rgba(255,255,255,0.07);
+  --auth-input-bg:       #13151f;
+  --auth-input-border:   rgba(255,255,255,0.1);
+  --auth-input-focus-bg: #161924;
+  --auth-input-ph:       #4a5068;
+  --auth-divider-color:  #3a3f55;
+  --auth-divider-line:   rgba(255,255,255,0.07);
+  --auth-social-bg:      #13151f;
+  --auth-social-border:  rgba(255,255,255,0.1);
+  --auth-social-text:    #c8ccd8;
+  --auth-social-hover:   #161924;
+}
+
+[data-theme="light"] {
+  /* Surfaces */
+  --bg-page:    #f4f6f5;
+  --bg-surface: #ffffff;
+  --bg-inset:   #eef1ef;
+
+  /* Borders */
+  --border:      #e1e5e2;
+  --border-soft: #e8ebe9;
+
+  /* Text — same 1→6 scale, inverted so 1 is still "most prominent" */
+  --text-1: #14181a;
+  --text-2: #4b5550;
+  --text-3: #6b7570;
+  --text-4: #8a9590;
+  --text-5: #a3aba6;
+  --text-6: #bcc2bd;
+
+  /* Slightly deeper green keeps contrast on a white surface */
+  --accent:        #1f8f5c;
+  --accent-rgb:    31, 143, 92;
+  --accent-active: #186e45;
+
+  --shadow-dropdown: 0 8px 24px rgba(20, 30, 25, 0.12);
+
+  /* Auth card — light overrides */
+  --auth-card-bg:        #ffffff;
+  --auth-card-border:    #e1e5e2;
+  --auth-card-shadow:    0 20px 60px rgba(20,30,25,0.1), 0 4px 16px rgba(20,30,25,0.06);
+  --auth-tab-track:      #eef1ef;
+  --auth-tab-border:     #e1e5e2;
+  --auth-input-bg:       #eef1ef;
+  --auth-input-border:   #d5dbd7;
+  --auth-input-focus-bg: #f8faf9;
+  --auth-input-ph:       #a3aba6;
+  --auth-divider-color:  #b0b8b4;
+  --auth-divider-line:   #e1e5e2;
+  --auth-social-bg:      #eef1ef;
+  --auth-social-border:  #d5dbd7;
+  --auth-social-text:    #14181a;
+  --auth-social-hover:   #f8faf9;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Smooth, scoped theme-switch transition. More specific rules elsewhere keep
+   their own transition timing for hover/press states. */
+body, .calorie-card, .water-card, .dash-header, .bottom-nav, .nav-btn,
+input, button, .option-btn, .tab, .auth-tabs,
+#selected-food-card, .scanner-inner, .scanner-header, .meal-btn,
+#food-search-input, .barcode-scan-btn, #food-search-results, .log-entry,
+.scanner-status, .scanner-choice-btn, .theme-toggle-btn {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-1);
+  min-height: 100vh;
+}
+
+/* THEME TOGGLE BUTTON (floating, visible on every screen) */
+.theme-toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 500;
+}
+.theme-toggle-btn:hover  { color: var(--accent); border-color: var(--accent); }
+.theme-toggle-btn:active { transform: scale(0.92); }
+.theme-icon { display: block; }
+.icon-moon  { display: none; }
+/* Dark mode (default): show moon (tap to switch to light) */
+[data-theme="light"] .icon-sun  { display: none; }
+[data-theme="light"] .icon-moon { display: block; }
+
+/* ── AUTH ────────────────────────────────────────────────────────────────── */
+
+/* Full-screen wrapper with subtle radial glow behind the card */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  gap: 24px;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%,
+      rgba(var(--accent-rgb), 0.08) 0%, transparent 70%),
+    var(--bg-page);
+}
+
+/* Brand */
+.auth-brand {
+  text-align: center;
+}
+.logo {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -1px;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+.tagline {
+  color: var(--text-3);
+  font-size: 0.9rem;
+  letter-spacing: 0.4px;
+}
+
+/* ── Card ── */
+.form-container {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 28px;
+  padding: 32px 28px 28px;
+  box-sizing: border-box;
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.04) inset,
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Tabs — pill style */
+.auth-tabs {
+  display: flex;
+  margin-bottom: 26px;
+  border-radius: 50px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  padding: 4px;
+  gap: 4px;
+}
+.tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-3);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+.tab.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.4);
+}
+
+/* Inputs — fully pill-shaped */
+.auth-input {
+  width: 100%;
+  padding: 15px 20px;
+  margin-bottom: 14px;
+  background: var(--bg-inset);
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  color: var(--text-1);
+  font-size: 0.97rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
+.auth-input::placeholder {
+  color: var(--text-4);
+}
+
+/* Forgot password */
+.page-link {
+  text-align: right;
+  margin: -4px 4px 16px;
+}
+.page-link-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.page-link-label:hover { opacity: 1; }
+
+/* Main CTA — pill */
+.form-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  box-shadow:
+    0 4px 14px rgba(var(--accent-rgb), 0.45),
+    0 1px 3px rgba(var(--accent-rgb), 0.2);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.form-btn:hover {
+  background: var(--accent-active);
+  box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.5);
+}
+.form-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(var(--accent-rgb), 0.3);
+}
+
+/* Error */
+.error {
+  color: var(--danger);
+  margin-top: 10px;
+  font-size: 0.86rem;
+  min-height: 1.1em;
+  text-align: center;
+}
+
+/* "or" divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 16px;
+  color: var(--text-4);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Guest mode — secondary pill button */
+.form-btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--border);
+  box-shadow: none;
+  margin-top: 12px;
+}
+.form-btn-secondary:hover {
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: none;
+}
+.form-btn-secondary:active { transform: scale(0.97); }
+
+.guest-note {
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--text-4);
+  margin: 10px 4px 0;
+  line-height: 1.4;
+}
+
+/* Guest trial banner — dashboard */
+.trial-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 10px 16px 0;
+  font-size: 0.82rem;
+  color: var(--text-1);
+}
+.trial-banner-cta {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trial-banner-cta:hover { background: var(--accent-active); }
+
+/* Trial-expired / upgrade screen */
+.trial-expired-title {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 4px 0 10px;
+  color: var(--text-1);
+}
+.trial-expired-sub {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+/* Social buttons */
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border-radius: 50px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.google-login-button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+.google-login-button:active {
+  transform: scale(0.97);
+}
+.google-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Auth theme overrides — uses CSS vars set in :root / [data-theme="light"]
+   No hardcoded colours here, so toggling the theme always works instantly.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.auth-wrapper {
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%,
+      rgba(var(--accent-rgb), 0.1) 0%, transparent 65%),
+    var(--bg-page);
+}
+
+.form-container {
+  background: var(--auth-card-bg);
+  border: 1.5px solid var(--auth-card-border);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.03) inset,
+    var(--auth-card-shadow);
+}
+
+.auth-tabs {
+  background: var(--auth-tab-track);
+  border-color: var(--auth-tab-border);
+}
+
+.auth-input {
+  background: var(--auth-input-bg);
+  border-color: var(--auth-input-border);
+  color: var(--text-1);
+}
+.auth-input:focus {
+  border-color: var(--accent);
+  background: var(--auth-input-focus-bg);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+}
+.auth-input::placeholder {
+  color: var(--auth-input-ph);
+}
+
+.auth-divider {
+  color: var(--auth-divider-color);
+}
+.auth-divider::before,
+.auth-divider::after {
+  background: var(--auth-divider-line);
+}
+
+.google-login-button {
+  background: var(--auth-social-bg);
+  border-color: var(--auth-social-border);
+  color: var(--auth-social-text);
+}
+.google-login-button:hover {
+  border-color: var(--accent);
+  background: var(--auth-social-hover);
+}
+
+/* DASHBOARD */
+/* ── Dashboard top bar ───────────────────────────────────────────────────── */
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ── Dashboard hero ──────────────────────────────────────────────────────── */
+.dash-hero {
+  padding: 18px 20px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-hero #greeting {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.dash-hero-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+button#logout-btn, .profile-logout-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 12px;
+  background: transparent;
+  border: 1.5px solid var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  border-radius: 10px;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+button#logout-btn:hover, .profile-logout-btn:hover {
+  background: var(--danger, #ef4444);
+  color: #fff;
+}
+
+.dash-main {
+  padding: 16px;
+  padding-bottom: 80px;
+  overflow-y: auto;
+}
+
+/* CALORIE RING CARD */
+.calorie-card {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ring-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin-bottom: 20px;
+}
+
+.ring { width: 160px; height: 160px; transform: rotate(-90deg); }
+
+.ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 10;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 314;
+  stroke-dashoffset: 314;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.ring-text span {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-1);
+  display: block;
+}
+
+.ring-text small { color: var(--text-3); font-size: 0.75rem; }
+
+.macros {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+
+.macro { text-align: center; }
+.macro-val { font-size: 1.1rem; font-weight: 600; color: var(--accent); display: block; }
+.macro-label { font-size: 0.75rem; color: var(--text-3); }
+
+/* WATER CARD */
+.water-card {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.water-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--text-3);
+}
+
+.water-bar {
+  background: var(--border);
+  border-radius: 8px;
+  height: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.water-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 8px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.water-btns { display: flex; gap: 8px; }
+.water-btn { flex: 1; padding: 8px; background: var(--bg-inset); border: 1px solid var(--blue); color: var(--blue); border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 8px 0;
+}
+
+.nav-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+}
+
+.nav-btn span { font-size: 0.7rem; }
+.nav-btn.active { color: var(--accent); }
+
+/* PROFILE SETUP */
+.profile-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.profile-container h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-1);
+}
+
+.profile-sub {
+  color: var(--text-3);
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+
+.profile-container label {
+  display: block;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  margin-top: 16px;
+}
+
+.option-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.option-group.vertical {
+  flex-direction: column;
+}
+
+.option-btn {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.option-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+button#save-profile-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 24px;
+}
+
+/* ── Home dashboard extras ───────────────────────────────────────────────── */
+
+/* Generic home card */
+.hd-card {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-soft);
+}
+
+.hd-card-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 14px;
+}
+
+/* Remaining kcal badge (inside calorie-card) */
+.hd-remaining-badge {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), .12);
+  border-radius: 20px;
+  padding: 4px 14px;
+  margin-bottom: 14px;
+  display: inline-block;
+}
+
+.hd-remaining-badge.over {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, .12);
+}
+
+/* Macro progress bars */
+.hd-macro-row {
+  margin-bottom: 12px;
+}
+
+.hd-macro-row:last-child { margin-bottom: 0; }
+
+.hd-macro-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+
+.hd-macro-name {
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.hd-macro-lbl {
+  font-size: .74rem;
+  color: var(--text-3);
+}
+
+.hd-bar-track {
+  background: var(--border);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.hd-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  width: 0%;
+  transition: width .5s ease;
+}
+
+.hd-bar-fill.carbs   { background: var(--accent); }
+.hd-bar-fill.protein { background: var(--blue); }
+.hd-bar-fill.fat     { background: var(--orange); }
+
+/* Today's meals summary */
+.hd-meals-empty {
+  font-size: .82rem;
+  color: var(--text-4);
+  text-align: center;
+  padding: 8px 0 12px;
+}
+
+.hd-meal-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.hd-meal-row:last-child { border-bottom: none; }
+
+.hd-meal-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+  min-width: 88px;
+}
+
+.hd-meal-foods {
+  flex: 1;
+  font-size: .78rem;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hd-meal-kcal {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hd-log-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(var(--accent-rgb), .12);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.hd-log-btn:active { background: rgba(var(--accent-rgb), .25); }

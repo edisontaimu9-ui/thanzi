@@ -138,8 +138,38 @@
           </div>
         </div>
 
+        <!-- Guest mode -->
+        <button id="guest-btn" class="form-btn form-btn-secondary">Continue as Guest</button>
+        <p class="guest-note">No account needed — free for 14 days. Create an account anytime to keep your data.</p>
+
       </div><!-- /form-container -->
     </div><!-- /auth-wrapper -->
+  </div>
+
+  <!-- ── Trial Expired Screen ─────────────────────────────────────────────── -->
+  <div id="trial-expired-screen" class="screen" style="display:none">
+    <div class="auth-wrapper">
+      <div class="auth-brand">
+        <h1 class="logo">Thanzi</h1>
+        <p class="tagline">Know what you eat</p>
+      </div>
+      <div class="form-container">
+        <h2 id="trial-expired-title" class="trial-expired-title">Your free trial has ended</h2>
+        <p id="trial-expired-sub" class="trial-expired-sub">
+          Your 14-day guest trial is over. Create a free account to keep going —
+          all your logged meals and recipes are saved and will carry right over.
+        </p>
+
+        <div id="trial-upgrade-form">
+          <input type="text"     id="trial-name"     class="auth-input" placeholder="Full name" autocomplete="name">
+          <input type="email"    id="trial-email"    class="auth-input" placeholder="Email" autocomplete="email">
+          <input type="password" id="trial-password" class="auth-input" placeholder="Password" autocomplete="new-password">
+          <button id="trial-upgrade-btn" class="form-btn">Create account & keep my data</button>
+        </div>
+
+        <p id="trial-error" class="error"></p>
+      </div>
+    </div>
   </div>
 
   <!-- ── Profile Setup Screen ─────────────────────────────────────────────── -->
@@ -184,6 +214,12 @@
     <!-- Top bar: logo only -->
     <div class="dash-topbar">
       <img src="/thanzi/icons/web-app-manifest-192x192.png" class="dash-logo" alt="Thanzi">
+    </div>
+
+    <!-- Guest trial banner — shown only during an active guest session -->
+    <div id="trial-banner" class="trial-banner" style="display:none">
+      <span id="trial-banner-text"></span>
+      <button id="trial-banner-cta" class="trial-banner-cta">Create account</button>
     </div>
 
     <!-- Hero section -->
