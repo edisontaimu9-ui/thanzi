@@ -318,6 +318,72 @@ body {
   background: var(--border);
 }
 
+/* Guest mode — secondary pill button */
+.form-btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--border);
+  box-shadow: none;
+  margin-top: 12px;
+}
+.form-btn-secondary:hover {
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: none;
+}
+.form-btn-secondary:active { transform: scale(0.97); }
+
+.guest-note {
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--text-4);
+  margin: 10px 4px 0;
+  line-height: 1.4;
+}
+
+/* Guest trial banner — dashboard */
+.trial-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 10px 16px 0;
+  font-size: 0.82rem;
+  color: var(--text-1);
+}
+.trial-banner-cta {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trial-banner-cta:hover { background: var(--accent-active); }
+
+/* Trial-expired / upgrade screen */
+.trial-expired-title {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 4px 0 10px;
+  color: var(--text-1);
+}
+.trial-expired-sub {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
 /* Social buttons */
 .buttons-container {
   display: flex;
