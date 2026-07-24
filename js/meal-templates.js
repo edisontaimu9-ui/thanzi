@@ -33,6 +33,7 @@ const ThanziMealTemplates = (() => {
     draftMeal:     'breakfast',
     selectedFood:  null,       // food object chosen from search dropdown
     searchTimer:   null,
+    searchReqId:   0,          // guards against stale async search responses
     logTarget:     null,       // template pending log confirmation
   };
 
@@ -337,15 +338,28 @@ const ThanziMealTemplates = (() => {
       return;
     }
 
-    _state.searchTimer = setTimeout(() => {
-      const hits = (typeof ThanziFood !== 'undefined')
-        ? ThanziFood.searchLocal(q, 8)
-        : [];
+    _state.searchTimer = setTimeout(async () => {
+      const reqId = ++_state.searchReqId;
 
-      // also include custom foods
+      // also include custom foods (instant, local)
       const custom = (typeof ThanziCustomFoods !== 'undefined')
         ? ThanziCustomFoods.search(q).map(f => ({ ...f, sourceUsed: 'custom' }))
         : [];
+
+      results.innerHTML = '<div class="mt-sr-empty">Searching…</div>';
+      results.style.display = 'block';
+
+      // Chakudya Nutrition Registry (async — local FCT/packaged first,
+      // falls through server-side to the external cascade)
+      let hits = [];
+      if (typeof ThanziFood !== 'undefined') {
+        try {
+          hits = await ThanziFood.search(q, { multi: true, limit: 8 });
+        } catch (_e) { hits = []; }
+      }
+
+      // Stale response — a newer keystroke already fired a new search
+      if (reqId !== _state.searchReqId) return;
 
       const all = [...custom, ...hits];
 

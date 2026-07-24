@@ -15,7 +15,7 @@
  * NEW in v2:
  *  - "Describe a meal" flow: AI generates full recipe (name, servings,
  *    prep time, cook time, steps, ingredients with Malawian portions) then
- *    each ingredient is auto-matched to the Malawi Food Composition Table (MFCT).
+ *    each ingredient is auto-matched to the Chakudya Nutrition Registry.
  *  - Extended nutrition panel: fibre, sodium, sugar per serving in addition
  *    to kcal / carbs / protein / fat.
  *  - Preparation steps panel (editable).
@@ -207,7 +207,7 @@ const ThanziRecipe = (() => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // DATABASE MATCHING — map an AI ingredient name to Malawi Food Composition Table
+  // DATABASE MATCHING — map an AI ingredient name to the Chakudya Nutrition Registry
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
@@ -327,7 +327,7 @@ const ThanziRecipe = (() => {
    * Full recipe generation from a natural-language meal description.
    * Steps:
    *   1. AI generates complete recipe JSON
-   *   2. Each ingredient is matched against Malawi Food Composition Table (MFCT)
+   *   2. Each ingredient is matched against the Chakudya Nutrition Registry
    *   3. DB values override AI nutrition estimates where matched
    *   4. Modal is populated with results
    */
@@ -448,7 +448,7 @@ Rules:
           <span></span><span></span><span></span>
         </div>
         <p>Crafting "<strong>${input}</strong>" with Malawian ingredients…</p>
-        <small>Matching to Malawi Food Composition Table…</small>
+        <small>Matching to Chakudya Nutrition Registry…</small>
       </div>`;
     _el('rb-nutrition-summary').style.display = 'none';
     _el('rb-steps-section').style.display     = 'none';

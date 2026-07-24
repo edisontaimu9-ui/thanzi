@@ -10,6 +10,14 @@
   --bg-surface: #1a1a2e;
   --bg-inset:   #0f1117;
 
+  /* Card surfaces used by settings/exercise/goals/weight/progress panels */
+  --surface-1: #262638;
+  --surface-2: #1e1e2e;
+  --bg-card:   #1e1e2e;
+
+  /* Elevated surface used by recipe.css (cards/buttons above --bg-surface) */
+  --bg-elevated: #242738;
+
   /* Borders */
   --border:      #2a2a2a;
   --border-soft: #23233a;
@@ -66,6 +74,14 @@
   --bg-page:    #f4f6f5;
   --bg-surface: #ffffff;
   --bg-inset:   #eef1ef;
+
+  /* Card surfaces — light equivalents */
+  --surface-1: #eef1ef;
+  --surface-2: #ffffff;
+  --bg-card:   #ffffff;
+
+  /* Elevated surface — light equivalent */
+  --bg-elevated: #eef1ef;
 
   /* Borders */
   --border:      #e1e5e2;
