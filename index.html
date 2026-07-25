@@ -1261,10 +1261,6 @@
           <div class="rb-row">
             <input class="rb-input rb-input--sm" id="rb-servings" type="number" min="1" max="20" value="4">
             <label class="rb-label-inline">servings</label>
-            <input class="rb-input rb-input--xs" id="rb-prep-time" type="number" min="0" max="300" placeholder="0">
-            <label class="rb-label-inline">min prep</label>
-            <input class="rb-input rb-input--xs" id="rb-cook-time" type="number" min="0" max="600" placeholder="0">
-            <label class="rb-label-inline">min cook</label>
           </div>
         </div>
 
@@ -1348,21 +1344,24 @@
           </div>
         </div>
 
-        <!-- Preparation steps section -->
-        <div class="rb-steps-section" id="rb-steps-section" style="display:none">
-          <div class="rb-section-title">Preparation Steps</div>
-          <div id="rb-steps-list" class="rb-steps-list"></div>
-          <div class="rb-step-add-row">
-            <input class="rb-input" id="rb-step-input" type="text"
-              placeholder="Add a step…" maxlength="300">
-            <button class="rb-step-add-btn" id="rb-step-add-btn">+ Add</button>
-          </div>
-        </div>
-
         <!-- Modal actions -->
-        <div class="rb-modal-actions">
+        <div class="rb-modal-actions" id="rb-modal-actions">
           <button class="rb-btn-secondary" id="rb-cancel-btn">Cancel</button>
           <button class="rb-btn-primary"   id="rb-save-btn">Log Analysed Meal</button>
+        </div>
+
+        <!-- Meal-type step — shown in place of the actions above after
+             tapping "Log Analysed Meal", so the analysis stays visible
+             while the user picks a meal type. -->
+        <div class="rb-log-step" id="rb-log-step" style="display:none">
+          <p class="rb-log-step-label">Log as which meal?</p>
+          <div class="rb-log-step-btns">
+            <button class="rb-log-meal-btn" data-meal="breakfast">🌅 Breakfast</button>
+            <button class="rb-log-meal-btn" data-meal="lunch">☀️ Lunch</button>
+            <button class="rb-log-meal-btn" data-meal="dinner">🌙 Dinner</button>
+            <button class="rb-log-meal-btn" data-meal="snack">🍎 Snack</button>
+          </div>
+          <button class="rb-log-step-back" id="rb-log-step-back">← Back</button>
         </div>
 
       </div>

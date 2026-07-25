@@ -639,93 +639,6 @@
 .rb-nut-potassium span { color: #c084fc; }
 .rb-nut-zinc      span { color: #22d3ee; }
 
-/* ── Steps section ───────────────────────────────────────────── */
-.rb-steps-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rb-steps-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rb-step-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: var(--bg-elevated, #1e2130);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 10px;
-}
-
-.rb-step-num {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 50%;
-  font-size: .72rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-}
-
-.rb-step-text {
-  flex: 1;
-  font-size: .84rem;
-  color: var(--text-primary);
-  line-height: 1.45;
-  outline: none;
-  min-height: 20px;
-  word-break: break-word;
-}
-.rb-step-text:focus {
-  border-bottom: 1px dashed var(--accent);
-}
-
-.rb-step-remove {
-  background: none;
-  border: none;
-  color: var(--danger, #ef4444);
-  cursor: pointer;
-  font-size: .78rem;
-  padding: 2px 4px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  opacity: .5;
-  transition: opacity .1s;
-  margin-top: 1px;
-}
-.rb-step-remove:hover { opacity: 1; }
-
-.rb-step-add-row {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
-
-.rb-step-add-btn {
-  flex-shrink: 0;
-  padding: 8px 12px;
-  background: var(--bg-elevated, #2a2d3a);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: .8rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity .15s;
-}
-.rb-step-add-btn:hover { opacity: .8; }
-
 /* ── Modal actions ───────────────────────────────────────────── */
 .rb-modal-actions {
   display: flex;
@@ -749,6 +662,57 @@
 .rb-btn-primary:hover,
 .rb-btn-secondary:hover { opacity: .85; }
 .rb-btn-primary:disabled { opacity: .6; cursor: wait; }
+
+/* ── Inline meal-type step (replaces modal actions temporarily) ──── */
+.rb-log-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rb-log-step-label {
+  margin: 0;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.rb-log-step-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rb-log-meal-btn {
+  padding: 13px 10px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-elevated, #242738);
+  color: var(--text-primary);
+  font-size: .87rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.rb-log-meal-btn:hover { border-color: var(--accent); }
+.rb-log-meal-btn:active { transform: scale(.97); background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.rb-log-meal-btn:disabled { opacity: .5; cursor: wait; }
+
+.rb-log-step-back {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s;
+}
+.rb-log-step-back:hover { color: var(--text-primary); }
 
 /* ── Thandizo AI chat recipe save btn ──────────────────────────── */
 .ai-recipe-save-btn {

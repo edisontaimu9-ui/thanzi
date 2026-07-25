@@ -164,6 +164,7 @@ const ThanziRecipe = (() => {
     steps:       [],     // string[]
     searchTimer: null,
     generating:  false,
+    pendingLog:  null,   // { name, per } set while the inline meal-type step is showing
   };
 
   // ── DOM helpers ────────────────────────────────────────────────────────────
@@ -372,21 +373,15 @@ const ThanziRecipe = (() => {
     try {
       const ragContext = await _retrieveRAG(input);
 
-      const systemPrompt = `You are Thandizo, Thanzi's Malawian nutrition assistant. Generate realistic recipes using local Malawian ingredients and household measures common in Malawi (nsima, relish, cups, tablespoons, pieces). Use nutrition values typical for Sub-Saharan African foods. Never translate "nsima" into a generic English word like "porridge" — keep it as "nsima" and preserve any qualifier given (e.g. "mgaiwa nsima", "nsima ya ufa woyera"). Always respond with ONLY a valid JSON object — no markdown, no explanation.`;
+      const systemPrompt = `You are Thandizo, Thanzi's Malawian nutrition assistant. Break down realistic meals using local Malawian ingredients and household measures common in Malawi (nsima, relish, cups, tablespoons, pieces). Use nutrition values typical for Sub-Saharan African foods. Never translate "nsima" into a generic English word like "porridge" — keep it as "nsima" and preserve any qualifier given (e.g. "mgaiwa nsima", "nsima ya ufa woyera"). Always respond with ONLY a valid JSON object — no markdown, no explanation.`;
 
-      const userPrompt = `Generate a complete recipe for: "${input}"
+      const userPrompt = `Break down the nutrition for this meal: "${input}"
 ${ragContext ? `\nRelevant Malawian food knowledge (use this to ground ingredient names, portions and authenticity — Chakudya, Thanzi's Malawi food database):\n${ragContext}\n` : ''}
 Respond ONLY with this exact JSON structure:
 {
-  "name": "Recipe name",
+  "name": "Meal name",
   "description": "One sentence about the dish",
   "servings": 4,
-  "prepTime": 15,
-  "cookTime": 30,
-  "steps": [
-    "Step 1 description",
-    "Step 2 description"
-  ],
   "ingredients": [
     {
       "name": "ingredient name (simple, searchable)",
@@ -415,9 +410,7 @@ Rules:
 - Nutrition values are for the STATED quantity (not per 100g)
 - vitA is micrograms (µg) RAE, vitC/calcium/iron/potassium/zinc are milligrams (mg) — estimate using standard food-composition data for the ingredient
 - Include 4–10 ingredients
-- Include 3–8 preparation steps
-- servings: integer 1–10
-- prepTime and cookTime: integer minutes`;
+- servings: integer 1–10`;
 
       const recipe = await _callAI(systemPrompt, userPrompt, 1400);
 
@@ -480,7 +473,6 @@ Rules:
         <small>Matching to Chakudya Nutrition Registry…</small>
       </div>`;
     _el('rb-nutrition-summary').style.display = 'none';
-    _el('rb-steps-section').style.display     = 'none';
     overlay.style.display    = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -614,46 +606,9 @@ Ingredients: ${text}`;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // RENDER — STEPS
+  // (Preparation-steps editor removed — the analyser only reports nutrition,
+  //  it doesn't need cooking instructions.)
   // ══════════════════════════════════════════════════════════════════════════
-
-  function _renderSteps() {
-    const container = _el('rb-steps-list');
-    const section   = _el('rb-steps-section');
-    if (!container || !section) return;
-
-    if (!_s.steps.length) {
-      section.style.display = 'none';
-      return;
-    }
-
-    section.style.display = 'block';
-    container.innerHTML = _s.steps.map((step, i) => `
-      <div class="rb-step-row" data-idx="${i}">
-        <span class="rb-step-num">${i + 1}</span>
-        <div class="rb-step-text" contenteditable="true"
-          data-idx="${i}"
-          spellcheck="false">${step}</div>
-        <button class="rb-step-remove" data-idx="${i}" aria-label="Remove step">✕</button>
-      </div>
-    `).join('');
-
-    // Step text editing
-    container.querySelectorAll('.rb-step-text').forEach(el => {
-      el.addEventListener('blur', e => {
-        const idx = parseInt(e.target.dataset.idx);
-        _s.steps[idx] = e.target.textContent.trim();
-      });
-    });
-
-    // Step remove
-    container.querySelectorAll('.rb-step-remove').forEach(btn => {
-      btn.addEventListener('click', e => {
-        _s.steps.splice(parseInt(e.currentTarget.dataset.idx), 1);
-        _renderSteps();
-      });
-    });
-  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // FOOD SEARCH (manual ingredient add)
@@ -729,28 +684,16 @@ Ingredients: ${text}`;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ADD STEP
-  // ══════════════════════════════════════════════════════════════════════════
-
-  function _addStep() {
-    const input = _el('rb-step-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    _s.steps.push(text);
-    input.value = '';
-    _renderSteps();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
   // SAVE TO APPWRITE
   // ══════════════════════════════════════════════════════════════════════════
 
   async function _saveRecipe() {
     const name     = (_el('rb-recipe-name')?.value || '').trim();
     const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
-    const prepTime = parseInt(_el('rb-prep-time')?.value) || 0;
-    const cookTime = parseInt(_el('rb-cook-time')?.value) || 0;
+    // Prep/cook time inputs were removed — the analyser only tracks nutrition.
+    // Sent as 0 to satisfy the Appwrite schema's existing fields.
+    const prepTime = 0;
+    const cookTime = 0;
 
     if (!name)                  { _toast('Enter a recipe name.', 'error'); return; }
     if (!_s.ingredients.length) { _toast('Add at least one ingredient.', 'error'); return; }
@@ -1036,6 +979,12 @@ Ingredients: ${text}`;
     _s.editId      = recipe ? recipe.$id : null;
     _s.ingredients = [];
     _s.steps       = [];
+    _s.pendingLog  = null;
+
+    const logStep = _el('rb-log-step');
+    const actions = _el('rb-modal-actions');
+    if (logStep) logStep.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
 
     if (source) {
       // Populate ingredients
@@ -1078,8 +1027,6 @@ Ingredients: ${text}`;
     _el('rb-modal-title').textContent = recipe ? 'Edit Analysis' : 'New Analysis';
     _el('rb-recipe-name').value       = source?.name     || '';
     _el('rb-servings').value          = source?.servings || 4;
-    if (_el('rb-prep-time')) _el('rb-prep-time').value = source?.prepTime || '';
-    if (_el('rb-cook-time')) _el('rb-cook-time').value = source?.cookTime || '';
     if (_el('rb-ai-input'))  _el('rb-ai-input').value  = '';
     if (_el('rb-ing-search')) {
       _el('rb-ing-search').value = '';
@@ -1087,7 +1034,6 @@ Ingredients: ${text}`;
     }
 
     _renderIngredients();
-    _renderSteps();
 
     _el('rb-modal-overlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -1099,6 +1045,13 @@ Ingredients: ${text}`;
     _s.editId      = null;
     _s.ingredients = [];
     _s.steps       = [];
+    _s.pendingLog  = null;
+    // Reset the log step back to the default action buttons so a fresh
+    // "New Analysis" doesn't open mid-way through the meal-type step.
+    const logStep = _el('rb-log-step');
+    const actions = _el('rb-modal-actions');
+    if (logStep) logStep.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1106,56 +1059,37 @@ Ingredients: ${text}`;
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Called when the user taps "Log Food" inside the recipe editor modal.
-   * Shows the shared meal-type picker, then writes a food_logs document
-   * whose fields match the Appwrite schema used by ThanziLog:
-   *   userId, foodName, calories (int), carbs, protein, fat,
-   *   mealType, date, quantity (double, grams), unit ('g')
+   * Called when the user taps "Log Analysed Meal" inside the analyser modal.
+   * Instead of the shared full-screen meal-type picker (which sits at a lower
+   * z-index than this modal and so can't reliably render on top of it), we
+   * swap the modal's own action buttons for an inline "log as which meal?"
+   * step — the nutrition analysis stays visible the whole time, and nothing
+   * closes until a meal type is actually chosen.
    */
   function _logFromModal() {
     const name     = (_el('rb-recipe-name')?.value || '').trim();
     const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
 
-    if (!name)                  { _toast('Enter a recipe name.', 'error'); return; }
+    if (!name)                  { _toast('Enter a meal name.', 'error'); return; }
     if (!_s.ingredients.length) { _toast('Add at least one ingredient.', 'error'); return; }
     if (!_s.user)               { _toast('Sign in to log food.', 'error'); return; }
 
     const { per } = _recalc();
+    _s.pendingLog = { name, per };
 
-    const picker    = document.getElementById('mt-log-picker');
-    const backdrop  = document.getElementById('mt-log-backdrop');
-    const cancelBtn = document.getElementById('mt-log-cancel');
+    _el('rb-modal-actions').style.display = 'none';
+    _el('rb-log-step').style.display      = 'flex';
+  }
 
-    if (!picker) {
-      _doLogFromModal(name, per, 'lunch');
-      return;
-    }
-
-    picker.style.display = 'flex';
-
-    function cleanup() {
-      picker.style.display = 'none';
-      picker.querySelectorAll('.mt-log-meal-btn').forEach(b => b.removeEventListener('click', onMeal));
-      backdrop?.removeEventListener('click', onCancel);
-      cancelBtn?.removeEventListener('click', onCancel);
-    }
-
-    function onCancel() { cleanup(); }
-
-    function onMeal(e) {
-      const meal = e.currentTarget.dataset.meal;
-      cleanup();
-      _doLogFromModal(name, per, meal);
-    }
-
-    picker.querySelectorAll('.mt-log-meal-btn').forEach(b => b.addEventListener('click', onMeal));
-    backdrop?.addEventListener('click', onCancel);
-    cancelBtn?.addEventListener('click', onCancel);
+  function _cancelLogStep() {
+    _s.pendingLog = null;
+    _el('rb-log-step').style.display      = 'none';
+    _el('rb-modal-actions').style.display = 'flex';
   }
 
   async function _doLogFromModal(name, per, meal) {
-    const btn = _el('rb-save-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Logging…'; }
+    const btns = document.querySelectorAll('.rb-log-meal-btn');
+    btns.forEach(b => b.disabled = true);
 
     try {
       await _db.createDocument(
@@ -1178,12 +1112,13 @@ Ingredients: ${text}`;
 
       if (typeof ThanziLog !== 'undefined') ThanziLog.refresh?.();
       _toast(`"${name}" logged to ${meal}! ✓`, 'success');
+      _s.pendingLog = null;
       _closeModal();
 
     } catch (err) {
       _toast('Log failed: ' + err.message, 'error');
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Log Analysed Meal'; }
+      // Let the user retry without re-entering everything
+      btns.forEach(b => b.disabled = false);
     }
   }
 
@@ -1210,6 +1145,13 @@ Ingredients: ${text}`;
 
     // Log Food (replaces Save Recipe)
     _el('rb-save-btn')?.addEventListener('click', _logFromModal);
+    _el('rb-log-step-back')?.addEventListener('click', _cancelLogStep);
+    document.querySelectorAll('.rb-log-meal-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!_s.pendingLog) return;
+        _doLogFromModal(_s.pendingLog.name, _s.pendingLog.per, btn.dataset.meal);
+      });
+    });
 
     // Servings → recalc
     _el('rb-servings')?.addEventListener('input', _recalc);
@@ -1233,12 +1175,6 @@ Ingredients: ${text}`;
         const r = _el('rb-ing-results');
         if (r) r.style.display = 'none';
       }
-    });
-
-    // Add step button
-    _el('rb-step-add-btn')?.addEventListener('click', _addStep);
-    _el('rb-step-input')?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); _addStep(); }
     });
 
     await _loadRecipes();
