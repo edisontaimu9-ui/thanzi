@@ -436,6 +436,32 @@
   transition: opacity .15s, transform .1s;
 }
 .pntf-save-btn:active { transform: scale(.98); }
+.pntf-save-btn:disabled { opacity: .6; cursor: wait; }
+
+.pntf-test-btn {
+  width: 100%;
+  padding: 11px;
+  margin-top: 8px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.pntf-test-btn:hover { border-color: var(--accent, #3db97a); }
+.pntf-test-btn:active { transform: scale(.98); }
+
+.pntf-note {
+  font-size: .74rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  margin: 10px 2px 0;
+  text-align: center;
+}
+
 .pntf-save-msg {
   font-size: .8rem;
   color: var(--accent, #3db97a);

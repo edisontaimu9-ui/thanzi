@@ -40,6 +40,7 @@ const APP_SHELL = [
   '/thanzi/js/weight.js',
   '/thanzi/js/custom-foods.js',
   '/thanzi/js/settings.js',
+  '/thanzi/js/push.js',
   '/thanzi/js/goals.js',
   '/thanzi/js/recipe.js',
   '/thanzi/js/scanner.js',
@@ -153,16 +154,55 @@ self.addEventListener('fetch', event => {
 });
 
 // ── Push notifications ────────────────────────────────────────────────────────
+// Payload shape sent by the push-scheduler Cloudflare Worker:
+//   { title, body, tag, url, renotify }
 self.addEventListener('push', event => {
-  const data = event.data
-    ? event.data.json()
-    : { title: 'Thanzi', body: 'You have a new update!' };
+  let data = { title: 'Thanzi', body: 'You have a new update!' };
+  if (event.data) {
+    try { data = event.data.json(); }
+    catch (e) { data = { title: 'Thanzi', body: event.data.text() }; }
+  }
+
+  const options = {
+    body:     data.body || '',
+    icon:     '/thanzi/icons/web-app-manifest-192x192.png',
+    badge:    '/thanzi/icons/favicon-96x96.png',
+    tag:      data.tag || 'thanzi-notification',
+    renotify: !!data.tag,
+    data:     { url: data.url || '/thanzi/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title || 'Thanzi', options));
+});
+
+// Tapping a notification focuses an already-open Thanzi tab if one exists,
+// otherwise opens a new one at the relevant URL.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/thanzi/';
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Thanzi', {
-      body:  data.body  || '',
-      icon:  '/thanzi/icons/web-app-manifest-192x192.png',
-      badge: '/thanzi/icons/favicon-96x96.png',
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes('/thanzi/') && 'focus' in c) return c.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
     })
+  );
+});
+
+// If the push subscription itself expires/rotates, drop the stale Appwrite
+// doc so the scheduler stops trying to send to a dead endpoint. Re-subscribes
+// automatically using the same VAPID key, then hands the new subscription
+// back to the app the next time it's open (the app's own subscribe() flow
+// will pick it up and re-save it since the old doc is now gone silently on
+// the next successful send attempt from the worker side).
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription
+      ? { userVisibleOnly: true, applicationServerKey: event.oldSubscription.options.applicationServerKey }
+      : undefined
+    ).catch(() => {})
   );
 });
 

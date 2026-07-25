@@ -520,7 +520,7 @@ const ThanziProfile = (() => {
     // Save
     const saveBtn = _el('pntf-save-btn');
     const saveMsg = _el('pntf-save-msg');
-    if (saveBtn) saveBtn.addEventListener('click', () => {
+    if (saveBtn) saveBtn.addEventListener('click', async () => {
       const prefs = {
         mealReminders:  _el('pntf-meal-remind')?.checked  ?? false,
         mealBreakfast:  _el('pntf-time-breakfast')?.value || '08:00',
@@ -538,10 +538,58 @@ const ThanziProfile = (() => {
         ThanziSettings.set('waterReminders', prefs.waterReminders);
         ThanziSettings.set('weeklyReport',   prefs.weeklyReport);
       }
-      if (saveMsg) {
-        saveMsg.textContent = '✓ Preferences saved';
+
+      const anyReminderOn = prefs.mealReminders || prefs.waterReminders
+        || prefs.weeklyReport || prefs.goalAlert;
+
+      const showMsg = (text, isError = false) => {
+        if (!saveMsg) return;
+        saveMsg.textContent = text;
+        saveMsg.style.color = isError ? 'var(--danger, #ef4444)' : '';
         saveMsg.style.display = 'block';
-        setTimeout(() => { saveMsg.style.display = 'none'; }, 2500);
+        setTimeout(() => { saveMsg.style.display = 'none'; }, isError ? 4500 : 2500);
+      };
+
+      // Sync with the actual push subscription so reminders can be delivered
+      // even when the app is fully closed.
+      if (typeof ThanziPush !== 'undefined' && ThanziPush.isSupported()) {
+        saveBtn.disabled = true;
+        try {
+          if (anyReminderOn) {
+            await ThanziPush.subscribe(prefs);
+            showMsg('✓ Preferences saved — notifications enabled');
+          } else {
+            await ThanziPush.unsubscribe();
+            showMsg('✓ Preferences saved — notifications off');
+          }
+        } catch (err) {
+          console.error('[Notifications] Push sync failed:', err);
+          showMsg('Saved locally, but push setup failed: ' + err.message, true);
+        } finally {
+          saveBtn.disabled = false;
+        }
+      } else if (typeof ThanziPush !== 'undefined' && anyReminderOn) {
+        showMsg('Saved — but this browser/device doesn\'t support push notifications', true);
+      } else {
+        showMsg('✓ Preferences saved');
+      }
+    });
+
+    // Send a local test notification so the user can confirm permission +
+    // display work on this device before relying on scheduled reminders.
+    _el('pntf-test-btn')?.addEventListener('click', async () => {
+      if (typeof ThanziPush === 'undefined' || !ThanziPush.isSupported()) {
+        alert('Push notifications aren\'t supported on this browser/device.');
+        return;
+      }
+      try {
+        if (Notification.permission !== 'granted') {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') { alert('Notification permission was not granted.'); return; }
+        }
+        await ThanziPush.sendLocalTestNotification();
+      } catch (err) {
+        alert('Could not show test notification: ' + err.message);
       }
     });
   }

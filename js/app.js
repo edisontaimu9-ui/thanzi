@@ -208,6 +208,12 @@ const ThanziApp = (() => {
     if (typeof ThanziMealTemplates !== 'undefined') {
       ThanziMealTemplates.init(user);
     }
+
+    // Init the push-notification subscription manager (no side effects until
+    // the user opts in from the Notifications tab)
+    if (typeof ThanziPush !== 'undefined') {
+      ThanziPush.init(user);
+    }
   };
 
   // ── Nav panel switching ──────────────────────────────────────────────────
