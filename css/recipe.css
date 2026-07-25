@@ -576,6 +576,34 @@
 .rb-nut-sodium  span { color: #a78bfa; }
 .rb-nut-sugar   span { color: #fb7185; }
 
+/* ── Micronutrients ──────────────────────────────────────────── */
+.rb-nut-micros-title {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.rb-nut-row--micros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 6px;
+  text-align: center;
+  margin-top: 8px;
+}
+.rb-nut-row--micros .rb-nut-item span { font-size: .92rem; }
+
+.rb-nut-vita      span { color: #fbbf24; }
+.rb-nut-vitc      span { color: #4ade80; }
+.rb-nut-calcium   span { color: #93c5fd; }
+.rb-nut-iron      span { color: #f87171; }
+.rb-nut-potassium span { color: #c084fc; }
+.rb-nut-zinc      span { color: #22d3ee; }
+
 /* ── Steps section ───────────────────────────────────────────── */
 .rb-steps-section {
   display: flex;

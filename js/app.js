@@ -12,7 +12,7 @@ const ThanziApp = (() => {
     waterGoal: 2000,
   };
 
-  let selections = { gender: null, activity: null, goal: null };
+  let selections = { gender: null, activity: null, goal: null, interests: [] };
   let _currentUser = null;
   let _logInited = false;
   let _profileInited = false;
@@ -270,6 +270,21 @@ const ThanziApp = (() => {
     document.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const group = btn.dataset.group;
+
+        if (group === 'interests') {
+          // Multi-select: toggle this button, don't clear siblings
+          btn.classList.toggle('selected');
+          const val = btn.dataset.val;
+          const list = selections.interests || (selections.interests = []);
+          const idx  = list.indexOf(val);
+          if (btn.classList.contains('selected')) {
+            if (idx === -1) list.push(val);
+          } else if (idx !== -1) {
+            list.splice(idx, 1);
+          }
+          return;
+        }
+
         document.querySelectorAll(`[data-group="${group}"]`)
           .forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -282,26 +297,34 @@ const ThanziApp = (() => {
       const age    = parseInt(document.getElementById('p-age').value);
       const weight = parseFloat(document.getElementById('p-weight').value);
       const height = parseFloat(document.getElementById('p-height').value);
-      const { gender, activity, goal } = selections;
+      const { gender, activity, goal, interests } = selections;
 
       if (!age || !weight || !height || !gender || !activity || !goal) {
         document.getElementById('profile-error').textContent = 'Please fill in all fields';
         return;
       }
 
-      const plan = ThanziNutrition.generate({
+      const profileInputs = {
         age,
-        sex:            gender,
-        weight_kg:      weight,
-        height_m:       height / 100,
-        activity_level: activity,
+        sex:               gender,
+        weight_kg:         weight,
+        height_m:          height / 100,
+        activity_level:    activity,
         goal,
-      });
+        health_interests:  interests || [],
+      };
+
+      const plan = ThanziNutrition.generate(profileInputs);
 
       if (plan.error) {
         document.getElementById('profile-error').textContent = plan.error;
         return;
       }
+
+      // Keep the raw inputs on the plan so other panels (Goals, Thandizo AI,
+      // achievements) can read health_interests / regenerate the plan later.
+      plan.inputs = profileInputs;
+      plan.health_interests = interests || [];
 
       const user = await ThanziAuth.getUser();
       localStorage.setItem('thanzi_profile_' + user.$id, JSON.stringify(plan));

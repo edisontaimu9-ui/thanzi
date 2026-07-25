@@ -89,6 +89,36 @@ const ThanziAI = (() => {
 
   // ── Build nutrition context string sent to AI ──────────────────────────────
 
+  // Human-readable labels + tailoring guidance for each health-interest topic
+  // a user can pick during profile setup / in the Goals panel. Keeps Thandizo's
+  // focus aligned with what the user actually cares about instead of generic
+  // advice.
+  const HEALTH_INTEREST_GUIDANCE = {
+    weight_loss:      { label: 'Weight loss',                    note: 'favour a sustainable calorie deficit, protein and fibre for satiety, and portion guidance' },
+    diabetes:         { label: 'Diabetes management',             note: 'prioritise glycaemic impact — lower-GI carbs, consistent carb portions, pairing carbs with protein/fibre, and caution with added sugar' },
+    hyperlipidemia:   { label: 'Hyperlipidemia (cholesterol)',    note: 'favour unsaturated fats, soluble fibre, and lower saturated/trans fat; flag high-cholesterol or fried foods where relevant' },
+    hypertension:     { label: 'Hypertension (blood pressure)',   note: 'flag high-sodium foods, favour potassium-rich foods (fruits, vegetables), and mention the DASH-style pattern where relevant' },
+    heart_health:     { label: 'Heart health',                    note: 'favour unsaturated fats, fibre, oily fish/legumes, and lower sodium and saturated fat' },
+    pregnancy:        { label: 'Pregnancy & maternal nutrition',  note: 'emphasise iron, folate, calcium and food-safety basics; never suggest supplement dosages — recommend confirming with a health provider' },
+    muscle_gain:      { label: 'Muscle gain / sports performance', note: 'emphasise adequate protein spread across the day, sufficient total calories, and recovery nutrition' },
+    general_wellness: { label: 'General wellness',                note: 'give balanced, varied-diet guidance without over-indexing on any single metric' },
+  };
+
+  /** Reads the user's stored nutrition plan from localStorage and returns
+   *  their selected health-interest topics (if any). Never throws. */
+  function _getHealthInterests() {
+    try {
+      if (!_user || !_user.$id) return [];
+      const raw = localStorage.getItem('thanzi_profile_' + _user.$id);
+      if (!raw) return [];
+      const plan = JSON.parse(raw);
+      return plan?.health_interests || plan?.inputs?.health_interests || [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+
   function _buildContext() {
     const firstName = (_user && _user.name && _user.name.trim().split(' ')[0]) || 'the user';
     const s = _getAppState ? _getAppState() : {};
@@ -100,11 +130,20 @@ const ThanziAI = (() => {
       fat:     (s.fatGoal         || 0) - (s.fat              || 0),
     };
 
+    const interests = _getHealthInterests();
+    const interestBlock = interests.length ? `
+HEALTH INTERESTS (selected by the user in their profile — tailor advice to these):
+${interests.map(id => {
+      const g = HEALTH_INTEREST_GUIDANCE[id];
+      return g ? `- ${g.label}: ${g.note}` : `- ${id}`;
+    }).join('\n')}
+` : '';
+
     return `
 USER PROFILE:
 - Name: ${firstName}
 - App: Thanzi (nutrition tracker, Malawi)
-
+${interestBlock}
 TODAY'S NUTRITION STATUS:
 - Calories consumed: ${s.caloriesConsumed || 0} / ${s.caloriesGoal || 0} kcal (${remaining.kcal} remaining)
 - Carbs:   ${s.carbs    || 0}g consumed, ${remaining.carbs}g remaining (goal: ${s.carbsGoal   || 0}g)
@@ -118,6 +157,8 @@ INSTRUCTIONS:
 - When suggesting meals, prefer foods commonly available in Malawi and southern Africa (nsima, beans, vegetables, fish, etc.) but also include international options.
 - Keep responses friendly, clear, and mobile-friendly (avoid overly long walls of text).
 - Always be supportive of the user's nutrition goals.
+${interests.length ? '- Weave in the user\'s health interests above where relevant, but don\'t force it into every reply — only when it naturally applies to what they asked.' : ''}
+- You are not a doctor: for anything diagnostic, medication-related, or a specific clinical concern, encourage the user to consult a healthcare professional rather than giving medical advice yourself.
 `.trim();
   }
 
@@ -298,16 +339,16 @@ Use Malawian/Southern African food portions where relevant. Be realistic with qu
 
     const btn = document.createElement('button');
     btn.className   = 'ai-recipe-save-btn';
-    btn.textContent = '🍳 Save to Recipe Builder →';
+    btn.textContent = '🍳 Analyse in Recipe Analyser →';
     btn.addEventListener('click', () => {
       if (typeof ThanziRecipe !== 'undefined' && ThanziRecipe.openWithData) {
         ThanziRecipe.openWithData(recipeData);
-        // Navigate to recipe builder panel
+        // Navigate to recipe analyser panel
         document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
         const rbPanel = document.getElementById('recipe-builder-panel');
         if (rbPanel) rbPanel.style.display = 'block';
       } else {
-        alert('Recipe Builder not available yet.');
+        alert('Recipe Analyser not available yet.');
       }
     });
 

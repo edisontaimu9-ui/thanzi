@@ -36,6 +36,17 @@
 - **Custom food & meal tools**
   - Custom foods library
   - Reusable meal templates
+  - **Recipe Analyser** — describe a meal or add ingredients manually; each
+    ingredient is matched to the Chakudya Nutrition Registry for macros, and
+    AI estimates key micronutrients (Vitamin A, Vitamin C, Calcium, Iron,
+    Potassium, Zinc) per serving
+- **Personalised health focus**
+  - Profile setup includes optional health-interest topics (Weight loss,
+    Diabetes management, Hyperlipidemia, Hypertension, Heart health,
+    Pregnancy, Muscle gain, General wellness), editable later from the
+    Goals panel
+  - Thandizo (AI assistant) tailors its advice to the user's selected
+    health interests
 - **PWA experience**
   - Installable app (manifest + icons + screenshots)
   - Offline caching with service worker

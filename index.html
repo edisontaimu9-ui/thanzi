@@ -219,6 +219,17 @@
           <button class="option-btn" data-val="maintain" data-group="goal">Maintain</button>
           <button class="option-btn" data-val="gain"     data-group="goal">Gain muscle</button>
         </div>
+        <label>Health Interests <span class="profile-field-hint">(optional — pick any that apply)</span></label>
+        <div class="option-group vertical" id="p-interests-group">
+          <button class="option-btn" data-val="weight_loss"    data-group="interests">Weight loss</button>
+          <button class="option-btn" data-val="diabetes"       data-group="interests">Diabetes management</button>
+          <button class="option-btn" data-val="hyperlipidemia" data-group="interests">Hyperlipidemia (cholesterol)</button>
+          <button class="option-btn" data-val="hypertension"   data-group="interests">Hypertension (blood pressure)</button>
+          <button class="option-btn" data-val="heart_health"   data-group="interests">Heart health</button>
+          <button class="option-btn" data-val="pregnancy"      data-group="interests">Pregnancy &amp; maternal nutrition</button>
+          <button class="option-btn" data-val="muscle_gain"    data-group="interests">Muscle gain / sports performance</button>
+          <button class="option-btn" data-val="general_wellness" data-group="interests">General wellness</button>
+        </div>
         <button id="save-profile-btn">Generate my plan</button>
         <p id="profile-error" class="error"></p>
       </div>
@@ -625,6 +636,18 @@
             <label class="gl-target-label" for="gl-target-weight-input">Target Weight (kg)</label>
             <input type="number" id="gl-target-weight-input"
                    placeholder="e.g. 65" min="20" max="500" step="0.1" inputmode="decimal">
+          </div>
+
+          <div class="gl-set-sub" style="margin-top:14px">Health interests <span style="opacity:.7;font-weight:400">(optional — tailors Thandizo's advice)</span></div>
+          <div class="gl-interests-wrap" id="gl-interests-wrap">
+            <button class="gl-goal-btn gl-interest-btn" data-interest="weight_loss">Weight loss</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="diabetes">Diabetes management</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="hyperlipidemia">Hyperlipidemia</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="hypertension">Hypertension</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="heart_health">Heart health</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="pregnancy">Pregnancy</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="muscle_gain">Muscle gain</button>
+            <button class="gl-goal-btn gl-interest-btn" data-interest="general_wellness">General wellness</button>
           </div>
 
           <p id="gl-error"></p>
@@ -1154,15 +1177,15 @@
     <div id="settings-panel" class="dash-panel" style="display:none"></div>
     <!-- /settings-panel -->
 
-    <!-- ── Recipe Builder Panel ──────────────────────────────────────────── -->
+    <!-- ── Recipe Analyser Panel ─────────────────────────────────────────── -->
     <div id="recipe-builder-panel" class="dash-panel" style="display:none">
       <div class="rb-wrap">
 
         <!-- Header -->
         <div class="rb-header">
           <div>
-            <h2 class="rb-title">Recipe Builder</h2>
-            <p class="rb-subtitle">Describe any meal — AI builds it for you</p>
+            <h2 class="rb-title">Recipe Analyser</h2>
+            <p class="rb-subtitle">Describe any meal — get estimated macros &amp; micronutrients</p>
           </div>
           <button class="rb-new-btn" id="rb-new-btn">+ Manual</button>
         </div>
@@ -1175,7 +1198,7 @@
               <circle cx="9" cy="10" r="1" fill="currentColor"/>
               <circle cx="15" cy="10" r="1" fill="currentColor"/>
             </svg>
-            AI Recipe Generator
+            AI Recipe Analyser
           </div>
           <div class="rb-ai-generate-row">
             <textarea
@@ -1190,11 +1213,11 @@
                 <circle cx="9" cy="10" r="1" fill="currentColor"/>
                 <circle cx="15" cy="10" r="1" fill="currentColor"/>
               </svg>
-              Generate
+              Analyse
             </button>
           </div>
           <p class="rb-ai-generate-hint">
-            AI matches ingredients to the Chakudya Nutrition Registry for accurate nutrition values.
+            AI matches each ingredient to the Chakudya Nutrition Registry and estimates macros + key micronutrients.
           </p>
         </div>
 
@@ -1207,7 +1230,7 @@
               <line x1="9" y1="12" x2="15" y2="12"/>
               <line x1="9" y1="16" x2="13" y2="16"/>
             </svg>
-            <p>No recipes yet — describe a meal above or tap Manual to start.</p>
+            <p>No analysed meals yet — describe a meal above or tap Manual to start.</p>
           </div>
         </div>
 
@@ -1258,7 +1281,7 @@
         <!-- Food search -->
         <div class="rb-search-wrap">
           <input class="rb-input" id="rb-ing-search" type="search"
-            placeholder="Search Chakudya Nutrition Registry…" autocomplete="off">
+            placeholder="Search Chakudya Nutrition Registry to analyse…" autocomplete="off">
           <div id="rb-ing-results" class="rb-ing-results" style="display:none"></div>
         </div>
 
@@ -1294,6 +1317,28 @@
               <span id="rb-nut-sugar">0g</span><small>Sugar</small>
             </div>
           </div>
+          <!-- Micronutrients (estimated) -->
+          <div class="rb-nut-micros-title">Micronutrients (estimated)</div>
+          <div class="rb-nut-row--micros">
+            <div class="rb-nut-item rb-nut-vita">
+              <span id="rb-nut-vita">0µg</span><small>Vitamin A</small>
+            </div>
+            <div class="rb-nut-item rb-nut-vitc">
+              <span id="rb-nut-vitc">0mg</span><small>Vitamin C</small>
+            </div>
+            <div class="rb-nut-item rb-nut-calcium">
+              <span id="rb-nut-calcium">0mg</span><small>Calcium</small>
+            </div>
+            <div class="rb-nut-item rb-nut-iron">
+              <span id="rb-nut-iron">0mg</span><small>Iron</small>
+            </div>
+            <div class="rb-nut-item rb-nut-potassium">
+              <span id="rb-nut-potassium">0mg</span><small>Potassium</small>
+            </div>
+            <div class="rb-nut-item rb-nut-zinc">
+              <span id="rb-nut-zinc">0mg</span><small>Zinc</small>
+            </div>
+          </div>
         </div>
 
         <!-- Preparation steps section -->
@@ -1310,7 +1355,7 @@
         <!-- Modal actions -->
         <div class="rb-modal-actions">
           <button class="rb-btn-secondary" id="rb-cancel-btn">Cancel</button>
-          <button class="rb-btn-primary"   id="rb-save-btn">Log Food</button>
+          <button class="rb-btn-primary"   id="rb-save-btn">Log Analysed Meal</button>
         </div>
 
       </div>
@@ -1459,12 +1504,12 @@
         Meal Templates
       </button>
 
-      <button class="drawer-nav-item" data-nav="recipe-builder">
+      <button class="drawer-nav-item" data-nav="recipe-builder" title="Analyse a meal's macros &amp; micronutrients using the Chakudya Nutrition Registry">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
           <path d="M8 12h8M12 8v8"/>
         </svg>
-        Recipe Builder
+        Recipe Analyser
       </button>
 
       <button class="drawer-nav-item" data-nav="exercise">

@@ -159,6 +159,23 @@
 .gl-goal-btn.selected svg { stroke: var(--accent); }
 .gl-goal-btn:active { transform: scale(0.98); }
 
+/* Health-interest chips — compact, wrapping, multi-select */
+.gl-interests-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.gl-interest-btn {
+  width: auto;
+  flex-direction: row;
+  padding: 8px 14px;
+  margin-bottom: 0;
+  font-size: .8rem;
+  border-radius: 999px;
+}
+
 /* Target weight input (shown for lose/gain) */
 .gl-target-wrap {
   margin-top: 14px;

@@ -17,6 +17,7 @@ const ThanziGoals = (() => {
   let _plan     = null;   // current nutrition plan object
   let _profile  = null;   // raw profile inputs { age, sex, weight_kg, height_m, activity_level, goal }
   let _selected = null;   // currently selected goal button value
+  let _selectedInterests = []; // currently selected health-interest values
   let _userId   = null;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -160,6 +161,32 @@ const ThanziGoals = (() => {
     } catch (e) {}
   }
 
+  // ── Health-interest chip selection ────────────────────────────────────────
+
+  function _bindInterestChips() {
+    document.querySelectorAll('.gl-interest-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.interest;
+        btn.classList.toggle('selected');
+        const idx = _selectedInterests.indexOf(val);
+        if (btn.classList.contains('selected')) {
+          if (idx === -1) _selectedInterests.push(val);
+        } else if (idx !== -1) {
+          _selectedInterests.splice(idx, 1);
+        }
+      });
+    });
+  }
+
+  function _restoreInterestChips() {
+    _selectedInterests = (_plan && _plan.health_interests)
+      || (_profile && _profile.health_interests)
+      || [];
+    document.querySelectorAll('.gl-interest-btn').forEach(btn => {
+      btn.classList.toggle('selected', _selectedInterests.includes(btn.dataset.interest));
+    });
+  }
+
   // ── Save goal ─────────────────────────────────────────────────────────────
 
   async function _saveGoal() {
@@ -196,6 +223,7 @@ const ThanziGoals = (() => {
     const newPlan = ThanziNutrition.generate({
       ..._profile,
       goal: _selected,
+      health_interests: _selectedInterests,
     });
 
     if (newPlan.error) {
@@ -205,8 +233,10 @@ const ThanziGoals = (() => {
 
     // Persist
     _plan = newPlan;
-    _profile.goal = _selected;
-    _plan.inputs  = _profile;
+    _profile.goal              = _selected;
+    _profile.health_interests  = _selectedInterests;
+    _plan.inputs             = _profile;
+    _plan.health_interests    = _selectedInterests;
 
     if (_userId) {
       localStorage.setItem('thanzi_profile_' + _userId, JSON.stringify(_plan));
@@ -239,10 +269,14 @@ const ThanziGoals = (() => {
 
     _loadPlan();
 
-    // Bind goal buttons
-    document.querySelectorAll('.gl-goal-btn').forEach(btn => {
+    // Bind goal buttons (exclude health-interest chips, which share styling
+    // but use data-interest instead of data-goal and are multi-select)
+    document.querySelectorAll('.gl-goal-btn[data-goal]').forEach(btn => {
       btn.addEventListener('click', () => _setSelected(btn.dataset.goal));
     });
+
+    // Bind health-interest chips
+    _bindInterestChips();
 
     // Bind save
     const saveBtn = document.getElementById('gl-save-btn');
@@ -251,6 +285,9 @@ const ThanziGoals = (() => {
     // Pre-select current goal
     const currentGoal = _profile ? _profile.goal : null;
     if (currentGoal) _setSelected(currentGoal);
+
+    // Pre-select current health interests
+    _restoreInterestChips();
 
     // Restore target weight
     const tw = _loadTargetWeight();
@@ -274,6 +311,8 @@ const ThanziGoals = (() => {
 
     const currentGoal = _profile ? _profile.goal : null;
     if (currentGoal) _setSelected(currentGoal);
+
+    _restoreInterestChips();
 
     const tw = _loadTargetWeight();
     const twInput = document.getElementById('gl-target-weight-input');

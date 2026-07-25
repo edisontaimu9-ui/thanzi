@@ -1,5 +1,14 @@
 /**
- * recipe.js — Thanzi AI Recipe Builder  (v2.1)
+ * recipe.js — Thanzi AI Recipe Analyser  (v3.0)
+ *
+ * NEW in v3.0:
+ *  - Repurposed from a recipe *builder* into a recipe *analyser*: every
+ *    ingredient is matched against the Chakudya Nutrition Registry (CNR)
+ *    for macros, and the AI additionally estimates key micronutrients
+ *    (Vitamin A, Vitamin C, Calcium, Iron, Potassium, Zinc) per ingredient
+ *    since CNR itself does not yet expose micronutrient data. Totals and
+ *    per-serving values for both macros and micronutrients are shown in
+ *    the nutrition summary panel.
  *
  * NEW in v2.1:
  *  - Chakudya RAG/semantic grounding: both full-recipe generation and
@@ -150,7 +159,8 @@ const ThanziRecipe = (() => {
     user:        null,
     recipes:     [],
     editId:      null,
-    ingredients: [],     // [{ name, qty, unit, calories, carbs, protein, fat, fibre, sodium, sugar, dbMatched }]
+    ingredients: [],     // [{ name, qty, unit, calories, carbs, protein, fat, fibre, sodium, sugar,
+                         //    vitA, vitC, calcium, iron, potassium, zinc, dbMatched }]
     steps:       [],     // string[]
     searchTimer: null,
     generating:  false,
@@ -160,6 +170,13 @@ const ThanziRecipe = (() => {
   const _el  = id => document.getElementById(id);
   const _fmt = n  => isNaN(n) ? '0' : Number(n).toFixed(1);
   const _today = () => new Date().toISOString().slice(0, 10);
+
+  // Nutrient keys tracked per ingredient — macros come from Chakudya when
+  // matched, micronutrients are AI-estimated (CNR has no micronutrient data
+  // yet) and are never overwritten by a database match.
+  const MACRO_KEYS = ['calories', 'carbs', 'protein', 'fat', 'fibre', 'sodium', 'sugar'];
+  const MICRO_KEYS = ['vitA', 'vitC', 'calcium', 'iron', 'potassium', 'zinc'];
+  const NUTRIENT_KEYS = [...MACRO_KEYS, ...MICRO_KEYS];
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   function _toast(msg, type = 'info') {
@@ -178,20 +195,15 @@ const ThanziRecipe = (() => {
   function _recalc() {
     const servings = Math.max(1, parseInt(_el('rb-servings')?.value) || 1);
     const totals   = _s.ingredients.reduce((acc, ing) => {
-      acc.calories += ing.calories || 0;
-      acc.carbs    += ing.carbs    || 0;
-      acc.protein  += ing.protein  || 0;
-      acc.fat      += ing.fat      || 0;
-      acc.fibre    += ing.fibre    || 0;
-      acc.sodium   += ing.sodium   || 0;
-      acc.sugar    += ing.sugar    || 0;
+      NUTRIENT_KEYS.forEach(k => { acc[k] += ing[k] || 0; });
       return acc;
-    }, { calories: 0, carbs: 0, protein: 0, fat: 0, fibre: 0, sodium: 0, sugar: 0 });
+    }, Object.fromEntries(NUTRIENT_KEYS.map(k => [k, 0])));
 
     const per = {};
     Object.keys(totals).forEach(k => per[k] = totals[k] / servings);
 
     const set = (id, val) => { const e = _el(id); if (e) e.textContent = val; };
+    // Macros
     set('rb-nut-kcal',    Math.round(per.calories));
     set('rb-nut-carbs',   _fmt(per.carbs)   + 'g');
     set('rb-nut-protein', _fmt(per.protein) + 'g');
@@ -199,6 +211,13 @@ const ThanziRecipe = (() => {
     set('rb-nut-fibre',   _fmt(per.fibre)   + 'g');
     set('rb-nut-sodium',  Math.round(per.sodium) + 'mg');
     set('rb-nut-sugar',   _fmt(per.sugar)   + 'g');
+    // Micronutrients (estimated)
+    set('rb-nut-vita',      Math.round(per.vitA) + 'µg');
+    set('rb-nut-vitc',      _fmt(per.vitC)       + 'mg');
+    set('rb-nut-calcium',   Math.round(per.calcium)   + 'mg');
+    set('rb-nut-iron',      _fmt(per.iron)            + 'mg');
+    set('rb-nut-potassium', Math.round(per.potassium) + 'mg');
+    set('rb-nut-zinc',      _fmt(per.zinc)            + 'mg');
 
     const summary = _el('rb-nutrition-summary');
     if (summary) summary.style.display = _s.ingredients.length ? 'block' : 'none';
@@ -218,7 +237,10 @@ const ThanziRecipe = (() => {
    * uses — since Chakudya does literal/substring search and a guessed
    * "canonical" name can silently return zero hits even when the food
    * exists. If found, scales its per-100g macros to `qty` and `unit`.
-   * Returns a nutrition object if matched, else null.
+   * Returns a nutrition object if matched, else null. NOTE: CNR does not
+   * currently expose micronutrient data, so only macro fields are returned
+   * here — callers must keep the AI's micronutrient estimate for the
+   * ingredient rather than overwrite it with this result.
    */
   async function _matchToDatabase(name, qty, unit) {
     if (typeof ThanziFood === 'undefined') return null;
@@ -376,7 +398,13 @@ Respond ONLY with this exact JSON structure:
       "fat": 1.2,
       "fibre": 2.1,
       "sodium": 5,
-      "sugar": 0.5
+      "sugar": 0.5,
+      "vitA": 12,
+      "vitC": 3.5,
+      "calcium": 18,
+      "iron": 1.1,
+      "potassium": 210,
+      "zinc": 0.6
     }
   ]
 }
@@ -385,6 +413,7 @@ Rules:
 - Use realistic Malawian household portions (cups, tablespoons, pieces, grams)
 - Ingredient names should be simple and searchable (e.g. "nsima (thick, maize)" not "nsima flour mixture")
 - Nutrition values are for the STATED quantity (not per 100g)
+- vitA is micrograms (µg) RAE, vitC/calcium/iron/potassium/zinc are milligrams (mg) — estimate using standard food-composition data for the ingredient
 - Include 4–10 ingredients
 - Include 3–8 preparation steps
 - servings: integer 1–10
@@ -439,7 +468,7 @@ Rules:
     _s.ingredients = [];
     _s.steps       = [];
 
-    _el('rb-modal-title').textContent = 'Generating Recipe…';
+    _el('rb-modal-title').textContent = 'Analysing Meal…';
     _el('rb-recipe-name').value       = '';
     _el('rb-servings').value          = 4;
     _el('rb-ingredients').innerHTML   = `
@@ -447,7 +476,7 @@ Rules:
         <div class="rb-generating-dots">
           <span></span><span></span><span></span>
         </div>
-        <p>Crafting "<strong>${input}</strong>" with Malawian ingredients…</p>
+        <p>Analysing "<strong>${input}</strong>" with Malawian ingredients…</p>
         <small>Matching to Chakudya Nutrition Registry…</small>
       </div>`;
     _el('rb-nutrition-summary').style.display = 'none';
@@ -474,10 +503,10 @@ Rules:
       const ragContext = await _retrieveRAG(text);
 
       const systemPrompt = 'You are Thandizo, a Malawian nutrition assistant. Never translate "nsima" into a generic English word like "porridge" — keep it as "nsima" and preserve any qualifier given (e.g. "mgaiwa nsima"). Always respond with only a valid JSON array. No markdown, no explanation.';
-      const userPrompt   = `Parse the following into a JSON array. For each ingredient give: name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat, fibre, sodium, sugar — all for the stated quantity. Use Malawian/Southern African food values.
+      const userPrompt   = `Parse the following into a JSON array. For each ingredient give: name, qty (number), unit (g/ml/cup/tbsp/tsp/piece/serving), calories, carbs, protein, fat, fibre, sodium, sugar, vitA (µg RAE), vitC (mg), calcium (mg), iron (mg), potassium (mg), zinc (mg) — all for the stated quantity. Use Malawian/Southern African food values.
 ${ragContext ? `\nRelevant Malawian food knowledge (Chakudya, Thanzi's Malawi food database):\n${ragContext}\n` : ''}
 Return ONLY a valid JSON array:
-[{"name":"ingredient","qty":100,"unit":"g","calories":120,"carbs":25,"protein":3,"fat":1,"fibre":2,"sodium":5,"sugar":0.5}]
+[{"name":"ingredient","qty":100,"unit":"g","calories":120,"carbs":25,"protein":3,"fat":1,"fibre":2,"sodium":5,"sugar":0.5,"vitA":8,"vitC":2,"calcium":15,"iron":0.8,"potassium":180,"zinc":0.4}]
 
 Ingredients: ${text}`;
 
@@ -497,6 +526,14 @@ Ingredients: ${text}`;
           fibre:     dbMatch ? dbMatch.fibre    : (ing.fibre    || 0),
           sodium:    dbMatch ? dbMatch.sodium   : (ing.sodium   || 0),
           sugar:     dbMatch ? dbMatch.sugar    : (ing.sugar    || 0),
+          // Micronutrients are always AI-estimated — CNR has no micronutrient
+          // data to override with, regardless of whether a macro match was found.
+          vitA:      ing.vitA      || 0,
+          vitC:      ing.vitC      || 0,
+          calcium:   ing.calcium   || 0,
+          iron:      ing.iron      || 0,
+          potassium: ing.potassium || 0,
+          zinc:      ing.zinc      || 0,
           dbName:    dbMatch ? dbMatch.dbName   : null,
           dbMatched: !!dbMatch,
         });
@@ -557,7 +594,7 @@ Ingredients: ${text}`;
         const ing    = _s.ingredients[idx];
         const ratio  = newQty / (ing.qty || 1);
         ing.qty      = newQty;
-        ['calories','carbs','protein','fat','fibre','sodium','sugar'].forEach(k => {
+        NUTRIENT_KEYS.forEach(k => {
           ing[k] = (ing[k] || 0) * ratio;
         });
         _renderIngredients();
@@ -643,6 +680,15 @@ Ingredients: ${text}`;
       fibre:     food.fibre       || food.fiber || 0,
       sodium:    food.sodium      || 0,
       sugar:     food.sugar       || 0,
+      // Chakudya Nutrition Registry doesn't carry micronutrient data yet —
+      // these stay 0 for manually-added ingredients (only AI-analysed
+      // ingredients get micronutrient estimates).
+      vitA:      0,
+      vitC:      0,
+      calcium:   0,
+      iron:      0,
+      potassium: 0,
+      zinc:      0,
       dbName:    food.name,
       dbMatched: true,
     });
@@ -1010,6 +1056,12 @@ Ingredients: ${text}`;
         fibre:     ing.fibre    || 0,
         sodium:    ing.sodium   || 0,
         sugar:     ing.sugar    || 0,
+        vitA:      ing.vitA      || 0,
+        vitC:      ing.vitC      || 0,
+        calcium:   ing.calcium   || 0,
+        iron:      ing.iron      || 0,
+        potassium: ing.potassium || 0,
+        zinc:      ing.zinc      || 0,
         dbName:    ing.dbName   || null,
         dbMatched: ing.dbMatched || false,
       }));
@@ -1023,7 +1075,7 @@ Ingredients: ${text}`;
     }
 
     // Fill form fields
-    _el('rb-modal-title').textContent = recipe ? 'Edit Recipe' : 'New Recipe';
+    _el('rb-modal-title').textContent = recipe ? 'Edit Analysis' : 'New Analysis';
     _el('rb-recipe-name').value       = source?.name     || '';
     _el('rb-servings').value          = source?.servings || 4;
     if (_el('rb-prep-time')) _el('rb-prep-time').value = source?.prepTime || '';
@@ -1131,7 +1183,7 @@ Ingredients: ${text}`;
     } catch (err) {
       _toast('Log failed: ' + err.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Log Food'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Log Analysed Meal'; }
     }
   }
 
