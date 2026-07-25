@@ -363,7 +363,7 @@ const ThanziRecipe = (() => {
     const btn = _el('rb-ai-generate-btn');
     if (btn) {
       btn.disabled   = true;
-      btn.innerHTML  = `<span class="rb-ai-spinner"></span> Generating…`;
+      btn.innerHTML  = `<span class="rb-ai-spinner"></span> Analysing…`;
     }
 
     // Show progress indicator in modal
@@ -450,13 +450,13 @@ Rules:
 
     } catch (err) {
       console.error('[Recipe] Generation failed:', err);
-      _toast('Could not generate recipe: ' + err.message, 'error');
+      _toast('Could not analyse meal: ' + err.message, 'error');
       _hideGeneratingState();
     } finally {
       _s.generating = false;
       if (btn) {
         btn.disabled  = false;
-        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg> Generate`;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg> Analyse meal`;
       }
     }
   }
@@ -543,10 +543,10 @@ Ingredients: ${text}`;
       _renderIngredients();
 
     } catch (err) {
-      _toast('AI parse failed: ' + err.message, 'error');
+      _toast('Could not parse list: ' + err.message, 'error');
     } finally {
       btn.disabled    = false;
-      btn.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/></svg> AI Parse`;
+      btn.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg> Parse list`;
     }
   }
 

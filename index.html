@@ -1183,42 +1183,48 @@
 
         <!-- Header -->
         <div class="rb-header">
-          <div>
+          <div class="rb-header-copy">
+            <div class="rb-eyebrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+              </svg>
+              Nutrition analysis
+            </div>
             <h2 class="rb-title">Recipe Analyser</h2>
-            <p class="rb-subtitle">Describe any meal — get estimated macros &amp; micronutrients</p>
+            <p class="rb-subtitle">Break down any meal into macros &amp; micronutrients</p>
           </div>
           <button class="rb-new-btn" id="rb-new-btn">+ Manual</button>
         </div>
 
-        <!-- AI Generate box -->
-        <div class="rb-ai-generate-box">
-          <div class="rb-ai-generate-label">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
-              <circle cx="9" cy="10" r="1" fill="currentColor"/>
-              <circle cx="15" cy="10" r="1" fill="currentColor"/>
-            </svg>
-            AI Recipe Analyser
-          </div>
-          <div class="rb-ai-generate-row">
-            <textarea
-              id="rb-ai-generate-input"
-              class="rb-ai-generate-input"
-              rows="2"
-              placeholder="Describe your meal — e.g. 'nsima with chicken and vegetables' or 'beans and rice for 4 people'"
-            ></textarea>
-            <button class="rb-ai-generate-btn" id="rb-ai-generate-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
-                <circle cx="9" cy="10" r="1" fill="currentColor"/>
-                <circle cx="15" cy="10" r="1" fill="currentColor"/>
+        <!-- Analyser card -->
+        <div class="rb-analyser-card">
+          <div class="rb-analyser-head">
+            <span class="rb-analyser-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+                <path d="M7 2v20"/>
+                <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
               </svg>
-              Analyse
-            </button>
+            </span>
+            <div>
+              <h3 class="rb-analyser-title">Describe a meal</h3>
+              <p class="rb-analyser-desc">Every ingredient is matched to the Chakudya Nutrition Registry, with macros and key micronutrients estimated per serving.</p>
+            </div>
           </div>
-          <p class="rb-ai-generate-hint">
-            AI matches each ingredient to the Chakudya Nutrition Registry and estimates macros + key micronutrients.
-          </p>
+          <textarea
+            id="rb-ai-generate-input"
+            class="rb-ai-generate-input"
+            rows="2"
+            placeholder="e.g. 'nsima with chicken and vegetables' or 'beans and rice for 4 people'"
+          ></textarea>
+          <button class="rb-ai-generate-btn" id="rb-ai-generate-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+              <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+            </svg>
+            Analyse meal
+          </button>
         </div>
 
         <!-- Saved recipe list -->
@@ -1265,15 +1271,16 @@
         <!-- Ingredients section -->
         <div class="rb-section-title">Ingredients</div>
 
-        <!-- AI parse (add ingredients from text) -->
+        <!-- List parse (add ingredients from text) -->
         <div class="rb-ai-row">
           <textarea id="rb-ai-input" class="rb-ai-textarea" rows="2"
             placeholder="Paste an ingredient list — e.g. '2 cups nsima flour, 1 cup beans, 1 tbsp oil'"></textarea>
           <button class="rb-ai-btn" id="rb-ai-parse-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2a4 4 0 014 4v1h1a3 3 0 010 6h-1v1a4 4 0 01-8 0v-1H7a3 3 0 010-6h1V6a4 4 0 014-4z"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 6h13M8 12h13M8 18h13"/>
+              <path d="M3 6h.01M3 12h.01M3 18h.01"/>
             </svg>
-            AI Parse
+            Parse list
           </button>
         </div>
         <p class="rb-ai-hint">Or search and add one by one:</p>
