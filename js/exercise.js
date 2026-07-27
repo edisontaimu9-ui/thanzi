@@ -47,13 +47,54 @@ const ThanziExercise = (() => {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  // ── Calorie estimation (Anthropic AI) ────────────────────────────────────
+  /** Most recent logged body weight (kg) from the Weight panel, or null if none logged. */
+  function _currentWeightKg() {
+    try {
+      const raw = localStorage.getItem('thanzi_weight_logs');
+      const entries = raw ? JSON.parse(raw) : [];
+      return (entries && entries[0] && entries[0].weight) ? entries[0].weight : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Pull a duration in minutes out of free text; defaults to 30. */
+  function _parseDurationMin(desc) {
+    const lower = desc.toLowerCase();
+    const durMatch = lower.match(/(\d+(?:\.\d+)?)\s*(?:min(?:ute)?s?|hr?s?|hours?)/);
+    if (!durMatch) return 30;
+    let val = parseFloat(durMatch[1]);
+    if (/hr|hour/.test(durMatch[0])) val *= 60;
+    return Math.round(val);
+  }
+
+  // ── Calorie estimation ──────────────────────────────────────────────────
 
   /**
    * Ask Claude to parse the natural-language description and return JSON.
-   * Falls back to a simple keyword estimator if the API call fails.
+   * Tries the offline Krause & Mahan activity table first (fast, no network,
+   * scaled to the user's own logged body weight); falls back to the AI
+   * parser, then to a flat MET-based estimator if both are unavailable.
    */
   async function _parseExercise(description) {
+    // ── 1. Offline table lookup (Appendix 10) ────────────────────────────
+    const durationMin = _parseDurationMin(description);
+    const weightKg = _currentWeightKg();
+    const tableHit = (typeof ThanziActivityCalories !== 'undefined') &&
+      ThanziActivityCalories.estimate(description, durationMin, weightKg || 70);
+    if (tableHit) {
+      return {
+        name: tableHit.name,
+        duration_min: durationMin,
+        calories: tableHit.calories,
+        notes: weightKg ? '' : 'estimated at 70 kg — log your weight for accuracy',
+      };
+    }
+    // ── 2. AI parser (network) ────────────────────────────────────────────
+    return _parseExerciseAI(description);
+  }
+
+  async function _parseExerciseAI(description) {
     const prompt = `
 You are a fitness data parser. The user logged an exercise in natural language.
 Extract the exercise details and estimate calories burned for an average adult (75 kg).
