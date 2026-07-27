@@ -3,7 +3,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * TEXT SEARCH  (searchFood)
- *   Layer 1 — Chakudya /foods           Malawi FCT + packaged foods. Highest priority.
+ *   Layer 1 — Chakudya /foods + /packaged   Queried SIMULTANEOUSLY: /foods is
+ *                                       the whole-food FCT, /packaged is a
+ *                                       separate branded-foods table with no
+ *                                       server-side name-search param, so we
+ *                                       fetch a page of it and match by name
+ *                                       client-side. Highest priority overall.
  *   Layer 2 — Chakudya /foods/lookup    Server-side external cascade (USDA FDC →
  *                                       Open Food Facts → FatSecret), only hit
  *                                       when Layer 1 has no match. Chakudya caches
@@ -139,6 +144,90 @@
     } catch (_e) { return []; }
   }
 
+  // ── Chakudya /packaged — branded/packaged foods table. This is a SEPARATE
+  // table from /foods (per the CNR README), and GET /packaged only supports
+  // `barcode`/`limit`/`offset` — no server-side name-search param. So for
+  // ingredient NAME matching (as opposed to barcode scanning) we pull a page
+  // of packaged foods once, cache it briefly, and match client-side. This
+  // runs in parallel with _searchMW so a branded item isn't missed just
+  // because it lives in a different table than the whole-food FCT.
+  let _packagedCache   = null;
+  let _packagedCacheAt = 0;
+  const PACKAGED_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+
+  async function _fetchPackagedList(limit = 300) {
+    const now = Date.now();
+    if (_packagedCache && (now - _packagedCacheAt) < PACKAGED_CACHE_TTL_MS) {
+      return _packagedCache;
+    }
+    try {
+      const url = _MW_API + '/packaged?limit=' + limit;
+      const res = await fetch(url, {
+        signal:  _signal(8000),
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return _packagedCache || [];
+      const json = await res.json();
+      if (!Array.isArray(json.data)) return _packagedCache || [];
+      _packagedCache   = json.data;
+      _packagedCacheAt = now;
+      return _packagedCache;
+    } catch (_e) {
+      return _packagedCache || [];
+    }
+  }
+
+  function _packagedToUnified(item) {
+    const kcal = item.energy_kcal ?? item.kcal ?? null;
+    return {
+      id:              'pkg_' + item.id,
+      name:            item.product_name || item.name || '',
+      brand:           item.brand || item.manufacturer || null,
+      cat:             item.category || 'Packaged',
+      kcal,
+      kj:              item.kj ?? (kcal != null ? +(kcal * 4.184).toFixed(0) : null),
+      pro:             item.protein_g ?? null,
+      cho:             item.carbs_g ?? null,
+      fat:             item.fat_g ?? null,
+      fiber:           item.fiber_g ?? null,
+      sugar:           item.sugar_g ?? item.sugars_g ?? null,
+      sodium:          item.sodium_mg != null ? +(item.sodium_mg / 1000).toFixed(3) : null,
+      unit:            'g',
+      barcode:         item.barcode || null,
+      sourceUsed:      'Chakudya-packaged',
+      dbSource:        'Chakudya Packaged DB',
+      confidenceScore: 0.9,
+      lastUpdated:     null,
+    };
+  }
+
+  /** Client-side name match over the packaged-foods list (no server-side
+   *  search param exists for /packaged, unlike /foods). */
+  async function _searchPackagedByName(query, limit = 10) {
+    const nq = _norm(query);
+    if (!nq) return [];
+    const list = await _fetchPackagedList();
+    if (!list.length) return [];
+
+    const scored = [];
+    for (const item of list) {
+      const hay = _norm((item.product_name || item.name || '') + ' ' + (item.brand || item.manufacturer || ''));
+      if (!hay) continue;
+      let score = 0;
+      if (hay === nq) score = 100;
+      else if (hay.includes(nq) || nq.includes(hay)) score = 60;
+      else {
+        const qTokens = nq.split(' ').filter(t => t.length > 2);
+        const hTokens = hay.split(' ').filter(t => t.length > 2);
+        const overlap = qTokens.filter(t => hTokens.includes(t)).length;
+        if (overlap > 0) score = 20 + overlap;
+      }
+      if (score > 0) scored.push({ item, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, limit).map(s => _packagedToUnified(s.item));
+  }
+
   /** Fetch a single food by id — used by import/detail screens */
   async function _fetchMWById(id) {
     try {
@@ -259,10 +348,16 @@
     const cacheKey = _norm(query) + (multi ? '|m' : '');
     if (_cache.has(cacheKey)) return _cache.get(cacheKey);
 
-    // Layer 1 — Chakudya local database
-    const mwResults = await _searchMW(query, multi ? limit : 5);
-    if (mwResults.length) {
-      const result = multi ? mwResults.slice(0, limit) : mwResults[0];
+    // Layer 1 — Chakudya /foods (whole-food FCT) AND /packaged (branded
+    // foods) queried SIMULTANEOUSLY, so a branded/packaged ingredient isn't
+    // missed just because it lives in a different table than the FCT.
+    const [mwResults, pkgResults] = await Promise.all([
+      _searchMW(query, multi ? limit : 5),
+      _searchPackagedByName(query, multi ? limit : 5),
+    ]);
+    const combined = [...mwResults, ...pkgResults];
+    if (combined.length) {
+      const result = multi ? combined.slice(0, limit) : combined[0];
       _cache.set(cacheKey, result);
       return result;
     }
@@ -292,7 +387,11 @@
     return await _lookupExternal({ barcode });
   }
 
-  function clearCache() { _cache.clear(); }
+  function clearCache() {
+    _cache.clear();
+    _packagedCache   = null;
+    _packagedCacheAt = 0;
+  }
 
 
   // ── Public API ─────────────────────────────────────────────────────────────

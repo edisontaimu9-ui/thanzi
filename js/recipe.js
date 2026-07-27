@@ -160,7 +160,7 @@ const ThanziRecipe = (() => {
     recipes:     [],
     editId:      null,
     ingredients: [],     // [{ name, qty, unit, calories, carbs, protein, fat, fibre, sodium, sugar,
-                         //    vitA, vitC, calcium, iron, potassium, zinc, dbMatched }]
+                         //    vitA, vitC, calcium, iron, potassium, zinc, dbMatched, estimateUnavailable }]
     steps:       [],     // string[]
     searchTimer: null,
     generating:  false,
@@ -347,6 +347,63 @@ const ThanziRecipe = (() => {
   }
 
   /**
+   * "Recheck before responding" — after AI + Chakudya matching, some
+   * ingredients can still end up with essentially blank nutrition (a failed
+   * or hallucinated AI estimate that happened to slip past DB matching).
+   * Rather than silently showing a confident-looking zero, this pass:
+   *   1. Retries Chakudya matching once more (covers a transient miss)
+   *   2. If still unmatched, pulls RAG grounding for just that ingredient
+   *      and asks the AI again — RAG only kicks in here, as a LAST resort,
+   *      not before Chakudya's own /foods + /packaged data
+   *   3. If it's still blank after both attempts, flags the ingredient as
+   *      `estimateUnavailable` so the UI can show a clear warning instead
+   *      of a confident zero.
+   */
+  function _isEmptyEstimate(ing) {
+    return (ing.calories || 0) <= 1
+      && (ing.carbs    || 0) <= 0.1
+      && (ing.protein  || 0) <= 0.1
+      && (ing.fat      || 0) <= 0.1;
+  }
+
+  async function _repairIngredient(ing) {
+    // 1. Retry Chakudya (covers a transient miss on the first pass)
+    const dbMatch = await _matchToDatabase(ing.name, ing.qty, ing.unit);
+    if (dbMatch) {
+      MACRO_KEYS.forEach(k => { ing[k] = dbMatch[k]; });
+      ing.dbName    = dbMatch.dbName;
+      ing.dbMatched = true;
+    } else if (_isEmptyEstimate(ing)) {
+      // 2. Last resort — RAG-grounded single-ingredient AI retry
+      try {
+        const ragCtx = await _retrieveRAG(`${ing.qty} ${ing.unit} ${ing.name}`);
+        const fix = await _callAI(
+          'You are a nutrition data assistant. Respond with ONLY one valid JSON object — no markdown, no explanation.',
+          `Give realistic nutrition values for this food quantity: "${ing.qty} ${ing.unit} ${ing.name}".` +
+          (ragCtx ? `\nGrounding reference data (Chakudya, Malawi food database):\n${ragCtx}\n` : '') +
+          `\nValues are for the STATED quantity, not per 100g. Return ONLY:
+{"calories":N,"carbs":N,"protein":N,"fat":N,"fibre":N,"sodium":N,"sugar":N,"vitA":N,"vitC":N,"calcium":N,"iron":N,"potassium":N,"zinc":N}`,
+          300
+        );
+        if (fix && typeof fix === 'object') {
+          NUTRIENT_KEYS.forEach(k => { if (typeof fix[k] === 'number') ing[k] = fix[k]; });
+        }
+      } catch (_e) { /* leave as-is — flagged below if still empty */ }
+    }
+
+    ing.estimateUnavailable = _isEmptyEstimate(ing);
+    return ing;
+  }
+
+  async function _validateAndRepairIngredients(ingredients) {
+    const flagged = ingredients.filter(_isEmptyEstimate);
+    if (!flagged.length) return ingredients;
+    await Promise.all(flagged.map(_repairIngredient));
+    return ingredients;
+  }
+
+
+  /**
    * Full recipe generation from a natural-language meal description.
    * Steps:
    *   1. AI generates complete recipe JSON
@@ -438,6 +495,10 @@ Rules:
         return { ...ing, dbMatched: false };
       }));
 
+      // Recheck before responding — repair any ingredient that still came
+      // out with essentially blank nutrition before showing results.
+      await _validateAndRepairIngredients(recipe.ingredients);
+
       // Populate modal with the generated recipe
       _openModal(null, recipe);
 
@@ -528,10 +589,17 @@ Ingredients: ${text}`;
           zinc:      ing.zinc      || 0,
           dbName:    dbMatch ? dbMatch.dbName   : null,
           dbMatched: !!dbMatch,
+          estimateUnavailable: false, // set accurately by _validateAndRepairIngredients below
         });
       }
 
       _el('rb-ai-input').value = '';
+
+      // Recheck before responding — repair any ingredient that still came
+      // out with essentially blank nutrition before showing results.
+      const newlyAdded = _s.ingredients.slice(_s.ingredients.length - arr.length);
+      await _validateAndRepairIngredients(newlyAdded);
+
       _renderIngredients();
 
     } catch (err) {
@@ -557,10 +625,11 @@ Ingredients: ${text}`;
     }
 
     container.innerHTML = _s.ingredients.map((ing, i) => `
-      <div class="rb-ing-row ${ing.dbMatched ? 'rb-ing-row--matched' : ''}" data-idx="${i}">
+      <div class="rb-ing-row ${ing.dbMatched ? 'rb-ing-row--matched' : ''} ${ing.estimateUnavailable ? 'rb-ing-row--warn' : ''}" data-idx="${i}">
         <div class="rb-ing-info">
           <span class="rb-ing-name">${ing.name}</span>
           ${ing.dbMatched ? `<span class="rb-ing-db-badge" title="Matched to Chakudya: ${ing.dbName || ''}">✓ MW</span>` : ''}
+          ${ing.estimateUnavailable ? `<span class="rb-ing-warn-badge" title="No reliable nutrition data found for this ingredient after checking Chakudya and retrying — treat these numbers as rough placeholders only.">⚠ unverified</span>` : ''}
           <span class="rb-ing-macros">
             ${Math.round(ing.calories)} kcal ·
             <span class="rb-c">${_fmt(ing.carbs)}g C</span> ·
@@ -646,6 +715,7 @@ Ingredients: ${text}`;
       zinc:      0,
       dbName:    food.name,
       dbMatched: true,
+      estimateUnavailable: false,
     });
     _renderIngredients();
     _el('rb-ing-search').value         = '';
@@ -1013,6 +1083,7 @@ Ingredients: ${text}`;
         zinc:      ing.zinc      || 0,
         dbName:    ing.dbName   || null,
         dbMatched: ing.dbMatched || false,
+        estimateUnavailable: ing.estimateUnavailable || false,
       }));
 
       // Populate steps
