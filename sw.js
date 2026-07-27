@@ -126,7 +126,7 @@ self.addEventListener('fetch', event => {
 
   if (isAppFile) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then(response => {
           if (response.ok) {
             // Update the shell cache with the fresh response
