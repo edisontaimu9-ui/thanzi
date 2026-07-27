@@ -48,14 +48,28 @@ const ThanziExercise = (() => {
   }
 
   /** Most recent logged body weight (kg) from the Weight panel, or null if none logged. */
-  function _currentWeightKg() {
+  /** Most recent logged body weight (kg): checks the Weight-tab log first, then the onboarding profile. */
+  async function _currentWeightKg() {
+    // 1. Standalone Weight-tab history (most current if the user logs it there)
     try {
       const raw = localStorage.getItem('thanzi_weight_logs');
       const entries = raw ? JSON.parse(raw) : [];
-      return (entries && entries[0] && entries[0].weight) ? entries[0].weight : null;
-    } catch (e) {
-      return null;
-    }
+      if (entries && entries[0] && entries[0].weight) return entries[0].weight;
+    } catch (e) { /* fall through */ }
+
+    // 2. Onboarding profile record (thanzi_profile_<userId>.weight_kg)
+    try {
+      if (typeof ThanziAuth !== 'undefined') {
+        const u = await ThanziAuth.getUser();
+        if (u && u.$id) {
+          const raw = localStorage.getItem('thanzi_profile_' + u.$id);
+          const profile = raw ? JSON.parse(raw) : null;
+          if (profile && profile.weight_kg) return profile.weight_kg;
+        }
+      }
+    } catch (e) { /* fall through */ }
+
+    return null;
   }
 
   /** Pull a duration in minutes out of free text; defaults to 30. */
@@ -79,7 +93,7 @@ const ThanziExercise = (() => {
   async function _parseExercise(description) {
     // ── 1. Offline table lookup (Appendix 10) ────────────────────────────
     const durationMin = _parseDurationMin(description);
-    const weightKg = _currentWeightKg();
+    const weightKg = await _currentWeightKg();
     const tableHit = (typeof ThanziActivityCalories !== 'undefined') &&
       ThanziActivityCalories.estimate(description, durationMin, weightKg || 70);
     if (tableHit) {

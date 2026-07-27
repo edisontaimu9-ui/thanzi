@@ -193,15 +193,24 @@ const ThanziActivityCalories = (() => {
   // A few common synonyms/aliases → canonical activity name in the table.
   const ALIASES = {
     'cycle': 'bike', 'cycling': 'bike', 'biking': 'bike', 'bicycle': 'bike', 'bicycling': 'bike',
-    'running': 'run', 'jogging': 'jog', 'walking': 'walk',
-    'swimming': 'swim', 'gym': 'weight training', 'lifting': 'weight training',
+    'biked': 'bike', 'cycled': 'bike',
+    'running': 'run', 'ran': 'run',
+    'jogging': 'jog', 'jogged': 'jog',
+    'walking': 'walk', 'walked': 'walk',
+    'swimming': 'swim', 'swam': 'swim', 'swum': 'swim',
+    'gym': 'weight training', 'lifting': 'weight training', 'lifted': 'weight training',
     'weights': 'weight training', 'strength training': 'weight training',
     'football (soccer)': 'soccer', 'american football': 'football',
-    'yoga': 'stretch, yoga', 'stretching': 'stretch, yoga',
-    'skiing': 'ski, downhill', 'ice skating': 'skate, ice', 'inline skating': 'skate, inline',
-    'rollerblading': 'skate, inline', 'rowing': 'stationary rower', 'rowing machine': 'stationary rower',
-    'jump roping': 'jump rope', 'skipping rope': 'jump rope', 'hiking': 'hike',
+    'yoga': 'stretch, yoga', 'stretching': 'stretch, yoga', 'stretched': 'stretch, yoga',
+    'skiing': 'ski, downhill', 'skied': 'ski, downhill',
+    'ice skating': 'skate, ice', 'inline skating': 'skate, inline',
+    'rollerblading': 'skate, inline', 'rowing': 'stationary rower', 'rowed': 'stationary rower',
+    'rowing machine': 'stationary rower',
+    'jump roping': 'jump rope', 'skipping rope': 'jump rope',
+    'hiking': 'hike', 'hiked': 'hike',
     'treadmill': 'treadmill, run', 'martial art': 'martial arts',
+    'boxed': 'boxing', 'kayaking': 'kayak', 'kayaked': 'kayak',
+    'hoop': 'basketball', 'hooped': 'basketball',
   };
 
   /**
