@@ -10,6 +10,61 @@ const ThanziSettings = (() => {
   const SETTINGS_KEY  = 'thanzi_settings';
   const CUSTOM_WP_KEY = 'thanzi_custom_wallpapers'; // { dark: dataURL|null, light: dataURL|null }
 
+  // ── About & Legal ──────────────────────────────────────────────────────────
+
+  const LEGAL_UPDATED = 'Last updated: July 2026';
+
+  const TERMS_HTML = `
+    <p class="legal-updated">${LEGAL_UPDATED}</p>
+    <h4>1. Acceptance of terms</h4>
+    <p>By creating an account, continuing as a guest, or otherwise using Thanzi, you agree to these Terms of Use. If you do not agree, please do not use the app.</p>
+    <h4>2. Not medical advice</h4>
+    <p>Thanzi provides general nutrition, hydration, and exercise information, including AI-generated suggestions from the Thandizo assistant. This content is for informational purposes only and is not a substitute for professional medical, dietetic, or clinical advice. Always consult a qualified health professional before making changes that affect a medical condition, pregnancy, or the health of a child.</p>
+    <h4>3. Accounts and guest trial</h4>
+    <p>You may sign in with email/password, Google, or continue as a guest for a limited free trial. You're responsible for keeping your login credentials secure. Guest data is tied to that anonymous session and is not recoverable if the session or device is lost.</p>
+    <h4>4. Your content</h4>
+    <p>Food logs, weight entries, custom recipes, and other data you enter remain yours. You're responsible for the accuracy of what you log — Thanzi's calorie and nutrient estimates depend on it.</p>
+    <h4>5. Acceptable use</h4>
+    <p>Don't use Thanzi to violate any law, attempt to disrupt or reverse-engineer the service, or misuse the AI assistant to generate harmful content.</p>
+    <h4>6. Service availability</h4>
+    <p>Thanzi is provided "as is." Features may change, and the service may occasionally be unavailable for maintenance or due to factors outside our control (e.g. third-party service outages).</p>
+    <h4>7. Limitation of liability</h4>
+    <p>To the fullest extent permitted by law, Thanzi and its developer are not liable for any indirect, incidental, or consequential damages arising from your use of the app, including decisions made based on its nutrition or exercise guidance.</p>
+    <h4>8. Changes to these terms</h4>
+    <p>These terms may be updated from time to time. Continued use of Thanzi after a change means you accept the revised terms.</p>
+    <h4>9. Contact</h4>
+    <p>Questions about these terms can be sent to edisontaimu9@gmail.com.</p>
+  `;
+
+  const PRIVACY_HTML = `
+    <p class="legal-updated">${LEGAL_UPDATED}</p>
+    <h4>1. What we collect</h4>
+    <p>Account details (name, email) if you register; profile inputs you provide (age, sex, weight, height, activity level, goals); food, water, weight, and exercise logs you enter; and custom recipes or meal templates you create.</p>
+    <h4>2. How it's used</h4>
+    <p>Your data is used to generate your personalised nutrition plan, track your progress, power the Thandizo AI assistant's responses, and sync your data across your devices.</p>
+    <h4>3. Where it's stored</h4>
+    <p>Account and log data is stored via Appwrite Cloud, our backend provider. Some preferences (theme, wallpaper) are stored locally on your device only and are not synced.</p>
+    <h4>4. Third parties</h4>
+    <p>If you sign in with Google, Google processes the authentication on its own terms. AI-assistant responses may be processed by a third-party AI provider to generate suggestions — your food/health data is not sold or used for advertising.</p>
+    <h4>5. Your choices</h4>
+    <p>You can export your food log as a CSV at any time from Data Management in Settings. To delete your account and associated data, contact us at the email below.</p>
+    <h4>6. Children</h4>
+    <p>Thanzi is not directed at children under 16. If you believe a child has created an account, please contact us so it can be removed.</p>
+    <h4>7. Changes to this policy</h4>
+    <p>We may update this policy as Thanzi's features evolve. Material changes will be reflected by an updated "last updated" date above.</p>
+    <h4>8. Contact</h4>
+    <p>Privacy questions or data deletion requests: edisontaimu9@gmail.com.</p>
+  `;
+
+  const CONTACT_LINKS = [
+    { icon: '📘', name: 'Facebook', desc: 'facebook.com/edisontaimu', href: 'https://www.facebook.com/share/1F6NTSBLXf/' },
+    { icon: '𝕏',  name: 'X (Twitter)', desc: '@edisontaimu', href: 'https://x.com/edisontaimu' },
+    { icon: '🌐', name: 'Website', desc: 'minutriq.me', href: 'https://minutriq.me/' },
+    { icon: '💬', name: 'WhatsApp', desc: '+265 88 175 2084', href: 'https://wa.me/265881752084' },
+    { icon: '✉️', name: 'Email', desc: 'edisontaimu9@gmail.com', href: 'mailto:edisontaimu9@gmail.com' },
+    { icon: '💼', name: 'LinkedIn', desc: 'Edison Taimu', href: 'https://www.linkedin.com/in/edison-taimu-a37415367?utm_source=share_via&utm_content=profile&utm_medium=member_android' },
+  ];
+
   // ── CSS-coded wallpaper catalogue ─────────────────────────────────────────
   // Every wallpaper is a CSS `background` value — no image files needed.
   // Themes: dark (#0f1117 base, #2d9e6b accent) / light (#f4f6f5 base, #1f8f5c accent)
@@ -296,6 +351,21 @@ const ThanziSettings = (() => {
     el.classList.add('show');
     clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ── Legal modal (Terms of Use / Privacy Policy) ────────────────────────────
+
+  function _openLegal(title, html) {
+    const overlay = document.getElementById('legal-modal-overlay');
+    if (!overlay) return;
+    document.getElementById('legal-modal-title').textContent = title;
+    document.getElementById('legal-modal-body').innerHTML = html;
+    overlay.style.display = 'flex';
+  }
+
+  function _closeLegal() {
+    const overlay = document.getElementById('legal-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
   // ── Theme ─────────────────────────────────────────────────────────────────
@@ -766,9 +836,50 @@ const ThanziSettings = (() => {
         </button>
       </div>
 
+      <!-- ── ABOUT & LEGAL ────────────────────────────────────────────────── -->
+      <div class="st-card">
+        <div class="st-card-header">
+          <div class="st-card-icon">📄</div>
+          <span class="st-card-title">About &amp; Legal</span>
+        </div>
+        <button class="st-action-row" id="st-terms-btn">
+          <div class="st-row-icon">📜</div>
+          <div class="st-row-info">
+            <div class="st-row-name">Terms of Use</div>
+          </div>
+          <span class="st-chevron">›</span>
+        </button>
+        <button class="st-action-row" id="st-privacy-btn">
+          <div class="st-row-icon">🔒</div>
+          <div class="st-row-info">
+            <div class="st-row-name">Privacy Policy</div>
+          </div>
+          <span class="st-chevron">›</span>
+        </button>
+      </div>
+
+      <!-- ── CONTACT & SOCIALS ────────────────────────────────────────────── -->
+      <div class="st-card">
+        <div class="st-card-header">
+          <div class="st-card-icon">📬</div>
+          <span class="st-card-title">Contact &amp; Socials</span>
+        </div>
+        ${CONTACT_LINKS.map(l => `
+          <a class="st-action-row st-link-row" href="${l.href}" target="_blank" rel="noopener noreferrer">
+            <div class="st-row-icon">${l.icon}</div>
+            <div class="st-row-info">
+              <div class="st-row-name">${l.name}</div>
+              <div class="st-row-desc">${l.desc}</div>
+            </div>
+            <span class="st-chevron">›</span>
+          </a>
+        `).join('')}
+      </div>
+
       <div class="st-footer">
         <div class="st-footer-name">Thanzi</div>
         <div class="st-footer-ver">Know what you eat · v0.1.0</div>
+        <div class="st-footer-ver">Edison Taimu © 2026. All rights reserved.</div>
       </div>
     `;
 
@@ -802,6 +913,10 @@ const ThanziSettings = (() => {
       .addEventListener('click', _exportCSV);
     document.getElementById('st-clear-today-btn')
       .addEventListener('click', _clearTodayLogs);
+    document.getElementById('st-terms-btn')
+      .addEventListener('click', () => _openLegal('Terms of Use', TERMS_HTML));
+    document.getElementById('st-privacy-btn')
+      .addEventListener('click', () => _openLegal('Privacy Policy', PRIVACY_HTML));
 
     // Built-in wallpaper thumbs
     document.querySelectorAll('.st-wp-thumb[data-id]').forEach(btn => {
@@ -834,6 +949,13 @@ const ThanziSettings = (() => {
   function init() {
     _load();
     _applyWallpaper();
+
+    const closeBtn = document.getElementById('legal-modal-close');
+    const overlay  = document.getElementById('legal-modal-overlay');
+    if (closeBtn) closeBtn.addEventListener('click', _closeLegal);
+    if (overlay) overlay.addEventListener('click', e => {
+      if (e.target === overlay) _closeLegal(); // click on backdrop, not the sheet
+    });
   }
 
   return { init, refresh, get };

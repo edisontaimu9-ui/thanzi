@@ -703,3 +703,80 @@
   transition: transform .12s;
 }
 .st-wp-remove-btn:active { transform: scale(.85); }
+
+/* ── About & Legal / Contact rows ────────────────────────────────────────── */
+.st-link-row {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ── Legal modal (Terms of Use / Privacy Policy) ─────────────────────────── */
+.legal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.legal-modal {
+  background: var(--bg-surface);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 600px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px 16px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom, 40px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+}
+.legal-modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin: 0;
+}
+
+.legal-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.legal-modal-close:active { background: var(--bg-inset); }
+
+.legal-modal-body {
+  font-size: .85rem;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.legal-modal-body h4 {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin: 16px 0 6px;
+}
+.legal-modal-body h4:first-child { margin-top: 0; }
+.legal-modal-body p { margin: 0 0 10px; }
+.legal-modal-body .legal-updated {
+  font-size: .72rem;
+  color: var(--text-3);
+  margin-bottom: 14px;
+}
