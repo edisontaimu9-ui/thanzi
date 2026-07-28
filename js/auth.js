@@ -22,7 +22,7 @@ const ThanziAuth = (() => {
     // account was made but ask them to log in manually rather than showing
     // a generic register error.
     try {
-      await account.createEmailSession(email, password);
+      await account.createEmailPasswordSession(email, password);
       return { success: true };
     } catch (err) {
       console.warn('[ThanziAuth] Account created but session failed:', err.code, err.message);
@@ -110,7 +110,7 @@ const ThanziAuth = (() => {
 
   const login = async (email, password) => {
     try {
-      await account.createEmailSession(email, password);
+      await account.createEmailPasswordSession(email, password);
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -166,19 +166,11 @@ const ThanziAuth = (() => {
     const base = window.location.origin + window.location.pathname;
     try {
       const result = account.createOAuth2Token('google', base, base);
-      // In SDK versions where this returns a promise instead of navigating
-      // directly, catch a rejection so it doesn't fail silently.
       if (result && typeof result.catch === 'function') {
-        result.catch(err => {
-          console.error('[ThanziAuth] createOAuth2Token rejected:', err);
-          alert('Google sign-in failed to start: ' + (err && err.message ? err.message : err));
-        });
+        result.catch(err => console.error('[ThanziAuth] createOAuth2Token rejected:', err));
       }
     } catch (err) {
-      // TEMP diagnostic: surface the real error on-device since there's no
-      // console attached. Remove this alert() once the cause is confirmed.
       console.error('[ThanziAuth] createOAuth2Token threw:', err);
-      alert('Google sign-in error: ' + (err && err.message ? err.message : err));
     }
   };
 
