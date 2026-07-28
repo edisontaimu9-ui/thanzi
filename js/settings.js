@@ -869,7 +869,6 @@ const ThanziSettings = (() => {
             <div class="st-row-icon">${l.icon}</div>
             <div class="st-row-info">
               <div class="st-row-name">${l.name}</div>
-              <div class="st-row-desc">${l.desc}</div>
             </div>
             <span class="st-chevron">›</span>
           </a>
