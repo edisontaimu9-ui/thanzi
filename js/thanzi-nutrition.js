@@ -67,10 +67,28 @@ const ThanziNutrition = (() => {
   }
 
   /**
-   * Total Water AI (L/day) — NASEM 2005
+   * Total Water — weight-tiered, age-adjusted (Method 3)
+   * Source: California Diet Manual (Calif. Dept. of Developmental Services,
+   * 2003, rev. 2010) via Krause & Mahan Appendix — "Estimating Daily Fluid
+   * Requirements for Healthy Individuals". Chosen over a flat mL/kg figure
+   * or the NASEM population AI because it scales by weight tier, so it
+   * doesn't over/underestimate at the high or low end of body weight — the
+   * source explicitly recommends this method for that reason.
+   *   First 10 kg:      100 mL/kg
+   *   Next 10 kg:        +50 mL/kg
+   *   Remaining kg:      +20 mL/kg (age ≤50) or +15 mL/kg (age >50)
    */
-  function _fluidAI(sex) {
-    return sex === 'M' ? 3.7 : 2.7;
+  function _fluidAI(weight_kg, age) {
+    let mL;
+    if (weight_kg <= 10) {
+      mL = weight_kg * 100;
+    } else if (weight_kg <= 20) {
+      mL = 1000 + (weight_kg - 10) * 50;
+    } else {
+      const perKgRemaining = age > 50 ? 15 : 20;
+      mL = 1500 + (weight_kg - 20) * perKgRemaining;
+    }
+    return mL / 1000; // liters/day, keeps the existing fluid_L unit contract
   }
 
   /**
@@ -598,7 +616,7 @@ const ThanziNutrition = (() => {
    *
    * @returns {Object|null} - null if age < 45
    */
-  function agingModule(age, sex) {
+  function agingModule(age, sex, weight_kg) {
     if (age < 45) return null;
 
     return {
@@ -611,7 +629,7 @@ const ThanziNutrition = (() => {
                     : '1000mg/day',
         vitamin_d: '600 IU/day via sun + food; critical for calcium absorption at this age',
         fiber:    `${_fiberAI(age, sex)}g/day — bowel health, cholesterol, blood glucose regulation`,
-        fluid:    `${_round(_fluidAI(sex) * 1000)} mL/day minimum — thirst sensation diminishes with age; schedule fluid intake`
+        fluid:    `${_round(_fluidAI(weight_kg, age) * 1000)} mL/day minimum — thirst sensation diminishes with age; schedule fluid intake`
       },
       special_flags: [
         'Vitamin B12 (2.4 µg/day): absorption declines with age → consider fortified foods or supplement',
@@ -947,7 +965,7 @@ const ThanziNutrition = (() => {
     const bone   = boneHealthEngine(age, sex, bone_inputs || {});
 
     // ── Age-specific modules ──
-    const aging  = agingModule(age, sex);
+    const aging  = agingModule(age, sex, weight_kg);
     const youth  = adolescentModule(age, sex);
 
     // ── Oral health ──
@@ -985,7 +1003,7 @@ const ThanziNutrition = (() => {
 
       micronutrients: {
         fiber_g:   _fiberAI(age, sex),
-        fluid_L:   _fluidAI(sex),
+        fluid_L:   _fluidAI(weight_kg, age),
         flags:     micros
       },
 
