@@ -150,13 +150,24 @@ const ThanziAuth = (() => {
     }
   };
 
-  // Fixed: use origin+pathname so stale query params never pollute the OAuth redirect URL
+  // Use origin+pathname so stale query params never pollute the OAuth redirect URL.
+  //
+  // IMPORTANT: this must be createOAuth2Token, not createOAuth2Session.
+  // createOAuth2Session relies on Appwrite setting a session cookie on ITS OWN
+  // domain (fra.cloud.appwrite.io), which the browser treats as a third-party
+  // cookie since it differs from Thanzi's domain — Safari, Brave, and Chrome's
+  // in-app/WebView browsers block that by default. The redirect back still
+  // "succeeds" (you see the splash screen), but no cookie ever lands, so
+  // getUser() 401s and init() falls back to the login screen.
+  // createOAuth2Token sidesteps this entirely: it appends ?userId=...&secret=...
+  // to the redirect URL instead of depending on a cookie, and we exchange those
+  // for a session ourselves in handleOAuthCallback() below.
   const loginWithGoogle = () => {
     const base = window.location.origin + window.location.pathname;
-    account.createOAuth2Session('google', base, base);
+    account.createOAuth2Token('google', base, base);
   };
 
-  // Handles the Appwrite OAuth callback in SDK v13+.
+  // Handles the Appwrite OAuth callback (token flow).
   // After the Google redirect, Appwrite appends ?userId=...&secret=... to the URL.
   // We must call account.createSession(userId, secret) to exchange them for a real
   // session — without this, account.get() finds nothing and the user appears logged out.
