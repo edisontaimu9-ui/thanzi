@@ -513,14 +513,21 @@ const ThanziApp = (() => {
     initTheme();
 
     try {
-      // Exchange OAuth callback params for a real session (Appwrite SDK v13+).
+      // Exchange OAuth callback params for a real session (Appwrite SDK v14+).
       // After Google sign-in, Appwrite redirects back with ?userId=...&secret=...
       // in the URL. handleOAuthCallback() calls account.createSession(userId, secret)
       // to finalise the session, then strips the params from the URL. Without this,
       // account.get() below finds no session and the user appears logged out.
+      const wasOAuthRedirect = window.location.search.includes('userId=');
       await ThanziAuth.handleOAuthCallback();
 
       const user = await ThanziAuth.getUser();
+
+      // TEMP diagnostic: if we just came back from Google but still have no
+      // user, getUser()'s 401 is being swallowed elsewhere — surface it here.
+      if (wasOAuthRedirect && !user) {
+        alert('Returned from Google, but no session was found afterward (getUser() came back empty).');
+      }
 
       if (user) {
         // Guests get full access for 14 days; once expired, block the app

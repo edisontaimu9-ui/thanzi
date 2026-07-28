@@ -183,11 +183,19 @@ const ThanziAuth = (() => {
     const userId = params.get('userId');
     const secret = params.get('secret');
 
+    // TEMP diagnostic: tell us whether Appwrite even sent params back.
+    if (!userId && !secret && window.location.search) {
+      alert('OAuth callback reached with unexpected query: ' + window.location.search);
+    }
+
     if (userId && secret) {
       try {
         await account.createSession(userId, secret);
       } catch (e) {
-        // Session may already exist if the page reloaded — safe to ignore
+        // TEMP diagnostic: surface instead of silently swallowing so we can
+        // see whether this is a real failure or a harmless re-run.
+        console.error('[ThanziAuth] createSession failed:', e.code, e.message);
+        alert('OAuth session exchange failed: ' + (e && e.message ? e.message : e));
       }
       // Clean the URL so the params don't re-trigger on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
