@@ -150,28 +150,62 @@ const ThanziAuth = (() => {
     }
   };
 
-  // Use origin+pathname so stale query params never pollute the OAuth redirect URL.
+  // Opens Google sign-in in a popup instead of navigating Thanzi's own tab
+  // away. The popup lands back on Thanzi's own URL (it's both the success
+  // and failure target), which — since it's the same origin — runs this
+  // same app.js again inside the popup. app.js's init() detects it's
+  // running as a popup (window.opener is set) and short-circuits: it
+  // exchanges the session, tells the opener via postMessage, and closes
+  // itself immediately rather than rendering the full UI in that tiny
+  // window. This function just opens the popup and waits for that message.
   //
-  // IMPORTANT: this must be createOAuth2Token, not createOAuth2Session.
-  // createOAuth2Session relies on Appwrite setting a session cookie on ITS OWN
-  // domain (fra.cloud.appwrite.io), which the browser treats as a third-party
-  // cookie since it differs from Thanzi's domain — Safari, Brave, and Chrome's
-  // in-app/WebView browsers block that by default. The redirect back still
-  // "succeeds" (you see the splash screen), but no cookie ever lands, so
-  // getUser() 401s and init() falls back to the login screen.
-  // createOAuth2Token sidesteps this entirely: it appends ?userId=...&secret=...
-  // to the redirect URL instead of depending on a cookie, and we exchange those
-  // for a session ourselves in handleOAuthCallback() below.
+  // We build the OAuth2 token URL by hand (GET /account/tokens/oauth2/google)
+  // rather than calling account.createOAuth2Token(), because that SDK method
+  // navigates the current window directly — there's no way to get a URL out
+  // of it to hand to window.open() instead.
   const loginWithGoogle = () => {
-    const base = window.location.origin + window.location.pathname;
-    try {
-      const result = account.createOAuth2Token('google', base, base);
-      if (result && typeof result.catch === 'function') {
-        result.catch(err => console.error('[ThanziAuth] createOAuth2Token rejected:', err));
+    return new Promise((resolve) => {
+      const base = window.location.origin + window.location.pathname;
+      const url = `${THANZI_CONFIG.endpoint}/account/tokens/oauth2/google` +
+        `?project=${encodeURIComponent(THANZI_CONFIG.projectId)}` +
+        `&success=${encodeURIComponent(base)}` +
+        `&failure=${encodeURIComponent(base)}`;
+
+      const popup = window.open(url, 'thanziGoogleAuth', 'width=480,height=640');
+
+      if (!popup) {
+        // Browser blocked the popup — fall back to the old full-page redirect
+        // so sign-in still works, just without the nicer popup UX.
+        try {
+          account.createOAuth2Token('google', base, base);
+        } catch (err) {
+          console.error('[ThanziAuth] createOAuth2Token threw:', err);
+        }
+        resolve(false);
+        return;
       }
-    } catch (err) {
-      console.error('[ThanziAuth] createOAuth2Token threw:', err);
-    }
+
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('message', onMessage);
+        clearInterval(watchClosed);
+        resolve(ok);
+      };
+
+      const onMessage = (event) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data && event.data.type === 'thanzi-oauth-complete') finish(true);
+      };
+      window.addEventListener('message', onMessage);
+
+      // If the person closes the popup manually without finishing sign-in,
+      // stop waiting instead of hanging forever.
+      const watchClosed = setInterval(() => {
+        if (popup.closed) finish(false);
+      }, 500);
+    });
   };
 
   // Handles the Appwrite OAuth callback (token flow).

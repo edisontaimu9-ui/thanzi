@@ -417,7 +417,26 @@ const ThanziApp = (() => {
     // Google OAuth
     const googleBtn = document.getElementById('google-oauth-btn');
     if (googleBtn) {
-      googleBtn.addEventListener('click', () => ThanziAuth.loginWithGoogle());
+      googleBtn.addEventListener('click', async () => {
+        const errEl = document.getElementById('auth-error');
+        if (errEl) errEl.textContent = '';
+
+        const ok = await ThanziAuth.loginWithGoogle();
+        if (!ok) {
+          // Either the popup was closed before finishing, or the popup was
+          // blocked and we fell back to a full-page redirect (in which case
+          // the page is already navigating away and this never really runs).
+          if (errEl) errEl.textContent = 'Google sign-in was closed before finishing. Please try again.';
+          return;
+        }
+
+        const user = await ThanziAuth.getUser();
+        if (user) {
+          await routeUser(user);
+        } else if (errEl) {
+          errEl.textContent = 'Signed in, but no session was found. Please try again.';
+        }
+      });
     }
 
     // Continue as Guest — no account required, starts the 14-day trial
@@ -509,42 +528,58 @@ const ThanziApp = (() => {
 
   // ── App init ─────────────────────────────────────────────────────────────
 
+  // Decides which screen to land a signed-in user on. Pulled out of init()
+  // so the Google-popup flow can reuse the exact same logic after it closes,
+  // instead of duplicating (and risking drift from) the normal page-load path.
+  const routeUser = async (user) => {
+    // Guests get full access for 14 days; once expired, block the app
+    // behind the upgrade screen. Their data isn't touched — upgrading
+    // converts this same session into a permanent account.
+    if (ThanziAuth.isGuest(user)) {
+      const trial = await ThanziAuth.getTrialStatus();
+      if (trial.expired) {
+        showUpgradeScreen(true);
+        return;
+      }
+    }
+
+    const profile = localStorage.getItem('thanzi_profile_' + user.$id);
+
+    if (profile) {
+      applyPlan(JSON.parse(profile));
+      showScreen('dashboard-screen');
+      await initDashboard(user);
+      bindNav();
+    } else {
+      showScreen('profile-screen');
+    }
+  };
+
   const init = async () => {
+    // If this window is the Google-sign-in popup Thanzi opened on itself
+    // (see ThanziAuth.loginWithGoogle), finish the handshake and close
+    // instead of rendering the full app UI inside that small popup window.
+    if (window.opener && window.location.search.includes('userId=')) {
+      await ThanziAuth.handleOAuthCallback();
+      try {
+        window.opener.postMessage({ type: 'thanzi-oauth-complete' }, window.location.origin);
+      } catch (e) { /* opener gone — nothing to notify */ }
+      window.close();
+      return;
+    }
+
     initTheme();
 
     try {
       // Exchange OAuth callback params for a real session (Appwrite SDK v14+).
-      // After Google sign-in, Appwrite redirects back with ?userId=...&secret=...
-      // in the URL. handleOAuthCallback() calls account.createSession(userId, secret)
-      // to finalise the session, then strips the params from the URL. Without this,
-      // account.get() below finds no session and the user appears logged out.
+      // This only fires here for the popup-blocked fallback path (full-page
+      // redirect) — the normal popup flow handles this above instead.
       await ThanziAuth.handleOAuthCallback();
 
       const user = await ThanziAuth.getUser();
 
       if (user) {
-        // Guests get full access for 14 days; once expired, block the app
-        // behind the upgrade screen. Their data isn't touched — upgrading
-        // converts this same session into a permanent account.
-        if (ThanziAuth.isGuest(user)) {
-          const trial = await ThanziAuth.getTrialStatus();
-          if (trial.expired) {
-            showUpgradeScreen(true);
-            bindEvents();
-            return;
-          }
-        }
-
-        const profile = localStorage.getItem('thanzi_profile_' + user.$id);
-
-        if (profile) {
-          applyPlan(JSON.parse(profile));
-          showScreen('dashboard-screen');
-          await initDashboard(user);
-          bindNav();
-        } else {
-          showScreen('profile-screen');
-        }
+        await routeUser(user);
       } else {
         showScreen('auth-screen');
       }
