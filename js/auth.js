@@ -164,7 +164,22 @@ const ThanziAuth = (() => {
   // for a session ourselves in handleOAuthCallback() below.
   const loginWithGoogle = () => {
     const base = window.location.origin + window.location.pathname;
-    account.createOAuth2Token('google', base, base);
+    try {
+      const result = account.createOAuth2Token('google', base, base);
+      // In SDK versions where this returns a promise instead of navigating
+      // directly, catch a rejection so it doesn't fail silently.
+      if (result && typeof result.catch === 'function') {
+        result.catch(err => {
+          console.error('[ThanziAuth] createOAuth2Token rejected:', err);
+          alert('Google sign-in failed to start: ' + (err && err.message ? err.message : err));
+        });
+      }
+    } catch (err) {
+      // TEMP diagnostic: surface the real error on-device since there's no
+      // console attached. Remove this alert() once the cause is confirmed.
+      console.error('[ThanziAuth] createOAuth2Token threw:', err);
+      alert('Google sign-in error: ' + (err && err.message ? err.message : err));
+    }
   };
 
   // Handles the Appwrite OAuth callback (token flow).
