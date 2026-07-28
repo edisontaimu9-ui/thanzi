@@ -12,7 +12,7 @@ const ThanziApp = (() => {
     waterGoal: 2000,
   };
 
-  let selections = { gender: null, activity: null, goal: null, interests: [] };
+  let selections = { gender: null, activity: null, goal: null, interests: [], rate: null };
   let _currentUser = null;
   let _logInited = false;
   let _profileInited = false;
@@ -272,6 +272,45 @@ const ThanziApp = (() => {
     // Theme toggle
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
+    // Renders the "Pace" picker for weight loss/gain, with presets scaled to
+    // the safe rate range for the selected sex + goal (Krause & Mahan Ch. 23:
+    // safe gain rate differs by sex; 'maintain' has no rate to pick at all).
+    const updateRateOptions = () => {
+      const section   = document.getElementById('rate-section');
+      const container = document.getElementById('rate-options');
+      const label     = document.getElementById('rate-label');
+      const { gender, goal } = selections;
+
+      selections.rate = null; // force a fresh pick whenever gender/goal changes
+      container.innerHTML = '';
+
+      const range = (gender && goal) ? ThanziNutrition.getRateRange(goal, gender) : null;
+      if (!range) {
+        section.style.display = 'none';
+        return;
+      }
+
+      label.textContent = goal === 'lose'
+        ? 'How fast do you want to lose weight?'
+        : 'How fast do you want to gain?';
+
+      range.presets.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.dataset.group = 'rate';
+        btn.dataset.val = p.value;
+        btn.textContent = `${p.label} (~${p.value} kg/week)`;
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selections.rate = p.value;
+        });
+        container.appendChild(btn);
+      });
+
+      section.style.display = 'block';
+    };
+
     // Profile option buttons
     document.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -295,6 +334,8 @@ const ThanziApp = (() => {
           .forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         selections[group] = btn.dataset.val;
+
+        if (group === 'gender' || group === 'goal') updateRateOptions();
       });
     });
 
@@ -303,10 +344,15 @@ const ThanziApp = (() => {
       const age    = parseInt(document.getElementById('p-age').value);
       const weight = parseFloat(document.getElementById('p-weight').value);
       const height = parseFloat(document.getElementById('p-height').value);
-      const { gender, activity, goal, interests } = selections;
+      const { gender, activity, goal, interests, rate } = selections;
+      const needsRate = goal === 'lose' || goal === 'gain';
 
       if (!age || !weight || !height || !gender || !activity || !goal) {
         document.getElementById('profile-error').textContent = 'Please fill in all fields';
+        return;
+      }
+      if (needsRate && !rate) {
+        document.getElementById('profile-error').textContent = 'Please choose a pace for your goal';
         return;
       }
 
@@ -317,6 +363,7 @@ const ThanziApp = (() => {
         height_m:          height / 100,
         activity_level:    activity,
         goal,
+        rate_kg_per_week:  needsRate ? rate : undefined,
         health_interests:  interests || [],
       };
 

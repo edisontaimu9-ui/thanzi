@@ -266,27 +266,73 @@ const ThanziNutrition = (() => {
   // ═══════════════════════════════════════════════════════════════════
 
   /**
+   * Safe weight-change rate range, by goal and sex.
+   * Source: Krause & Mahan Ch. 23 (Nutrition in Exercise and Sports
+   * Performance) — "Weight Loss" and "Weight Gain" sections.
+   *   - Loss: NATA guidance — 1 to 2 lb/week (≈0.45–0.9 kg/week). Thanzi
+   *     keeps a gentler floor of 0.25 kg/week as an extra-conservative
+   *     option; only the upper bound is tied to the book's 2 lb/week cap.
+   *   - Gain: ">2 lb/week may result in increased body fat." Safe lean-mass
+   *     gain is sex-specific — males 0.5–1.0 lb/week, females 0.25–0.75
+   *     lb/week (≈0.23–0.45 kg/week M, 0.11–0.34 kg/week F).
+   * Returns three presets (gradual/moderate/faster) spanning the safe
+   * range, for a simple button picker rather than a raw numeric input.
+   *
+   * @param {string} goal - 'lose' | 'gain' (no range for 'maintain')
+   * @param {string} sex  - 'M' | 'F'
+   * @returns {Object|null}
+   */
+  function _rateRange(goal, sex) {
+    let min, max;
+    if (goal === 'lose') {
+      min = 0.25; max = 0.9;                          // ≈0.5–2 lb/week
+    } else if (goal === 'gain') {
+      min = sex === 'M' ? 0.23 : 0.11;                 // 0.5 / 0.25 lb/week
+      max = sex === 'M' ? 0.45 : 0.34;                 // 1.0 / 0.75 lb/week
+    } else {
+      return null; // 'maintain' has no rate to pick
+    }
+    const mid = _round(min + (max - min) / 2, 2);
+    return {
+      min, max, default: mid,
+      presets: [
+        { label: 'Gradual',  value: min },
+        { label: 'Moderate', value: mid },
+        { label: 'Faster',   value: max }
+      ]
+    };
+  }
+
+  /**
    * Weight goal engine
    *
-   * Safety rules (Krause Chapter 20):
-   *   - Max safe loss rate: 0.5–1.0 kg/week (500–1000 kcal/day deficit)
+   * Safety rules (Krause Chapter 20 & 23):
+   *   - Loss rate clamped to sex-agnostic 0.25–0.9 kg/week (see _rateRange)
+   *   - Gain rate clamped to sex-specific safe range (see _rateRange) —
+   *     males can safely target a higher rate than females
    *   - Minimum calorie floor: 1500 kcal (M), 1200 kcal (F) — below this
    *     risks micronutrient deficiency and lean mass loss
    *   - BMI < 18.5: override goal to 'maintain' regardless of user intent
-   *   - Weight gain: 300–500 kcal/day surplus for lean mass gain
+   *   - Weight gain: surplus additionally capped at 500 kcal/day regardless
+   *     of requested rate, to minimise fat gain during a bulk — the
+   *     returned rate_kg_per_week reflects this actual, post-cap rate
    *
    * @param {number} eer              - calculated EER kcal/day
    * @param {string} sex              - 'M' | 'F'
    * @param {number} bmi              - calculated BMI
    * @param {string} goal             - 'lose' | 'maintain' | 'gain'
-   * @param {number} rate_kg_per_week - target rate 0.25–1.0 (default 0.5)
+   * @param {number} rate_kg_per_week - requested rate (default: range midpoint)
    * @returns {Object}
    */
-  function weightEngine(eer, sex, bmi, goal, rate_kg_per_week = 0.5) {
+  function weightEngine(eer, sex, bmi, goal, rate_kg_per_week) {
     const MIN_KCAL = sex === 'M' ? 1500 : 1200;
+    const range = _rateRange(goal, sex); // null for 'maintain'
 
-    // Safety: clamp rate to evidence-based safe range
-    const rate = _clamp(rate_kg_per_week, 0.25, 1.0);
+    // Safety: clamp requested rate to the sex/goal-specific safe range.
+    // Falls back to the range midpoint if the caller didn't specify one.
+    const rate = range
+      ? _clamp(rate_kg_per_week ?? range.default, range.min, range.max)
+      : 0;
     const daily_delta = _round((rate * 7700) / 7);   // 7700 kcal ≈ 1 kg fat
 
     // BMI-based override
@@ -316,11 +362,15 @@ const ThanziNutrition = (() => {
         break;
       }
       case 'gain': {
-        // Cap surplus at 500 kcal/day to minimise fat gain during bulk
+        // Cap surplus at 500 kcal/day to minimise fat gain during bulk.
+        // Recompute the actual rate from the capped surplus — the requested
+        // rate may not be achievable once this cap is applied.
         const surplus = Math.min(daily_delta, 500);
         target_kcal = eer + surplus;
-        actual_rate = rate;
-        note = `${surplus} kcal/day surplus → ~${_round((surplus * 7) / 7700, 2)} kg/week gain (lean mass focus)`;
+        actual_rate = _round((surplus * 7) / 7700, 2);
+        note = surplus < daily_delta
+          ? `Surplus capped at ${surplus} kcal/day (fat-gain limit) → ~${actual_rate} kg/week, below the ${rate} kg/week requested`
+          : `${surplus} kcal/day surplus → ~${actual_rate} kg/week gain (lean mass focus)`;
         break;
       }
       default: // maintain
@@ -500,11 +550,15 @@ const ThanziNutrition = (() => {
       }
     };
 
-    // Hydration strategy (ACSM 2017)
+    // Hydration strategy (ACSM 2017; sodium guidance from Krause & Mahan
+    // Ch. 23, Box 23.5 — "Summary of Guidelines for Proper Hydration")
     const hydration = {
       pre_exercise: `${_round(wt_kg * 5)}–${_round(wt_kg * 7)} mL — drink 4 hours before`,
       during: '400–800 mL per hour (drink to thirst; do not over-hydrate)',
       post_exercise: '1.5 L per kg of body weight lost in sweat',
+      sodium: session_min > 60
+        ? '0.5–0.7 g sodium per liter of fluid — improves palatability and drive to drink, reduces hyponatremia and muscle cramp risk during sessions over 1 hour'
+        : null,
       urine_target: 'Pale yellow urine = adequate hydration',
       malawi_note: 'High heat and humidity in Malawi increase sweat losses — increase to upper end of range during hot season'
     };
@@ -913,7 +967,9 @@ const ThanziNutrition = (() => {
    * @param {number} profile.height_m          - height in metres
    * @param {string} profile.activity_level    - 'sedentary'|'low_active'|'active'|'very_active'
    * @param {string} profile.goal              - 'lose'|'maintain'|'gain'
-   * @param {number} [profile.rate_kg_per_week]- target loss/gain rate (0.25–1.0)
+   * @param {number} [profile.rate_kg_per_week] - target loss/gain rate; clamped
+   *   to a safe range that depends on goal and sex (see weightEngine/_rateRange).
+   *   Omit to use the range midpoint.
    * @param {string} [profile.sport_type]      - 'endurance'|'strength'|'team_sport'|'power'|'recreational'
    * @param {number} [profile.session_min]     - workout session duration in minutes
    * @param {Object} [profile.bone_inputs]     - { dairy_servings_day, sun_exposure, weight_bearing_activity }
@@ -1032,6 +1088,7 @@ const ThanziNutrition = (() => {
     calcEER,
     calcBMR,
     weightEngine,
+    getRateRange: _rateRange,
     macroEngine,
     sportsEngine,
     boneHealthEngine,
