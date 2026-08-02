@@ -370,6 +370,15 @@
 .pntf-row-name { font-size: .88rem; font-weight: 600; color: var(--text-1, var(--text-primary, #fff)); }
 .pntf-row-sub  { font-size: .74rem; color: var(--text-3, var(--text-muted, #888)); margin-top: 1px; }
 
+/* Stacked variant — label row on top, full-width control below.
+   Used by #pntf-meal-time-row so the three time pickers get room
+   to breathe instead of being squeezed against the label text. */
+.pntf-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.pntf-row--stack .pntf-row-info { margin-bottom: 10px; }
+
 /* Toggle switch */
 .pntf-toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
 .pntf-toggle input { opacity: 0; width: 0; height: 0; }
@@ -392,16 +401,37 @@
 .pntf-toggle input:checked + .pntf-slider { background: var(--accent, #3db97a); }
 .pntf-toggle input:checked + .pntf-slider::before { transform: translateX(20px); }
 
-/* Time inputs row */
-.pntf-times { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Time inputs row — a labeled 3-column grid so each picker stays
+   clearly attached to its meal, and none of it wraps/overlaps on
+   narrow phone screens. */
+.pntf-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.pntf-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pntf-time-field label {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--text-3, var(--text-muted, #888));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .pntf-time-input {
-  padding: 6px 8px;
+  width: 100%;
+  padding: 7px 6px;
   border-radius: 8px;
   border: 1.5px solid var(--border, rgba(255,255,255,.12));
   background: var(--surface-1, rgba(255,255,255,.05));
   color: var(--text-1, #fff);
-  font-size: .82rem;
-  width: 90px;
+  font-size: .8rem;
+  box-sizing: border-box;
 }
 .pntf-time-input:focus { outline: none; border-color: var(--accent, #3db97a); }
 

@@ -761,15 +761,24 @@
               <span class="pntf-slider"></span>
             </label>
           </div>
-          <div class="pntf-row" id="pntf-meal-time-row" style="display:none">
+          <div class="pntf-row pntf-row--stack" id="pntf-meal-time-row" style="display:none">
             <div class="pntf-row-info">
               <div class="pntf-row-name">Reminder Times</div>
-              <div class="pntf-row-sub">Breakfast · Lunch · Dinner</div>
+              <div class="pntf-row-sub">Choose a time for each meal</div>
             </div>
             <div class="pntf-times">
-              <input type="time" id="pntf-time-breakfast" class="pntf-time-input" value="08:00">
-              <input type="time" id="pntf-time-lunch"     class="pntf-time-input" value="12:30">
-              <input type="time" id="pntf-time-dinner"    class="pntf-time-input" value="19:00">
+              <div class="pntf-time-field">
+                <label for="pntf-time-breakfast">🌅 Breakfast</label>
+                <input type="time" id="pntf-time-breakfast" class="pntf-time-input" value="08:00">
+              </div>
+              <div class="pntf-time-field">
+                <label for="pntf-time-lunch">☀️ Lunch</label>
+                <input type="time" id="pntf-time-lunch" class="pntf-time-input" value="12:30">
+              </div>
+              <div class="pntf-time-field">
+                <label for="pntf-time-dinner">🌙 Dinner</label>
+                <input type="time" id="pntf-time-dinner" class="pntf-time-input" value="19:00">
+              </div>
             </div>
           </div>
         </div>
