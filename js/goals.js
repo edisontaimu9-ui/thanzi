@@ -130,6 +130,74 @@ const ThanziGoals = (() => {
     _setText('gl-tgt-protein', protein + 'g');
     _setText('gl-tgt-carbs',   carbs + 'g');
     _setText('gl-tgt-fat',     fat + 'g');
+
+    _renderRecommendations();
+  }
+
+  // ── Recommendations (micronutrient flags + practical tips) ───────────────
+  // Sourced from ThanziNutrition.generate()'s existing output —
+  // plan.micronutrients.flags and plan.food_recommendations.practical_tips.
+  // Nothing new is computed here; this just surfaces data the engine
+  // already produces but no panel was rendering.
+
+  function _firstSearchTerm(hint) {
+    if (!hint) return '';
+    // query_hint looks like "banana OR sweet potato OR beans" — take the
+    // first alternative as the actual search box query.
+    return hint.split(/\s+OR\s+/i)[0].trim();
+  }
+
+  async function _findFoods(hint) {
+    const term = _firstSearchTerm(hint);
+    if (!term) return;
+    if (typeof ThanziApp !== 'undefined' && ThanziApp.openLogPanel) {
+      await ThanziApp.openLogPanel();
+    }
+    if (typeof ThanziLog !== 'undefined' && ThanziLog.searchFor) {
+      ThanziLog.searchFor(term);
+    }
+  }
+
+  function _renderRecommendations() {
+    const wrap  = document.getElementById('gl-recs-wrap');
+    const flagsEl = document.getElementById('gl-recs-flags');
+    const tipsEl  = document.getElementById('gl-recs-tips');
+    if (!wrap || !flagsEl || !tipsEl) return;
+
+    const flags = (_plan && _plan.micronutrients && _plan.micronutrients.flags) || [];
+    const tips  = (_plan && _plan.food_recommendations && _plan.food_recommendations.practical_tips) || [];
+
+    if (!flags.length && !tips.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+
+    const _priorityClass = (p) => p === 'high' ? 'high' : (p === 'medium' ? 'med' : 'low');
+    const _priorityLabel = (p) => p === 'high' ? 'High priority' : (p === 'medium' ? 'Worth watching' : 'Good to know');
+
+    flagsEl.innerHTML = flags.map((f, i) => `
+      <div class="gl-flag gl-flag-${_priorityClass(f.priority)}">
+        <div class="gl-flag-top">
+          <span class="gl-flag-name">${f.nutrient || f.name || 'Nutrient'}</span>
+          <span class="gl-flag-priority">${_priorityLabel(f.priority)}</span>
+        </div>
+        ${f.note ? `<div class="gl-flag-note">${f.note}</div>` : ''}
+        ${f.query_hint ? `<button type="button" class="gl-flag-find-btn" data-idx="${i}">Find foods →</button>` : ''}
+      </div>
+    `).join('');
+
+    flagsEl.querySelectorAll('.gl-flag-find-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = flags[parseInt(btn.dataset.idx, 10)];
+        if (f && f.query_hint) _findFoods(f.query_hint);
+      });
+    });
+
+    tipsEl.innerHTML = tips.length
+      ? `<div class="gl-tips-title">Tips for your goal</div>
+         <ul class="gl-tips-list">${tips.map(t => `<li>${t}</li>`).join('')}</ul>`
+      : '';
   }
 
   // ── Goal selection UI ─────────────────────────────────────────────────────

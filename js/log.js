@@ -1130,6 +1130,24 @@ ${rawItems.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     await _loadTodayLogs();
   }
 
-  return { init, refresh, logItems };
+  /**
+   * Public deep-link entry point — used by Goals recommendations ("Find
+   * foods →" on a micronutrient flag) to jump straight into the search
+   * box with a query already typed and results loading.
+   */
+  function searchFor(query) {
+    if (!query) return;
+    const input = _el('food-search-input');
+    if (!input) return;
+    input.value = query;
+    input.focus();
+    const customResults = (typeof ThanziCustomFoods !== 'undefined')
+      ? ThanziCustomFoods.search(query).map(f => ({ ...f, sourceUsed: 'custom' }))
+      : [];
+    if (customResults.length) _renderSearchResults(customResults, false);
+    _searchFullAsync(query);
+  }
+
+  return { init, refresh, logItems, searchFor };
 
 })();

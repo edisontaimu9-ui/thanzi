@@ -678,7 +678,19 @@ const ThanziApp = (() => {
     }).join('');
   };
 
-  return { init, addWater, updateNutrition, setWaterGoal, updateHomeMeals };
+  /**
+   * Switches to the Log tab (same as tapping nav-log). Used by Goals
+   * recommendations to deep-link a micronutrient flag into food search.
+   */
+  const openLogPanel = async () => {
+    _setActiveNav('nav-log');
+    showPanel('log-panel');
+    if (_logInited && typeof ThanziLog !== 'undefined') {
+      await ThanziLog.refresh();
+    }
+  };
+
+  return { init, addWater, updateNutrition, setWaterGoal, updateHomeMeals, openLogPanel };
 })();
 
 document.addEventListener('DOMContentLoaded', ThanziApp.init);

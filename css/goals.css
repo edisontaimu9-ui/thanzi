@@ -285,6 +285,98 @@
   line-height: 1.5;
 }
 
+/* ── Recommendations (micronutrient flags + tips) ────────────────────────── */
+.gl-recs-wrap {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.gl-recs-title {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 10px;
+}
+
+.gl-recs-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gl-flag {
+  background: var(--surface-1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--text-3);
+}
+
+.gl-flag-high { border-left-color: #e05; }
+.gl-flag-med  { border-left-color: #f4a83f; }
+.gl-flag-low  { border-left-color: var(--text-3); }
+
+.gl-flag-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gl-flag-name {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.gl-flag-priority {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.gl-flag-high .gl-flag-priority { color: #e05; }
+.gl-flag-med  .gl-flag-priority { color: #f4a83f; }
+
+.gl-flag-note {
+  font-size: .78rem;
+  color: var(--text-3);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.gl-flag-find-btn {
+  margin-top: 8px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.gl-flag-find-btn:active { opacity: .7; }
+
+.gl-tips-title {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+
+.gl-tips-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: .78rem;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
 /* ── Error / success ─────────────────────────────────────────────────────── */
 #gl-error {
   font-size: .8rem;
