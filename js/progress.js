@@ -25,6 +25,7 @@ const ThanziProgress = (() => {
   // ── State ──────────────────────────────────────────────────────────────────
   let _user    = null;
   let _loading = false;
+  let _reportRange = 7; // 7 | 30 — selected by the range toggle
 
   // Chart.js instances — destroyed before each re-render
   let _weightChart = null;
@@ -122,6 +123,198 @@ const ThanziProgress = (() => {
     const wrap = _el(containerId);
     wrap.innerHTML = `<div style="position:relative;height:140px"><canvas id="${canvasId}"></canvas></div>`;
     return _el(canvasId).getContext('2d');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Report Section — adherence %, logging streak, macro averages, weight Δ
+  // Reuses food_logs / weight_logs the other sections already fetch; adds no
+  // new storage, just aggregates over a 7 or 30 day window.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function _bindReportRangeToggle() {
+    const btn7  = _el('prog-report-range-7');
+    const btn30 = _el('prog-report-range-30');
+    if (!btn7 || !btn30) return;
+    const setActive = (n) => {
+      _reportRange = n;
+      btn7.classList.toggle('active', n === 7);
+      btn30.classList.toggle('active', n === 30);
+    };
+    btn7.addEventListener('click', () => { setActive(7);  _renderReport(); });
+    btn30.addEventListener('click', () => { setActive(30); _renderReport(); });
+    setActive(_reportRange);
+  }
+
+  /** Current consecutive-day logging streak, counted back from today. */
+  async function _calcStreak() {
+    let docs = [];
+    try {
+      const res = await _db.listDocuments(
+        THANZI_CONFIG.databaseId,
+        THANZI_CONFIG.collections.foodLogs,
+        [
+          Appwrite.Query.equal('userId', _user.$id),
+          Appwrite.Query.orderDesc('date'),
+          Appwrite.Query.limit(400),
+        ]
+      );
+      docs = res.documents;
+    } catch (e) {
+      console.error('ThanziProgress[streak]:', e.message);
+      return 0;
+    }
+
+    const loggedDates = new Set(docs.map(d => d.date));
+    let streak = 0;
+    const cursor = new Date();
+    // If nothing logged yet today, that's fine — start checking from today
+    // and don't break the streak until we hit the first real gap.
+    for (;;) {
+      const iso = cursor.toISOString().split('T')[0];
+      if (loggedDates.has(iso)) {
+        streak++;
+      } else if (streak === 0 && iso === _today()) {
+        // Today not logged yet — skip without breaking, check yesterday.
+      } else {
+        break;
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
+  }
+
+  async function _renderReport() {
+    const adherenceEl = _el('prog-report-adherence');
+    const streakEl     = _el('prog-report-streak');
+    const weightDeltaEl = _el('prog-report-weightdelta');
+    const macrosEl      = _el('prog-report-macros');
+    const loggedSubEl   = _el('prog-report-logged-sub');
+    if (!adherenceEl || !macrosEl) return;
+
+    macrosEl.innerHTML = '<p class="prog-chart-loading">Loading…</p>';
+
+    const days      = _lastNDays(_reportRange);
+    const startDate = days[0];
+    const plan      = _getPlan();
+
+    let foodDocs = [];
+    let weightDocs = [];
+    try {
+      const [foodRes, weightRes] = await Promise.all([
+        _db.listDocuments(
+          THANZI_CONFIG.databaseId,
+          THANZI_CONFIG.collections.foodLogs,
+          [
+            Appwrite.Query.equal('userId', _user.$id),
+            Appwrite.Query.greaterThanEqual('date', startDate),
+            Appwrite.Query.limit(1000),
+          ]
+        ),
+        _db.listDocuments(
+          THANZI_CONFIG.databaseId,
+          THANZI_CONFIG.collections.weightLogs,
+          [
+            Appwrite.Query.equal('userId', _user.$id),
+            Appwrite.Query.greaterThanEqual('date', startDate),
+            Appwrite.Query.orderAsc('date'),
+            Appwrite.Query.limit(200),
+          ]
+        ),
+      ]);
+      foodDocs   = foodRes.documents;
+      weightDocs = weightRes.documents;
+    } catch (e) {
+      console.error('ThanziProgress[report]:', e.message);
+    }
+
+    // ── Aggregate by day ──
+    const byDate = {};
+    foodDocs.forEach(d => {
+      const b = byDate[d.date] || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+      b.kcal    += d.calories || 0;
+      b.protein += d.protein  || 0;
+      b.carbs   += d.carbs    || 0;
+      b.fat     += d.fat      || 0;
+      byDate[d.date] = b;
+    });
+
+    const loggedDates = Object.keys(byDate);
+    const daysLogged   = loggedDates.length;
+    const kcalGoal     = plan?.energy?.target_kcal || 2000;
+
+    // ── Adherence: % of logged days within ±10% of calorie goal ──
+    const onTargetDays = loggedDates.filter(d => {
+      const kcal = byDate[d].kcal;
+      return kcal >= kcalGoal * 0.9 && kcal <= kcalGoal * 1.1;
+    }).length;
+    const adherencePct = daysLogged ? Math.round((onTargetDays / daysLogged) * 100) : null;
+
+    adherenceEl.textContent = adherencePct === null ? '—' : `${adherencePct}%`;
+    if (loggedSubEl) loggedSubEl.textContent = `${daysLogged}/${_reportRange} days logged`;
+
+    // ── Streak ──
+    if (streakEl) {
+      const streak = await _calcStreak();
+      streakEl.textContent = streak;
+    }
+
+    // ── Weight change over range ──
+    if (weightDeltaEl) {
+      if (weightDocs.length >= 2) {
+        const delta = Math.round((weightDocs[weightDocs.length - 1].weight - weightDocs[0].weight) * 10) / 10;
+        const sign  = delta > 0 ? '+' : '';
+        weightDeltaEl.textContent = `${sign}${delta} kg`;
+        weightDeltaEl.classList.toggle('neg', delta < 0);
+        weightDeltaEl.classList.toggle('pos', delta > 0);
+      } else {
+        weightDeltaEl.textContent = '—';
+        weightDeltaEl.classList.remove('neg', 'pos');
+      }
+    }
+
+    // ── Macro averages vs target ──
+    if (!daysLogged) {
+      macrosEl.innerHTML = '<p class="prog-chart-empty">Log some meals to see your averages.</p>';
+      return;
+    }
+
+    const avg = { protein: 0, carbs: 0, fat: 0 };
+    loggedDates.forEach(d => {
+      avg.protein += byDate[d].protein;
+      avg.carbs   += byDate[d].carbs;
+      avg.fat     += byDate[d].fat;
+    });
+    avg.protein = Math.round(avg.protein / daysLogged);
+    avg.carbs   = Math.round(avg.carbs   / daysLogged);
+    avg.fat     = Math.round(avg.fat     / daysLogged);
+
+    const targets = {
+      protein: plan?.macros?.protein?.g || null,
+      carbs:   plan?.macros?.carbs?.g   || null,
+      fat:     plan?.macros?.fat?.g     || null,
+    };
+
+    const rows = [
+      { key: 'protein', label: 'Protein', cls: 'prot' },
+      { key: 'carbs',   label: 'Carbs',   cls: 'carb' },
+      { key: 'fat',     label: 'Fat',     cls: 'fat'  },
+    ];
+
+    macrosEl.innerHTML = rows.map(r => {
+      const value  = avg[r.key];
+      const target = targets[r.key];
+      const pct    = target ? Math.min(100, Math.round((value / target) * 100)) : 0;
+      return `
+        <div class="prog-report-macro-row">
+          <div class="prog-report-macro-label">
+            <span>${r.label}</span>
+            <span>${value}g${target ? ` / ${target}g avg` : ' avg'}</span>
+          </div>
+          <div class="prog-report-macro-bar">
+            <div class="prog-report-macro-fill ${r.cls}" style="width:${target ? pct : 0}%"></div>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -517,6 +710,8 @@ const ThanziProgress = (() => {
   function init(user) {
     _user = user;
     _bindWeightForm();
+    _bindReportRangeToggle();
+    _renderReport();
     _renderWeight();
     _renderCalories();
     _renderWater();
@@ -527,7 +722,7 @@ const ThanziProgress = (() => {
     if (!_user || _loading) return;
     _loading = true;
     try {
-      await Promise.all([_renderWeight(), _renderCalories(), _renderWater()]);
+      await Promise.all([_renderReport(), _renderWeight(), _renderCalories(), _renderWater()]);
     } finally {
       _loading = false;
     }

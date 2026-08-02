@@ -451,6 +451,35 @@
     <!-- Progress Panel -->
     <div id="progress-panel" class="dash-panel" style="display:none">
 
+      <!-- ── Report ───────────────────────────────────────────────────────── -->
+      <div class="prog-section">
+        <div class="prog-section-header">
+          <span class="prog-section-title">📊 Report</span>
+          <div class="prog-report-range-toggle">
+            <button class="prog-report-range-btn" id="prog-report-range-7">7D</button>
+            <button class="prog-report-range-btn" id="prog-report-range-30">30D</button>
+          </div>
+        </div>
+
+        <div class="prog-report-stats">
+          <div class="prog-report-stat">
+            <span class="prog-report-stat-value" id="prog-report-adherence">—</span>
+            <span class="prog-report-stat-label">Adherence</span>
+            <span class="prog-report-stat-sub" id="prog-report-logged-sub"></span>
+          </div>
+          <div class="prog-report-stat">
+            <span class="prog-report-stat-value" id="prog-report-streak">—</span>
+            <span class="prog-report-stat-label">Day streak</span>
+          </div>
+          <div class="prog-report-stat">
+            <span class="prog-report-stat-value" id="prog-report-weightdelta">—</span>
+            <span class="prog-report-stat-label">Weight Δ</span>
+          </div>
+        </div>
+
+        <div id="prog-report-macros" class="prog-report-macros"></div>
+      </div>
+
       <!-- ── Weight Tracker ──────────────────────────────────────────────── -->
       <div class="prog-section">
         <div class="prog-section-header">

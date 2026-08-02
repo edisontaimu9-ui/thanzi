@@ -208,3 +208,100 @@
   color: var(--error, #ef4444);
   background: color-mix(in srgb, var(--error, #ef4444) 12%, transparent);
 }
+
+/* ── Report card (adherence / streak / weight Δ / macro averages) ───────── */
+.prog-report-range-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.prog-report-range-btn {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border, rgba(255,255,255,.14));
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+
+.prog-report-range-btn.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.prog-report-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.prog-report-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-input, var(--surface-1, rgba(255,255,255,.06)));
+  border-radius: 12px;
+  padding: 12px 6px 10px;
+}
+
+.prog-report-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.prog-report-stat-label {
+  font-size: .68rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  text-align: center;
+}
+
+.prog-report-stat-sub {
+  font-size: .62rem;
+  color: var(--text-muted);
+  opacity: .8;
+  margin-top: 1px;
+}
+
+.prog-report-stat-value.pos { color: #f4813f; }
+.prog-report-stat-value.neg { color: var(--accent); }
+
+.prog-report-macros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prog-report-macro-row { width: 100%; }
+
+.prog-report-macro-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: .78rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.prog-report-macro-bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--bg-input, rgba(255,255,255,.08));
+  overflow: hidden;
+}
+
+.prog-report-macro-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.prog-report-macro-fill.prot { background: #5b8dee; }
+.prog-report-macro-fill.carb { background: var(--accent); }
+.prog-report-macro-fill.fat  { background: #f4813f; }
