@@ -83,6 +83,12 @@ const ThanziDrawer = (() => {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       if (typeof ThanziWeight !== 'undefined') ThanziWeight.refresh();
     },
+    learn: () => {
+      document.querySelectorAll('.dash-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('learn-panel').style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (typeof ThanziLearn !== 'undefined') ThanziLearn.refresh();
+    },
     goals: () => {
       // Goals content lives inside profile-panel as the Health & Goals sub-tab
       document.getElementById('nav-profile').click();

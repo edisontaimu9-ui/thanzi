@@ -57,6 +57,7 @@
   <link rel="stylesheet" href="css/exercise.css">
   <link rel="stylesheet" href="css/weight.css">
   <link rel="stylesheet" href="css/goals.css">
+  <link rel="stylesheet" href="css/learn.css">
   <link rel="stylesheet" href="css/recipe.css">
   <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/settings.css">
@@ -1176,6 +1177,30 @@
     </div><!-- /weight-panel -->
 
 
+    <!-- Learn (Dietary Education) Panel -->
+    <div id="learn-panel" class="dash-panel" style="display:none">
+
+      <div class="lrn-header">
+        <div>
+          <div class="lrn-title">Learn</div>
+          <div class="lrn-subtitle">Nutrition education, tailored to you</div>
+        </div>
+      </div>
+
+      <div class="lrn-foryou-wrap" id="lrn-foryou-wrap" style="display:none">
+        <div class="lrn-section-title">For You</div>
+        <div id="lrn-foryou-list" class="lrn-list"></div>
+      </div>
+
+      <div class="lrn-alltopics-wrap">
+        <div class="lrn-section-title">All Topics</div>
+        <div class="lrn-filter-row" id="lrn-filter-row"></div>
+        <div id="lrn-all-list" class="lrn-list"></div>
+      </div>
+
+    </div><!-- /learn-panel -->
+
+
     <!-- AI Assistant Panel -->
     <div id="ai-panel" class="dash-panel" style="display:none">
       <div class="ai-panel-wrap">
@@ -1498,6 +1523,7 @@
   <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1/dist/iife/sdk.min.js"></script>
   <script src="js/thanzi-foodSearch.js"></script>
   <script src="js/thanzi-nutrition.js"></script>
+  <script src="js/thanzi-education.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/scanner.js"></script>
@@ -1591,6 +1617,14 @@
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
         </svg>
         Goals
+      </button>
+
+      <button class="drawer-nav-item" data-nav="learn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 4h6a4 4 0 014 4v12a3 3 0 00-3-3H2z"/>
+          <path d="M22 4h-6a4 4 0 00-4 4v12a3 3 0 013-3h7z"/>
+        </svg>
+        Learn
       </button>
 
       <button class="drawer-nav-item" data-nav="profile">
@@ -1783,6 +1817,7 @@
   <script src="js/activity-calories.js"></script>
   <script src="js/exercise.js"></script>
   <script src="js/weight.js"></script>
+  <script src="js/learn.js"></script>
   <script src="js/custom-foods.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/push.js"></script>
