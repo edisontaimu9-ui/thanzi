@@ -638,6 +638,18 @@ const ThanziApp = (() => {
 
       if (user) {
         await routeUser(user);
+      } else if (!navigator.onLine) {
+        // Offline, so account.get() couldn't reach Appwrite to confirm a
+        // session — that's not the same as being signed out. Fall back to
+        // the last-known signed-in user so offline features stay reachable
+        // (signing in itself needs connectivity anyway, so gating on it
+        // here would just strand an already-signed-in user).
+        const cached = ThanziAuth.getCachedUser();
+        if (cached) {
+          await routeUser(cached);
+        } else {
+          showScreen('auth-screen');
+        }
       } else {
         showScreen('auth-screen');
       }

@@ -120,10 +120,16 @@ self.addEventListener('fetch', event => {
 
   // 0. Page navigations (typing a URL, following a link, opening the app,
   //    reloading) get their own path: try the network first. If that fails
-  //    (device is offline), always show the dedicated offline page rather
+  //    (device is offline), normally show the dedicated offline page rather
   //    than silently falling back to the cached app shell — the user should
   //    always know they're offline, even though the shell itself is cached.
+  //
+  //    Exception: the offline page's own "Go Home" link is tagged
+  //    ?src=offline_home — that's an explicit request to use the cached app
+  //    (which now falls back to the last signed-in session on its own when
+  //    it can't reach Appwrite), not to see the offline notice again.
   if (request.mode === 'navigate') {
+    const bypassOffline = url.searchParams.get('src') === 'offline_home';
     event.respondWith(
       fetch(request)
         .then(response => {
@@ -132,7 +138,13 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => caches.match('/thanzi/offline.html'))
+        .catch(() => {
+          if (bypassOffline) {
+            return caches.match('/thanzi/index.html')
+              .then(cached => cached || caches.match('/thanzi/offline.html'));
+          }
+          return caches.match('/thanzi/offline.html');
+        })
     );
     return;
   }

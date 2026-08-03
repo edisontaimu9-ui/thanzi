@@ -9,6 +9,38 @@ const ThanziAuth = (() => {
   const TRIAL_DAYS = 14;
   const TRIAL_MS    = TRIAL_DAYS * 24 * 60 * 60 * 1000;
 
+  // ── Last-known session cache ─────────────────────────────────────────────
+  // A minimal, non-sensitive snapshot ($id/name/email only — never tokens
+  // or passwords) of the last user we successfully verified with Appwrite.
+  // Lets the app route straight into the dashboard when offline, instead of
+  // forcing the sign-in screen just because account.get() can't reach the
+  // network — signing in itself requires connectivity anyway, so blocking
+  // on it while offline would strand an already-signed-in user for nothing.
+  const LAST_USER_KEY = 'thanzi_last_user';
+
+  const _cacheUser = (user) => {
+    try {
+      localStorage.setItem(LAST_USER_KEY, JSON.stringify({
+        $id: user.$id, name: user.name, email: user.email,
+      }));
+    } catch (e) { /* ignore — storage unavailable/full */ }
+  };
+
+  /** Last-known signed-in user, or null if none is cached. Only meant to be
+   *  used as an OFFLINE fallback — always prefer a fresh getUser() result
+   *  when online, since this cache is never proof of a currently-valid
+   *  session by itself. */
+  const getCachedUser = () => {
+    try {
+      const raw = localStorage.getItem(LAST_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  };
+
+  const clearCachedUser = () => {
+    try { localStorage.removeItem(LAST_USER_KEY); } catch (e) { /* ignore */ }
+  };
+
   const register = async (name, email, password) => {
     try {
       await account.create(Appwrite.ID.unique(), email, password, name);
@@ -120,6 +152,7 @@ const ThanziAuth = (() => {
   const logout = async () => {
     try {
       await account.deleteSession('current');
+      clearCachedUser();
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -128,7 +161,9 @@ const ThanziAuth = (() => {
 
   const getUser = async () => {
     try {
-      return await account.get();
+      const user = await account.get();
+      _cacheUser(user);
+      return user;
     } catch (err) {
       // Surface the real reason in dev tools instead of failing silently.
       // The most common cause of "auth screen reappears after register/login"
@@ -232,5 +267,6 @@ const ThanziAuth = (() => {
   return {
     register, login, logout, getUser, updateName, loginWithGoogle, handleOAuthCallback,
     loginAsGuest, isGuest, getTrialStatus, upgradeGuestAccount, TRIAL_DAYS,
+    getCachedUser, clearCachedUser,
   };
 })();
