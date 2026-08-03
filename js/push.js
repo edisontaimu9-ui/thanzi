@@ -41,6 +41,8 @@ const ThanziPush = (function () {
   let _user  = null;
   let _docId = null; // cached Appwrite document $id for this user's subscription, once known
 
+  const ENDPOINT_CACHE_KEY = 'thanzi_push_endpoint';
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   function _urlBase64ToUint8Array(base64String) {
@@ -138,7 +140,66 @@ const ThanziPush = (function () {
     };
 
     await _upsertDoc(payload);
+    _cacheEndpoint(json.endpoint);
+    _tellSWWhoWeAre();
     return sub;
+  }
+
+  /** Remembers the live endpoint locally so resyncIfChanged() can detect
+   *  when the browser silently rotates it (e.g. after being offline). */
+  function _cacheEndpoint(endpoint) {
+    try { localStorage.setItem(ENDPOINT_CACHE_KEY, endpoint); } catch (e) {}
+  }
+
+  /** Hands the userId to the service worker (via IndexedDB) so it can
+   *  resync push_subscriptions in Appwrite even if no tab is open when
+   *  the subscription later rotates. Best-effort — safe to fail silently. */
+  async function _tellSWWhoWeAre() {
+    try {
+      if (!_user || !_user.$id) return;
+      const reg = await _getRegistration();
+      if (reg && reg.active) {
+        reg.active.postMessage({ type: 'PUSH_SET_USER', userId: _user.$id });
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * Checks whether the browser's live push subscription endpoint has
+   * changed since we last saved it (this happens when the browser rotates
+   * the subscription, most commonly after an extended offline period).
+   * If it has, re-saves it to Appwrite immediately.
+   *
+   * Safe to call often — no-ops quietly if not subscribed, unchanged, or
+   * not signed in. Call this on app load and whenever the app regains
+   * focus/comes back online, so a rotated subscription can't go unnoticed.
+   */
+  async function resyncIfChanged() {
+    if (!isSupported() || !_user || !_user.$id) return;
+    try {
+      const reg = await _getRegistration();
+      if (!reg) return;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return; // not subscribed — nothing to resync
+
+      const json   = sub.toJSON();
+      const cached = (() => { try { return localStorage.getItem(ENDPOINT_CACHE_KEY); } catch (e) { return null; } })();
+      if (cached === json.endpoint) return; // unchanged, nothing to do
+
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      await _upsertDoc({
+        userId:   _user.$id,
+        endpoint: json.endpoint,
+        p256dh:   json.keys.p256dh,
+        authKey:  json.keys.auth,
+        timezone,
+      });
+      _cacheEndpoint(json.endpoint);
+      _tellSWWhoWeAre();
+      console.log('[Push] Subscription had rotated — re-synced with server.');
+    } catch (err) {
+      console.warn('[Push] resync check failed:', err);
+    }
   }
 
   async function _upsertDoc(payload) {
@@ -216,6 +277,17 @@ const ThanziPush = (function () {
     });
   }
 
+  // If the SW had to rotate the subscription in the background (see
+  // pushsubscriptionchange in sw.js), it pings us here so we double-check
+  // and resync right away instead of waiting for the next full app load.
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data && event.data.type === 'PUSH_RESUBSCRIBED') {
+        resyncIfChanged();
+      }
+    });
+  }
+
   return {
     init,
     isSupported,
@@ -224,6 +296,7 @@ const ThanziPush = (function () {
     subscribe,
     unsubscribe,
     updatePrefs,
+    resyncIfChanged,
     sendLocalTestNotification,
   };
 })();

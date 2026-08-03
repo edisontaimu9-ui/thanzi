@@ -213,6 +213,17 @@ const ThanziApp = (() => {
     // the user opts in from the Notifications tab)
     if (typeof ThanziPush !== 'undefined') {
       ThanziPush.init(user);
+      // Catches subscriptions the browser silently rotated while the app
+      // was closed/offline — without this, notifications can go dead and
+      // never come back until the user manually re-toggles them.
+      ThanziPush.resyncIfChanged();
+      if (!window._thanziPushResyncBound) {
+        window._thanziPushResyncBound = true;
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') ThanziPush.resyncIfChanged();
+        });
+        window.addEventListener('online', () => ThanziPush.resyncIfChanged());
+      }
     }
   };
 
