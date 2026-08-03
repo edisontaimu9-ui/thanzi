@@ -25,12 +25,16 @@ const ThanziNutrition = (() => {
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * Physical Activity (PA) coefficients for DRI EER equations
-   * Source: IOM/NASEM Dietary Reference Intakes, 2005
+   * Physical Activity (PA) coefficients for the unified adult EER equation
+   * (Krause & Mahan Box 2.1 — "Normal and Overweight or Obese Men/Women
+   * 19 Years and Older, BMI ≥18.5 kg/m²"). Chosen over the older 2005
+   * normal-weight-only equation because it covers the full adult BMI
+   * range (normal, overweight, obese) with one continuous model — no
+   * discontinuity at the BMI 25 boundary, no branching needed.
    */
   const PA_COEFFICIENTS = {
-    M: { sedentary: 1.00, low_active: 1.11, active: 1.25, very_active: 1.48 },
-    F: { sedentary: 1.00, low_active: 1.12, active: 1.27, very_active: 1.45 }
+    M: { sedentary: 1.00, low_active: 1.12, active: 1.27, very_active: 1.54 },
+    F: { sedentary: 1.00, low_active: 1.14, active: 1.27, very_active: 1.45 }
   };
 
   /**
@@ -216,10 +220,21 @@ const ThanziNutrition = (() => {
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * Estimated Energy Requirement (EER) — DRI 2005 equations
+   * Estimated Energy Requirement (EER) — unified adult equation
+   * Source: Krause & Mahan Box 2.1 — "Normal and Overweight or Obese
+   * Men/Women 19 Years and Older (BMI ≥18.5 kg/m²)"
    *
-   * Adult Male   (19+): EER = 662 − (9.53 × age) + PA × (15.91 × wt + 539.6 × ht)
-   * Adult Female (19+): EER = 354 − (6.91 × age) + PA × (9.36 × wt + 726 × ht)
+   * Adult Male   (19+): EER = 864 − (9.72 × age) + PA × (14.2 × wt + 503 × ht)
+   * Adult Female (19+): EER = 387 − (7.31 × age) + PA × (10.9 × wt + 660.7 × ht)
+   *
+   * This single equation covers the whole normal/overweight/obese adult
+   * range (BMI ≥18.5) — chosen over the older two-equation 2005 DRI set
+   * (separate normal-weight vs. overweight/obese formulas) to avoid a
+   * discontinuity in predicted calories right at the BMI 25 boundary.
+   * Underweight adults (BMI <18.5) aren't covered by a distinct formula
+   * in this box; the same equation is used as the closest available
+   * estimate, and weightEngine() already overrides weight-loss goals to
+   * 'maintain' below BMI 18.5 as a separate safety check.
    *
    * Aging correction: REE declines ~7 kcal/year after age 50 due to
    * progressive sarcopenia — applied on top of the age term above.
@@ -236,9 +251,9 @@ const ThanziNutrition = (() => {
     let eer;
 
     if (sex === 'M') {
-      eer = 662 - (9.53 * age) + pa * (15.91 * wt_kg + 539.6 * ht_m);
+      eer = 864 - (9.72 * age) + pa * (14.2 * wt_kg + 503 * ht_m);
     } else {
-      eer = 354 - (6.91 * age) + pa * (9.36 * wt_kg + 726 * ht_m);
+      eer = 387 - (7.31 * age) + pa * (10.9 * wt_kg + 660.7 * ht_m);
     }
 
     // Aging correction (Krause: energy needs decline ~100 kcal/decade post-50)

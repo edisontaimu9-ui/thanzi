@@ -61,8 +61,9 @@ const ThanziGoals = (() => {
   // ── BMR / TDEE calculation ───────────────────────────────────────────────
   // Delegates to ThanziNutrition (thanzi-nutrition.js), which already
   // implements the correct DRI/Krause & Mahan EER equations with
-  // sex-specific PA coefficients (Box 2.1: normal-weight adults 19+ —
-  // M: 1.00/1.11/1.25/1.48, F: 1.00/1.12/1.27/1.45). This used to keep its
+  // sex-specific PA coefficients (Box 2.1: unified normal/overweight/obese
+  // adults 19+, BMI ≥18.5 — M: 1.00/1.12/1.27/1.54, F: 1.00/1.14/1.27/1.45).
+  // This used to keep its
   // own separate, generic Mifflin-St Jeor-style multiplier set
   // (1.2/1.375/1.55/1.725) which didn't match the engine's real numbers —
   // stats shown here could drift from the actual saved plan. Delegating
