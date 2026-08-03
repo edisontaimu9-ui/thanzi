@@ -119,9 +119,10 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
 
   // 0. Page navigations (typing a URL, following a link, opening the app,
-  //    reloading) get their own path: try the network first, and if that
-  //    fails AND we have nothing matching in cache either, serve the
-  //    dedicated offline fallback page instead of a browser error screen.
+  //    reloading) get their own path: try the network first. If that fails
+  //    (device is offline), always show the dedicated offline page rather
+  //    than silently falling back to the cached app shell — the user should
+  //    always know they're offline, even though the shell itself is cached.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -131,11 +132,7 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() =>
-          caches.match(request).then(cached =>
-            cached || caches.match('/thanzi/offline.html')
-          )
-        )
+        .catch(() => caches.match('/thanzi/offline.html'))
     );
     return;
   }
