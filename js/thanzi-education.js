@@ -24,6 +24,75 @@
 const ThanziEducation = (() => {
 
   // ═══════════════════════════════════════════════════════════════════
+  // DYNAMIC ARTICLES — weekly RAG-generated additions (see
+  // workers/education-generator/), fetched from the Appwrite
+  // `education_articles` collection and merged with the static library
+  // below at render time. Offline-first: if the fetch fails (no network,
+  // collection not yet created, etc.) the app silently falls back to the
+  // static library only — nothing here is required for Learn to work.
+  // ═══════════════════════════════════════════════════════════════════
+
+  let _dynamicArticles = [];
+  let _dynamicLoaded   = false;
+
+  function _appwriteDb() {
+    if (typeof Appwrite === 'undefined' || typeof THANZI_CONFIG === 'undefined') return null;
+    const client = new Appwrite.Client()
+      .setEndpoint(THANZI_CONFIG.endpoint)
+      .setProject(THANZI_CONFIG.projectId);
+    return new Appwrite.Databases(client);
+  }
+
+  /** Maps an Appwrite `education_articles` document onto the same shape
+   *  as a static ARTICLES entry, so both can be rendered identically. */
+  function _fromDoc(doc) {
+    return {
+      id:        doc.$id,
+      title:     doc.title,
+      category:  doc.category,
+      tags:      doc.tags || [],
+      read_min:  doc.read_min,
+      summary:   doc.summary,
+      body:      doc.body || [],
+    };
+  }
+
+  /** Fetches published dynamic articles from Appwrite. Safe to call
+   *  repeatedly — pass force=true to bypass the "already loaded" cache
+   *  (e.g. when the Learn panel is re-opened). Never throws; failures
+   *  just leave _dynamicArticles at whatever it was before (or empty). */
+  async function refreshLibrary(force = false) {
+    if (_dynamicLoaded && !force) return;
+    const db = _appwriteDb();
+    if (!db) { _dynamicLoaded = true; return; }
+
+    try {
+      const res = await db.listDocuments(
+        THANZI_CONFIG.databaseId,
+        THANZI_CONFIG.collections.educationArticles,
+        [
+          Appwrite.Query.equal('status', 'published'),
+          Appwrite.Query.orderDesc('$createdAt'),
+          Appwrite.Query.limit(100),
+        ]
+      );
+      _dynamicArticles = res.documents.map(_fromDoc);
+    } catch (e) {
+      // Offline, collection not created yet, etc. — fall back to static
+      // library only rather than breaking the Learn panel.
+      _dynamicArticles = _dynamicArticles || [];
+    }
+    _dynamicLoaded = true;
+  }
+
+  /** Static + dynamic, static first (dynamic articles are already sorted
+   *  newest-first, so they naturally surface recent additions near the
+   *  top of "All Topics" without reshuffling the hand-written library). */
+  function allArticles() {
+    return ARTICLES.concat(_dynamicArticles);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // ARTICLE LIBRARY
   // ═══════════════════════════════════════════════════════════════════
 
@@ -265,7 +334,7 @@ const ThanziEducation = (() => {
   function forUser(plan) {
     const userTags = _tagsForPlan(plan);
 
-    const scored = ARTICLES.map(a => {
+    const scored = allArticles().map(a => {
       const matches = a.tags.filter(t => userTags.has(t)).length;
       return { article: a, matches };
     });
@@ -276,13 +345,13 @@ const ThanziEducation = (() => {
       .slice(0, 6)
       .map(s => s.article);
 
-    return { forYou, all: ARTICLES };
+    return { forYou, all: allArticles() };
   }
 
   function categories() {
-    return [...new Set(ARTICLES.map(a => a.category))];
+    return [...new Set(allArticles().map(a => a.category))];
   }
 
-  return { forUser, categories, ARTICLES };
+  return { forUser, categories, allArticles, refreshLibrary, ARTICLES };
 
 })();

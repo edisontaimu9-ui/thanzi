@@ -10,6 +10,7 @@ const THANZI_CONFIG = {
     customFoods:       'custom_foods',
     mealTemplates:     'meal_templates',
     pushSubscriptions: 'push_subscriptions',
+    educationArticles: 'education_articles',
   },
   functions: {
     aiAssistant: 'YOUR_AI_FUNCTION_ID'  // ← replace after you create the Appwrite Function

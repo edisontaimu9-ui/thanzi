@@ -100,9 +100,10 @@ const ThanziLearn = (() => {
   function _renderAll() {
     const list = document.getElementById('lrn-all-list');
     if (!list) return;
+    const all = ThanziEducation.allArticles();
     const articles = _filter === 'All'
-      ? ThanziEducation.ARTICLES
-      : ThanziEducation.ARTICLES.filter(a => a.category === _filter);
+      ? all
+      : all.filter(a => a.category === _filter);
     list.innerHTML = articles.map((a, i) => _cardHTML(a, i, 'all')).join('');
     _bindExpand(list);
   }
@@ -118,8 +119,9 @@ const ThanziLearn = (() => {
     } catch (e) {}
   }
 
-  async function _renderAllSections() {
+  async function _renderAllSections(force) {
     _loadPlan();
+    await ThanziEducation.refreshLibrary(force);
     const { forYou } = ThanziEducation.forUser(_plan);
     _renderForYou(forYou);
     if (!_inited) {
@@ -131,13 +133,15 @@ const ThanziLearn = (() => {
 
   async function init() {
     await _loadUserId();
-    await _renderAllSections();
+    await _renderAllSections(false);
   }
 
-  /** Called by drawer each time the panel is opened. */
+  /** Called by drawer each time the panel is opened. Forces a fresh
+   *  dynamic-article fetch so a newly-published weekly article shows up
+   *  without needing an app restart. */
   async function refresh() {
     await _loadUserId();
-    await _renderAllSections();
+    await _renderAllSections(true);
   }
 
   return { init, refresh };
