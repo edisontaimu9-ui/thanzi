@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<title>You're Offline — Thanzi</title>
+<meta name="robots" content="noindex">
+
+<!-- Set theme before first paint, same logic app.js uses, so this page never
+     flashes the wrong theme when it's served from the SW cache. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('thanzi_theme');
+      if (!t) {
+        t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+          ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) { /* localStorage unavailable — default dark stays */ }
+  })();
+</script>
+
+<style>
+  /* ── Brand tokens — mirrors css/style.css so this page matches the rest
+     of Thanzi even though it's fully standalone (no external stylesheet,
+     so it renders instantly from the SW cache with zero extra requests). */
+  :root {
+    --bg-page:      #0f1117;
+    --bg-card:      #1e1e2e;
+    --bg-elevated:  #242738;
+    --border:       #2a2a2a;
+    --border-soft:  #23233a;
+    --text-1:       #ffffff;
+    --text-2:       #aaaaaa;
+    --text-3:       #888888;
+    --accent:       #2d9e6b;
+    --accent-rgb:   45, 158, 107;
+    --accent-active:#249059;
+    --on-accent:    #ffffff;
+    --danger:       #e74c3c;
+    --danger-rgb:   231, 76, 60;
+    --shadow-card:  0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  [data-theme="light"] {
+    --bg-page:      #f4f6f5;
+    --bg-card:      #ffffff;
+    --bg-elevated:  #eef1ef;
+    --border:       #e1e5e2;
+    --border-soft:  #e8ebe9;
+    --text-1:       #14181a;
+    --text-2:       #4b5550;
+    --text-3:       #6b7570;
+    --accent:       #1f8f5c;
+    --accent-rgb:   31, 143, 92;
+    --accent-active:#186e45;
+    --shadow-card:  0 8px 24px rgba(20, 30, 25, 0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg-page);
+    color: var(--text-1);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px 40px;
+    -webkit-font-smoothing: antialiased;
+    text-align: center;
+  }
+
+  /* Respect reduced-motion preference — see @media block at the bottom */
+  .wrap {
+    width: 100%;
+    max-width: 440px;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Illustration ─────────────────────────────────────────────────────── */
+  .illo-wrap {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 4px auto 20px;
+  }
+
+  .illo-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--accent-rgb), 0.16) 0%, rgba(var(--accent-rgb), 0) 70%);
+    animation: pulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(0.94); opacity: 0.7; }
+    50%      { transform: scale(1.06); opacity: 1; }
+  }
+
+  .illo-svg {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .illo-cloud {
+    fill: var(--bg-elevated);
+    stroke: var(--border);
+    stroke-width: 1.5;
+  }
+
+  .illo-bolt {
+    fill: var(--danger);
+  }
+
+  .illo-wifi-arc {
+    fill: none;
+    stroke: var(--text-3);
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    opacity: 0.55;
+  }
+
+  .illo-wifi-dot {
+    fill: var(--text-3);
+    opacity: 0.55;
+  }
+
+  .illo-slash {
+    stroke: var(--danger);
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  /* ── Text ─────────────────────────────────────────────────────────────── */
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+
+  .lede {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--text-2);
+    max-width: 360px;
+    margin: 0 auto 24px;
+  }
+
+  /* ── Status cards ─────────────────────────────────────────────────────── */
+  .status-grid {
+    display: grid;
+    gap: 12px;
+    text-align: left;
+    margin-bottom: 24px;
+  }
+
+  .status-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 16px 16px 14px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .status-card__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+
+  .status-card--ok .status-card__head   { color: var(--accent); }
+  .status-card--warn .status-card__head { color: var(--danger); }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-card--ok .status-dot   { background: var(--accent); }
+  .status-card--warn .status-dot { background: var(--danger); }
+
+  .status-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .status-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: var(--text-1);
+  }
+
+  .status-list svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .status-card--ok .status-list svg   { color: var(--accent); }
+  .status-card--warn .status-list svg { color: var(--text-3); }
+
+  /* ── Actions ──────────────────────────────────────────────────────────── */
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    appearance: none;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 0.98rem;
+    font-weight: 600;
+    padding: 14px 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    text-decoration: none;
+  }
+
+  .btn:active { transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.35);
+  }
+  .btn-primary:hover { background: var(--accent-active); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-1);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--bg-elevated); }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Live connection note ────────────────────────────────────────────── */
+  .conn-note {
+    margin-top: 18px;
+    font-size: 0.82rem;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .conn-note .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+  }
+
+  .conn-note.is-online .dot { background: var(--accent); }
+
+  /* ── Responsive scale-up for tablet/desktop ──────────────────────────── */
+  @media (min-width: 640px) {
+    .wrap { max-width: 480px; }
+    h1 { font-size: 1.75rem; }
+    .lede { font-size: 1rem; }
+    .illo-wrap { width: 152px; height: 152px; }
+    .actions { flex-direction: row; }
+    .btn { flex: 1; }
+  }
+
+  @media (min-width: 960px) {
+    body { padding-bottom: 60px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wrap { animation: none; opacity: 1; transform: none; }
+    .illo-glow { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="illo-wrap" aria-hidden="true">
+      <div class="illo-glow"></div>
+      <svg class="illo-svg" viewBox="0 0 132 132" xmlns="http://www.w3.org/2000/svg">
+        <!-- cloud -->
+        <path class="illo-cloud" d="M38 84c-11 0-20-8.5-20-19s9-19 20-19c1.6 0 3.1.2 4.6.5C46 33.8 55.6 27 67 27c14.8 0 27 11.2 28.8 25.6C104.6 54.2 111 61.8 111 71c0 10.5-9 19-20 19H38z"/>
+        <!-- disconnected wifi arcs, top-right of cloud -->
+        <path class="illo-wifi-arc" d="M78 58c6-6 16-6 22 0"/>
+        <path class="illo-wifi-arc" d="M84 66c3-3 8-3 11 0"/>
+        <circle class="illo-wifi-dot" cx="90" cy="74" r="2.6"/>
+        <!-- slash across the wifi to signal "disconnected" -->
+        <line class="illo-slash" x1="70" y1="48" x2="102" y2="80"/>
+        <!-- small "no signal" bolt on the cloud -->
+        <path class="illo-bolt" d="M60 62l-9 15h7l-3 11 12-16h-7l3-10z"/>
+      </svg>
+    </div>
+
+    <h1>You&rsquo;re Offline</h1>
+    <p class="lede">
+      No internet connection was detected. Some features are temporarily
+      unavailable, but you can still use offline features.
+    </p>
+
+    <div class="status-grid">
+      <section class="status-card status-card--ok" aria-labelledby="ok-head">
+        <div class="status-card__head" id="ok-head">
+          <span class="status-dot"></span> Available Offline
+        </div>
+        <ul class="status-list">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View previously cached workouts
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View saved meal plans
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Browse recently viewed foods
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View your progress history stored on the device
+          </li>
+        </ul>
+      </section>
+
+      <section class="status-card status-card--warn" aria-labelledby="warn-head">
+        <div class="status-card__head" id="warn-head">
+          <span class="status-dot"></span> Requires Internet
+        </div>
+        <ul class="status-list">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            AI fitness and nutrition assistant
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Syncing with your account
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Downloading new workouts
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Searching the online food database
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Community and social features
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="actions">
+      <!-- Plain <a href> fallbacks so both buttons work with JS disabled;
+           JS below upgrades "Try Again" to a smarter in-place reload. -->
+      <a href="javascript:void(0)" id="retry-btn" class="btn btn-primary">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M14 8.5a5.5 5.5 0 1 1-1.6-3.9M14 3v3.5h-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Try Again
+      </a>
+      <a href="/thanzi/" id="home-btn" class="btn btn-secondary">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M2.5 8.5L8.5 3l6 5.5M4.5 7v6.5h8V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Go Home
+      </a>
+    </div>
+
+    <p class="conn-note" id="conn-note">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="conn-label">Still offline</span>
+    </p>
+  </main>
+
+  <script>
+    (function () {
+      var retryBtn = document.getElementById('retry-btn');
+      var homeBtn  = document.getElementById('home-btn');
+      var note     = document.getElementById('conn-note');
+      var label    = document.getElementById('conn-label');
+
+      // "Try Again" — reload the page that was actually requested when this
+      // fallback was shown (falls back to a plain reload of this page).
+      retryBtn.addEventListener('click', function () {
+        retryBtn.setAttribute('aria-busy', 'true');
+        window.location.reload();
+      });
+
+      // "Go Home" — same base path the rest of the app uses (see sw.js SCOPE).
+      homeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.location.href = '/thanzi/';
+      });
+
+      function updateConnState() {
+        var online = navigator.onLine;
+        note.classList.toggle('is-online', online);
+        label.textContent = online ? 'Back online — tap Try Again' : 'Still offline';
+      }
+
+      window.addEventListener('online', updateConnState);
+      window.addEventListener('offline', updateConnState);
+      updateConnState();
+
+      // Auto-retry once the browser reports connectivity again, so the user
+      // doesn't have to tap anything if they're already looking at the screen.
+      window.addEventListener('online', function () {
+        setTimeout(function () { window.location.reload(); }, 600);
+      });
+    })();
+  </script>
+</body>
+</html>

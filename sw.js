@@ -21,6 +21,7 @@ const SCOPE      = '/thanzi/';
 const APP_SHELL = [
   '/thanzi/',
   '/thanzi/index.html',
+  '/thanzi/offline.html',
   '/thanzi/manifest.json',
   '/thanzi/css/style.css',
   '/thanzi/css/log.css',
@@ -116,6 +117,28 @@ self.addEventListener('fetch', event => {
   if (!request.url.startsWith('http')) return;
 
   const url = new URL(request.url);
+
+  // 0. Page navigations (typing a URL, following a link, opening the app,
+  //    reloading) get their own path: try the network first, and if that
+  //    fails AND we have nothing matching in cache either, serve the
+  //    dedicated offline fallback page instead of a browser error screen.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            caches.open(CACHE).then(c => c.put(request, response.clone()));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(request).then(cached =>
+            cached || caches.match('/thanzi/offline.html')
+          )
+        )
+    );
+    return;
+  }
 
   // 1. Live APIs — network only, never cache
   if (NETWORK_ONLY.some(h => url.hostname.includes(h))) {
