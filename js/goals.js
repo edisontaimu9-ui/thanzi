@@ -58,30 +58,29 @@ const ThanziGoals = (() => {
     } catch (e) { _plan = null; }
   }
 
-  // ── BMR / TDEE calculation (Mifflin-St Jeor) ─────────────────────────────
-  // Used to display stats; the authoritative recalculation goes through
-  // ThanziNutrition.generate() when saving.
+  // ── BMR / TDEE calculation ───────────────────────────────────────────────
+  // Delegates to ThanziNutrition (thanzi-nutrition.js), which already
+  // implements the correct DRI/Krause & Mahan EER equations with
+  // sex-specific PA coefficients (Box 2.1: normal-weight adults 19+ —
+  // M: 1.00/1.11/1.25/1.48, F: 1.00/1.12/1.27/1.45). This used to keep its
+  // own separate, generic Mifflin-St Jeor-style multiplier set
+  // (1.2/1.375/1.55/1.725) which didn't match the engine's real numbers —
+  // stats shown here could drift from the actual saved plan. Delegating
+  // instead of duplicating means there's only one place these coefficients
+  // can ever go stale.
 
   function _calcBMR(profile) {
-    if (!profile) return null;
+    if (!profile || typeof ThanziNutrition === 'undefined') return null;
     const { age, sex, weight_kg, height_m } = profile;
-    const h = height_m * 100; // cm
-    if (sex === 'M') return Math.round(10 * weight_kg + 6.25 * h - 5 * age + 5);
-    return Math.round(10 * weight_kg + 6.25 * h - 5 * age - 161);
+    if (!age || !sex || !weight_kg || !height_m) return null;
+    return ThanziNutrition.calcBMR(age, sex, weight_kg, height_m);
   }
 
-  const ACTIVITY_MULTS = {
-    sedentary:   1.2,
-    low_active:  1.375,
-    active:      1.55,
-    very_active: 1.725,
-  };
-
   function _calcTDEE(profile) {
-    const bmr = _calcBMR(profile);
-    if (!bmr) return null;
-    const mult = ACTIVITY_MULTS[profile.activity_level] || 1.4;
-    return Math.round(bmr * mult);
+    if (!profile || typeof ThanziNutrition === 'undefined') return null;
+    const { age, sex, weight_kg, height_m, activity_level } = profile;
+    if (!age || !sex || !weight_kg || !height_m || !activity_level) return null;
+    return ThanziNutrition.calcEER(age, sex, weight_kg, height_m, activity_level);
   }
 
   // ── Render banner & stat cards ────────────────────────────────────────────
