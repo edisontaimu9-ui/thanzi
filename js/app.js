@@ -638,20 +638,20 @@ const ThanziApp = (() => {
 
       if (user) {
         await routeUser(user);
-      } else if (!navigator.onLine) {
-        // Offline, so account.get() couldn't reach Appwrite to confirm a
-        // session — that's not the same as being signed out. Fall back to
-        // the last-known signed-in user so offline features stay reachable
-        // (signing in itself needs connectivity anyway, so gating on it
-        // here would just strand an already-signed-in user).
+      } else {
+        // account.get() failed — could be a real logout, or could be no
+        // usable connectivity even though navigator.onLine says otherwise
+        // (unreliable on mobile: it only checks the network interface, not
+        // actual internet reachability). Either way, if we have a
+        // last-known signed-in user, prefer using the app over blocking on
+        // a sign-in screen that itself needs the connectivity we might not
+        // have.
         const cached = ThanziAuth.getCachedUser();
         if (cached) {
           await routeUser(cached);
         } else {
           showScreen('auth-screen');
         }
-      } else {
-        showScreen('auth-screen');
       }
     } catch (err) {
       // Whatever went wrong (network blip, bad session, etc.), never leave
