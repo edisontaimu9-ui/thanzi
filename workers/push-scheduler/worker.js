@@ -26,7 +26,7 @@
 
 const COLLECTION       = 'push_subscriptions';
 const CRON_WINDOW_MIN  = 5;     // must match the cron schedule in wrangler.toml
-const PUSH_TTL_SECONDS = 3600;  // how long a push service should keep retrying delivery
+const PUSH_TTL_SECONDS = 86400; // how long a push service should keep retrying delivery
 
 // ════════════════════════════════════════════════════════════════════════════
 // Entry points
