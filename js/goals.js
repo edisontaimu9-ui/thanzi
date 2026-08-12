@@ -312,6 +312,14 @@ const ThanziGoals = (() => {
 
     _saveGoalOverride(_selected, targetWeight);
 
+    // Mirror the daily kcal target to the push_subscriptions doc (if the
+    // user has push enabled) so the push-scheduler Worker's Goal Reached
+    // webhook handler can compare today's logged calories against it.
+    // No-ops quietly if push isn't enabled — nothing to sync yet.
+    if (typeof ThanziPush !== 'undefined' && _plan.energy && _plan.energy.target_kcal) {
+      ThanziPush.updatePrefs({ dailyGoalKcal: _plan.energy.target_kcal }).catch(() => {});
+    }
+
     // Update the live app calorie goal
     if (typeof ThanziApp !== 'undefined') {
       ThanziApp.applyPlanPublic

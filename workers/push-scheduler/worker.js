@@ -65,6 +65,25 @@ export default {
       return json({ ok: true, summary });
     }
 
+    if (url.pathname === '/webhook/food-log-created' && request.method === 'POST') {
+      // Called by an Appwrite Webhook on databases.*.collections.food_logs
+      // .documents.*.create — see README.md "Goal Reached webhook" section
+      // for how to configure it. Verified via a shared-secret custom header
+      // (Appwrite webhooks let you attach arbitrary headers), NOT Appwrite's
+      // built-in HMAC signature — simpler to set up correctly from the
+      // console and just as safe as long as the secret stays private.
+      if (!env.WEBHOOK_SECRET || request.headers.get('X-Webhook-Secret') !== env.WEBHOOK_SECRET) {
+        return json({ error: 'unauthorized' }, 401);
+      }
+      try {
+        const doc = await request.json();
+        const result = await handleFoodLogCreated(env, doc);
+        return json({ ok: true, result });
+      } catch (err) {
+        return json({ error: String(err && err.message || err) }, 500);
+      }
+    }
+
     return json({ ok: true, service: 'thanzi-push-scheduler' });
   },
 };
@@ -160,6 +179,54 @@ async function runScheduledCheck(env) {
   }
 
   return summary;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Goal Reached Alert — event-driven, via Appwrite webhook (not the cron loop)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Fires once per day per user, the moment a food_logs create pushes their
+// running total for `date` at/over their dailyGoalKcal target (synced from
+// js/goals.js into the push_subscriptions doc whenever they save a plan).
+// Dedup key: lastGoalAlertDate on the subscription doc, same pattern as the
+// meal/weekly reminders in runScheduledCheck().
+
+async function handleFoodLogCreated(env, doc) {
+  const userId = doc.userId;
+  const date   = doc.date;
+  if (!userId || !date) return { skipped: 'missing userId or date on document' };
+
+  const sub = await findSubscriptionByUserId(env, userId);
+  if (!sub) return { skipped: 'no push subscription for this user' };
+  if (!sub.dailyGoalKcal) return { skipped: 'no dailyGoalKcal set for this user' };
+  if (sub.lastGoalAlertDate === date) return { skipped: 'already alerted today' };
+
+  const totalKcal = await sumCaloriesForDay(env, userId, date);
+  if (totalKcal < sub.dailyGoalKcal) return { skipped: 'goal not reached yet', totalKcal };
+
+  await sendPush(env, sub, {
+    title: '🎯 Goal reached!',
+    body:  `You've hit your ${sub.dailyGoalKcal} kcal target for today.`,
+    tag:   'thanzi-goal',
+    url:   '/thanzi/',
+  });
+  await updateSubscriptionDoc(env, sub.$id, { lastGoalAlertDate: date });
+
+  return { sent: true, totalKcal, goal: sub.dailyGoalKcal };
+}
+
+async function sumCaloriesForDay(env, userId, date) {
+  const params = new URLSearchParams();
+  params.append('queries[]', q('equal', 'userId', [userId]));
+  params.append('queries[]', q('equal', 'date', [date]));
+  params.append('queries[]', qLimit(200)); // a day's worth of log entries
+  const res = await fetch(
+    `${env.APPWRITE_ENDPOINT}/databases/${env.APPWRITE_DATABASE_ID}/collections/food_logs/documents?${params}`,
+    { headers: appwriteHeaders(env) }
+  );
+  if (!res.ok) throw new Error(`Appwrite food_logs query failed: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.documents.reduce((sum, d) => sum + (d.calories || 0), 0);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

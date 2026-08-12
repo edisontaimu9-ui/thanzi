@@ -23,15 +23,11 @@ spec-correct.
 ✅ Auto-cleanup: if a push fails with 404/410 (subscription expired /
    revoked), the worker deletes that subscription document.
 
-❌ "Goal Reached Alerts" are **not** sent by this worker. That's an
-   event (hitting today's calorie goal), not a scheduled time, and the
-   calorie goal itself currently lives only in the browser's `localStorage`
-   — this worker has no way to see it. To wire that up properly you'd
-   need to either (a) sync the daily goal to Appwrite and have this worker
-   check today's `food_logs` total against it, or (b) trigger a push
-   directly from the client the moment the goal is hit (needs its own
-   small send-endpoint). The `goalAlert` preference is still stored on the
-   subscription document for when this gets built.
+✅ "Goal Reached Alerts" — sent the moment a logged meal pushes the day's
+   total kcal at/over the user's daily target, via an Appwrite Webhook on
+   `food_logs` creates hitting `/webhook/food-log-created` (event-driven,
+   not the 5-min cron — see step 4 below). `js/goals.js` mirrors the target
+   to `dailyGoalKcal` on the subscription doc whenever the plan is saved.
 
 ## 1. Create the Appwrite collection
 
@@ -53,7 +49,9 @@ collections (`thanzi-db` by default), create a collection with ID
 | `waterReminders`      | boolean | default `false`                 |  |
 | `waterInterval`       | integer | default `2`                     |  |
 | `weeklyReport`        | boolean | default `false`                 |  |
-| `goalAlert`           | boolean | default `true`  (stored only — not yet acted on, see above) |  |
+| `goalAlert`           | boolean | default `true`                  |  |
+| `dailyGoalKcal`        | integer | synced from the app's saved plan |  |
+| `lastGoalAlertDate`    | string  | 12 (date `YYYY-MM-DD`)          |  |
 | `lastBreakfastSent`   | string  | 12 (date `YYYY-MM-DD`)          |  |
 | `lastLunchSent`       | string  | 12                                |  |
 | `lastDinnerSent`      | string  | 12                                |  |
@@ -114,6 +112,10 @@ wrangler secret put APPWRITE_API_KEY
 
 wrangler secret put APPWRITE_DATABASE_ID
 # thanzi-db
+
+wrangler secret put WEBHOOK_SECRET
+# any long random string you make up — used to authenticate the Goal
+# Reached webhook Appwrite calls in step 5 below.
 ```
 
 > The VAPID key pair above was generated specifically for this project and
@@ -162,6 +164,35 @@ curl -X POST https://thanzi-push-scheduler.<your-subdomain>.workers.dev/run-now
 
 This returns a summary `{ checked, sent, removed, errors }` and is exactly
 what the cron trigger runs automatically going forward.
+
+## 5. Wire up the Goal Reached webhook
+
+This is the one push that's event-driven instead of cron-polled — it fires
+the instant a logged meal crosses the day's kcal target, instead of waiting
+for the next 5-minute cron tick.
+
+1. In the Appwrite console, go to your project → **Settings → Webhooks** →
+   **Create webhook**.
+2. **Name:** `thanzi-goal-reached` (or anything).
+3. **URL:** `https://thanzi-push-scheduler.<your-subdomain>.workers.dev/webhook/food-log-created`
+4. **Events:** tick only `databases.*.collections.food_logs.documents.*.create`
+   (Appwrite's event picker lets you scope this to just the `food_logs`
+   collection and just the `create` action — don't tick update/delete).
+5. **Headers:** add a custom header `X-Webhook-Secret` with the exact same
+   value you set as `WEBHOOK_SECRET` in step 3. This is how the worker
+   authenticates the request — without a matching header it returns `401`.
+6. Save, and enable the webhook.
+
+To actually get alerts, a user also needs `dailyGoalKcal` set on their
+subscription doc — this happens automatically the next time they open
+**Goals** and hit **Save Goal**, as long as push is already enabled
+(`js/goals.js` calls `ThanziPush.updatePrefs({ dailyGoalKcal })`, which
+no-ops quietly if they haven't subscribed to push yet).
+
+**Test it:** log a meal in the app that pushes today's total over your
+saved goal. You should get a "🎯 Goal reached!" push within a couple
+seconds — no cron wait. Only fires once per day per user
+(`lastGoalAlertDate` dedupes it), resetting automatically the next day.
 
 ## Notes
 
