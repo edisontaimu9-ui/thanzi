@@ -16,6 +16,7 @@ crons = ["*/5 * * * *"]
 #   APPWRITE_PROJECT_ID
 #   APPWRITE_API_KEY
 #   APPWRITE_DATABASE_ID
-#   WEBHOOK_SECRET       shared secret for the Goal Reached Appwrite Webhook —
-#                        set the same value as a custom header (X-Webhook-Secret)
-#                        on the webhook in the Appwrite console. See README.md.
+#   WEBHOOK_USER         username for the Goal Reached Appwrite Webhook's
+#   WEBHOOK_PASSWORD     "HTTP authentication" fields — set the exact same
+#                        values in the Appwrite console when creating the
+#                        webhook. See README.md.

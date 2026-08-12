@@ -113,9 +113,12 @@ wrangler secret put APPWRITE_API_KEY
 wrangler secret put APPWRITE_DATABASE_ID
 # thanzi-db
 
-wrangler secret put WEBHOOK_SECRET
-# any long random string you make up — used to authenticate the Goal
-# Reached webhook Appwrite calls in step 5 below.
+wrangler secret put WEBHOOK_USER
+# any username you make up — used together with WEBHOOK_PASSWORD to
+# authenticate the Goal Reached webhook Appwrite calls in step 5 below.
+
+wrangler secret put WEBHOOK_PASSWORD
+# any long random password you make up
 ```
 
 > The VAPID key pair above was generated specifically for this project and
@@ -178,9 +181,11 @@ for the next 5-minute cron tick.
 4. **Events:** tick only `databases.*.collections.food_logs.documents.*.create`
    (Appwrite's event picker lets you scope this to just the `food_logs`
    collection and just the `create` action — don't tick update/delete).
-5. **Headers:** add a custom header `X-Webhook-Secret` with the exact same
-   value you set as `WEBHOOK_SECRET` in step 3. This is how the worker
-   authenticates the request — without a matching header it returns `401`.
+5. **HTTP authentication:** scroll down past the Security toggle — Appwrite's
+   webhook form has username/password fields here (not custom headers).
+   Enter the exact same username/password you set as `WEBHOOK_USER` /
+   `WEBHOOK_PASSWORD` in step 3. This is how the worker authenticates the
+   request — a wrong or missing Basic Auth header returns `401`.
 6. Save, and enable the webhook.
 
 To actually get alerts, a user also needs `dailyGoalKcal` set on their

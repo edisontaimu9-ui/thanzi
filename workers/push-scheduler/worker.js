@@ -68,11 +68,12 @@ export default {
     if (url.pathname === '/webhook/food-log-created' && request.method === 'POST') {
       // Called by an Appwrite Webhook on databases.*.collections.food_logs
       // .documents.*.create — see README.md "Goal Reached webhook" section
-      // for how to configure it. Verified via a shared-secret custom header
-      // (Appwrite webhooks let you attach arbitrary headers), NOT Appwrite's
-      // built-in HMAC signature — simpler to set up correctly from the
-      // console and just as safe as long as the secret stays private.
-      if (!env.WEBHOOK_SECRET || request.headers.get('X-Webhook-Secret') !== env.WEBHOOK_SECRET) {
+      // for how to configure it. Appwrite's webhook UI only offers HTTP
+      // Basic Auth (username/password) or its own HMAC signature scheme —
+      // no arbitrary custom headers — so this checks the standard
+      // Authorization: Basic header Appwrite sends when you fill in
+      // "HTTP authentication" on the webhook's config screen.
+      if (!isAuthorizedWebhook(request, env)) {
         return json({ error: 'unauthorized' }, 401);
       }
       try {
@@ -520,4 +521,25 @@ function json(obj, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/** Checks the standard `Authorization: Basic base64(user:pass)` header
+ *  against WEBHOOK_USER / WEBHOOK_PASSWORD secrets — this is what Appwrite
+ *  sends when you fill in "HTTP authentication" on a webhook's config
+ *  screen (its console has no field for arbitrary custom headers). */
+function isAuthorizedWebhook(request, env) {
+  if (!env.WEBHOOK_USER || !env.WEBHOOK_PASSWORD) return false;
+  const header = request.headers.get('Authorization') || '';
+  if (!header.startsWith('Basic ')) return false;
+  let decoded;
+  try {
+    decoded = atob(header.slice(6));
+  } catch {
+    return false;
+  }
+  const sep = decoded.indexOf(':');
+  if (sep === -1) return false;
+  const user = decoded.slice(0, sep);
+  const pass = decoded.slice(sep + 1);
+  return user === env.WEBHOOK_USER && pass === env.WEBHOOK_PASSWORD;
 }
