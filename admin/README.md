@@ -48,13 +48,22 @@ panel. Do this once:
    granted or revoked — add the same preference to any other account
    you want editing rights, or remove it to cut access.
 
+## Seeding the static library
+
+Recommended path: `../scripts/seed-education-articles.js`, run from
+Termux with a server API key. Server keys bypass collection/document
+permissions entirely, so it works no matter how Document Security is
+configured — see `scripts/seed-education-articles.js` header for setup
+and usage.
+
+The panel also has a **Seed static library** button that does the same
+thing from the browser using your admin session — kept as a fallback,
+but it depends on the document-permission setup in step 3 above being
+correct, so if it errors, use the script instead.
+
 ## Using it
 
 - Visit `yourdomain.com/admin/` and sign in with that account.
-- **Seed static library** pulls the hand-written articles baked into
-  `js/thanzi-education.js` (`ThanziEducation.ARTICLES`) into Appwrite,
-  one document per article, keyed by the article's own `id` — safe to
-  click more than once, already-seeded ones are skipped.
 - New/edited articles: **Body** field — separate paragraphs with a
   blank line, each becomes one paragraph in the rendered article.
 - **Tags** — comma-separated. These drive the Learn panel's "For You"

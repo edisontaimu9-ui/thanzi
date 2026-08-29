@@ -1,0 +1,8 @@
+{
+  "name": "thanzi-scripts",
+  "private": true,
+  "description": "One-off server-side scripts for Thanzi (run with a server API key, never in the browser)",
+  "dependencies": {
+    "node-appwrite": "*"
+  }
+}
