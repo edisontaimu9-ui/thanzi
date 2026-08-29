@@ -28,8 +28,8 @@
  */
 'use strict';
 
-const vm   = require('vm');
 const fs   = require('fs');
+const os   = require('os');
 const path = require('path');
 
 let sdk;
@@ -52,16 +52,22 @@ const DB_ID      = 'thanzi-db';
 const COL_ID     = 'education_articles';
 
 // ── Load ARTICLES straight from the app's own source of truth ──────────
-// thanzi-education.js is a plain IIFE with no browser-only code at load
-// time (window/document/Appwrite are only touched inside functions that
-// aren't called here), so it can run as-is in a Node vm sandbox. This
-// means the seed data can never drift from what the app actually ships.
+// thanzi-education.js is a plain browser IIFE (`const ThanziEducation =
+// (() => {...})();`) with no module.exports. We copy it to a temp file
+// with one line appended to export it, then require() that — this runs
+// the file exactly as authored (top-level `const` works fine inside
+// Node's CommonJS function wrapper, unlike vm sandboxing) and can never
+// drift from what the app actually ships, since it's the same file.
 
 const eduPath = path.join(__dirname, '..', 'js', 'thanzi-education.js');
-const sandbox = {};
-vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(eduPath, 'utf8'), sandbox, { filename: eduPath });
-const articles = sandbox.ThanziEducation.ARTICLES;
+const tmpPath = path.join(os.tmpdir(), `thanzi-education-${Date.now()}.js`);
+fs.writeFileSync(tmpPath, fs.readFileSync(eduPath, 'utf8') + '\nmodule.exports = ThanziEducation;\n');
+let articles;
+try {
+  articles = require(tmpPath).ARTICLES;
+} finally {
+  fs.unlinkSync(tmpPath);
+}
 
 const client = new sdk.Client()
   .setEndpoint(ENDPOINT)
