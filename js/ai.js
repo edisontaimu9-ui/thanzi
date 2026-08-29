@@ -44,7 +44,7 @@ const ThanziAI = (() => {
   // ── Proxy config ───────────────────────────────────────────────────────────
   const PROXY_URL   = 'https://thanzi-ai-proxy.edisontaimu9.workers.dev/v1/groq/v1/chat/completions';
   const THANZI_KEY  = 'thanzi_app001';
-  const AI_MODEL    = 'llama-3.3-70b-versatile';
+  const AI_MODEL    = 'openai/gpt-oss-120b';
   const RAG_URL     = 'https://chakudya-api.edisontaimu9.workers.dev/rag/retrieve';
 
   // Chakudya's memory system (Write → Consolidate → Recall) was built for
