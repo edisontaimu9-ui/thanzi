@@ -25,15 +25,18 @@ panel. Do this once:
 
 3. **Permissions** — this is the actual security boundary; the
    preference check in `admin.js` is UI-only (a user can edit their own
-   preferences, so it doesn't lock anything by itself). On the
-   collection's **Settings → Permissions**:
-   - Add yourself (by user ID, not "any authenticated user") with
-     **Create, Read, Update, Delete**.
-   - Keep a separate **Read**-only permission for `any` or `users` so
-     the Learn panel can still fetch published articles for everyone.
-   - Do **not** grant Create/Update/Delete to "any authenticated user"
-     — that would let anyone who signs up for a Thanzi account write
-     articles.
+   preferences, so it doesn't lock anything by itself).
+   - If the collection has **Document Security** enabled (Settings →
+     Permissions → toggle at the top), collection-level permissions are
+     ignored per document — `admin.js` already passes explicit
+     read/update/delete permissions on every document it creates, so
+     this works either way.
+   - Either way, also add yourself (by user ID, not "any authenticated
+     user") at the **collection level** with **Read** at minimum, so
+     the panel can list existing documents.
+   - Do **not** grant collection-level Create/Update/Delete to "any
+     authenticated user" — that would let anyone who signs up for a
+     Thanzi account write articles.
 
 4. **Mark your account as admin** — Auth → Users → select your account
    → Preferences → add:

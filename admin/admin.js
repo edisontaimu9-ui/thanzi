@@ -38,6 +38,21 @@ let _status = 'all';
 let _cat    = 'All';
 let _query  = '';
 let _editingId = null;
+let _userId = null;
+
+/** Explicit per-document permissions for new articles: anyone can read
+ *  (so the Learn panel works for guests too), only this admin account
+ *  can edit/delete. Required because the `education_articles` collection
+ *  has Document Security enabled — collection-level permissions alone
+ *  aren't applied per document in that mode, so createDocument() must
+ *  say who can access each document it creates. */
+function _docPermissions() {
+  return [
+    Appwrite.Permission.read(Appwrite.Role.any()),
+    Appwrite.Permission.update(Appwrite.Role.user(_userId)),
+    Appwrite.Permission.delete(Appwrite.Role.user(_userId)),
+  ];
+}
 
 // ── DOM refs ───────────────────────────────────────────────────────────
 
@@ -60,6 +75,7 @@ async function checkSession() {
   }
 
   const label = user.email || user.name || user.$id;
+  _userId = user.$id;
   try {
     const prefs = await account.getPrefs();
     if (prefs.role === 'admin') {
@@ -279,7 +295,7 @@ $('btn-save').addEventListener('click', async () => {
       const idx = _docs.findIndex(d => d.$id === _editingId);
       if (idx > -1) _docs[idx] = updated;
     } else {
-      const created = await db.createDocument(DB_ID, COL_ID, Appwrite.ID.unique(), data);
+      const created = await db.createDocument(DB_ID, COL_ID, Appwrite.ID.unique(), data, _docPermissions());
       _docs.unshift(created);
     }
     closeDrawer();
@@ -335,7 +351,7 @@ $('btn-seed').addEventListener('click', async () => {
         summary:  a.summary,
         body:     a.body || [],
         status:   'published',
-      });
+      }, _docPermissions());
       created++;
       seedLog.textContent += `✓ ${a.id}\n`;
     } catch (e) {
