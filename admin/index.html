@@ -17,7 +17,7 @@
     <input type="password" id="gate-password" placeholder="Password" autocomplete="current-password">
     <button class="primary" id="gate-submit">Sign in</button>
     <div class="err" id="gate-err"></div>
-    <div class="hint">This uses your existing Thanzi account. Access is limited to emails listed in <code>ADMIN_EMAILS</code> inside admin.js.</div>
+    <div class="hint">This uses your existing Thanzi account. Access requires <code>{"role":"admin"}</code> set on that account's preferences in the Appwrite console — nothing is hardcoded in this app.</div>
   </div>
 
   <!-- ── Main desk ──────────────────────────────────────────────── -->

@@ -23,9 +23,10 @@ panel. Do this once:
    | `body`     | String  | 2000, **array**      | Yes      |
    | `status`   | String  | 20 (values: `draft`, `published`) | Yes |
 
-3. **Permissions** — this is the actual security boundary; the email
-   check in `admin.js` is UI-only. On the collection's **Settings →
-   Permissions**:
+3. **Permissions** — this is the actual security boundary; the
+   preference check in `admin.js` is UI-only (a user can edit their own
+   preferences, so it doesn't lock anything by itself). On the
+   collection's **Settings → Permissions**:
    - Add yourself (by user ID, not "any authenticated user") with
      **Create, Read, Update, Delete**.
    - Keep a separate **Read**-only permission for `any` or `users` so
@@ -34,16 +35,15 @@ panel. Do this once:
      — that would let anyone who signs up for a Thanzi account write
      articles.
 
-## One-time setup (this code)
-
-Open `admin/admin.js` and replace the placeholder with your real
-Thanzi account email:
-
-```js
-const ADMIN_EMAILS = [
-  'you@example.com',
-];
-```
+4. **Mark your account as admin** — Auth → Users → select your account
+   → Preferences → add:
+   ```json
+   { "role": "admin" }
+   ```
+   This is what unlocks the Content Desk UI for that account. Nothing
+   is hardcoded in the code, so this is the only place access is
+   granted or revoked — add the same preference to any other account
+   you want editing rights, or remove it to cut access.
 
 ## Using it
 

@@ -6,20 +6,23 @@
  * Not linked from the main app — reachable only by URL (/admin/).
  *
  * Real access control happens in two places:
- *   1. ADMIN_EMAILS below — a client-side UI gate only.
+ *   1. The `role: "admin"` user preference checked below — a client-side
+ *      UI gate only. Set it on your account from the Appwrite console:
+ *      Auth → Users → (your account) → Preferences → add {"role":"admin"}.
+ *      No email or ID is hardcoded here, so this file is safe to keep in
+ *      a public repo — granting/revoking access is done entirely from
+ *      the console, on any account, without touching code.
  *   2. Appwrite collection permissions — the actual security boundary.
  *      Set Create/Update/Delete on `education_articles` to your specific
  *      user (not "any authenticated user") in the Appwrite console, or
- *      anyone who registers a Thanzi account could write articles.
+ *      anyone who registers a Thanzi account could write articles. A
+ *      preference is self-editable by the signed-in user, so it's not a
+ *      real lock by itself — the collection permission is what actually
+ *      keeps other accounts out.
  *
  * Depends on: Appwrite Web SDK (CDN), js/config.js, js/thanzi-education.js
  */
 'use strict';
-
-// ── Fill in with your own Thanzi account email(s) before deploying ───────
-const ADMIN_EMAILS = [
-  'REPLACE_WITH_YOUR_EMAIL@example.com',
-];
 
 const client  = new Appwrite.Client()
   .setEndpoint(THANZI_CONFIG.endpoint)
@@ -48,16 +51,25 @@ const seedLog    = $('seed-log');
 // ── Auth ───────────────────────────────────────────────────────────────
 
 async function checkSession() {
+  let user;
   try {
-    const user = await account.get();
-    if (ADMIN_EMAILS.includes(user.email)) {
-      $('acct-email').textContent = user.email;
+    user = await account.get();
+  } catch (e) {
+    showGate('');
+    return;
+  }
+
+  const label = user.email || user.name || user.$id;
+  try {
+    const prefs = await account.getPrefs();
+    if (prefs.role === 'admin') {
+      $('acct-email').textContent = label;
       showDesk();
       return;
     }
-    showGate(`Signed in as ${user.email}, which isn't in ADMIN_EMAILS.`);
+    showGate(`Signed in as ${label}, but this account isn't marked as admin. Add {"role":"admin"} to its preferences in the Appwrite console.`);
   } catch (e) {
-    showGate('');
+    showGate(`Signed in as ${label}, but couldn't check admin status: ${e.message}`);
   }
 }
 
