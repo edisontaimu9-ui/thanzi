@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Thanzi — Content Desk</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+  <!-- ── Login gate ─────────────────────────────────────────────── -->
+  <div class="gate" id="gate">
+    <h1>Content Desk</h1>
+    <p class="sub">Sign in with your Thanzi admin account.</p>
+    <input type="text" id="gate-email" placeholder="Email" autocomplete="username">
+    <input type="password" id="gate-password" placeholder="Password" autocomplete="current-password">
+    <button class="primary" id="gate-submit">Sign in</button>
+    <div class="err" id="gate-err"></div>
+    <div class="hint">This uses your existing Thanzi account. Access is limited to emails listed in <code>ADMIN_EMAILS</code> inside admin.js.</div>
+  </div>
+
+  <!-- ── Main desk ──────────────────────────────────────────────── -->
+  <div class="desk" id="desk" style="display:none">
+    <div class="desk-header">
+      <h1 class="desk-title">Content Desk<small>Learn library · education_articles</small></h1>
+      <div class="desk-account">
+        <span id="acct-email"></span>
+        <button id="btn-logout">Sign out</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <input type="search" id="search" placeholder="Search title or summary…">
+        <button class="btn accent" id="btn-new">+ New</button>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn ghost small" id="btn-seed">Seed static library</button>
+        <button class="btn ghost small" id="btn-refresh">Refresh</button>
+      </div>
+      <div class="chip-row" id="status-filters">
+        <button class="chip active" data-status="all">All</button>
+        <button class="chip" data-status="published">Published</button>
+        <button class="chip" data-status="draft">Draft</button>
+      </div>
+      <div class="chip-row" id="category-filters"></div>
+    </div>
+
+    <div class="seed-log" id="seed-log"></div>
+
+    <p class="count-line" id="count-line"></p>
+    <div id="list"></div>
+  </div>
+
+  <!-- ── Editor drawer ──────────────────────────────────────────── -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <h2 id="drawer-title">New article</h2>
+      <button class="drawer-close" id="drawer-close">&times;</button>
+    </div>
+
+    <input type="hidden" id="f-doc-id">
+
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="f-title" placeholder="Building a balanced Malawian plate">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Category</label>
+        <input type="text" id="f-category" placeholder="Fundamentals" list="category-list">
+        <datalist id="category-list"></datalist>
+      </div>
+      <div class="field" style="max-width:110px">
+        <label>Read (min)</label>
+        <input type="number" id="f-read-min" min="1" max="30" value="3">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Tags</label>
+      <input type="text" id="f-tags" placeholder="weight_loss, lose, nutrient:Iron">
+      <div class="help">Comma-separated. Matches the Learn panel's personalization tags — goal names (lose/maintain/gain), health-interest ids, <code>nutrient:Name</code>, or <code>module:name</code>.</div>
+    </div>
+
+    <div class="field">
+      <label>Summary</label>
+      <textarea id="f-summary" rows="2" placeholder="One sentence shown on the collapsed card."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Body</label>
+      <textarea id="f-body" rows="10" placeholder="First paragraph.&#10;&#10;Second paragraph.&#10;&#10;Third paragraph."></textarea>
+      <div class="help">Separate paragraphs with a blank line. Each becomes its own <code>&lt;p&gt;</code> in the article.</div>
+    </div>
+
+    <div class="field">
+      <label>Status</label>
+      <div class="status-toggle">
+        <button type="button" data-val="draft" id="f-status-draft">Draft</button>
+        <button type="button" data-val="published" id="f-status-published">Published</button>
+      </div>
+    </div>
+
+    <div class="drawer-err" id="drawer-err"></div>
+
+    <div class="drawer-footer">
+      <button class="btn danger" id="btn-delete" style="display:none">Delete</button>
+      <button class="btn accent" id="btn-save">Save</button>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1/dist/iife/sdk.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/thanzi-education.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
