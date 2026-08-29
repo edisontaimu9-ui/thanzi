@@ -264,6 +264,7 @@ function openEditor(id) {
   $('f-read-min').value  = doc ? (doc.read_min || 3) : 3;
   $('f-tags').value      = doc ? (doc.tags || []).join(', ') : '';
   $('f-summary').value   = doc ? (doc.summary || '') : '';
+  $('f-topic-seed').value = doc ? (doc.topic_seed || '') : '';
   $('f-body').value      = doc ? (doc.body || []).join('\n\n') : '';
   setStatusToggle(doc ? (doc.status || 'draft') : 'draft');
   $('btn-delete').style.display = doc ? 'block' : 'none';
@@ -279,6 +280,7 @@ $('btn-save').addEventListener('click', async () => {
   const readMin  = parseInt($('f-read-min').value, 10) || 3;
   const tags     = $('f-tags').value.split(',').map(t => t.trim()).filter(Boolean);
   const summary  = $('f-summary').value.trim();
+  const topicSeed = $('f-topic-seed').value.trim() || title;
   const body     = $('f-body').value.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   const status   = $('f-status-published').dataset.selected ? 'published' : 'draft';
 
@@ -287,7 +289,7 @@ $('btn-save').addEventListener('click', async () => {
     return;
   }
 
-  const data = { title, category, read_min: readMin, tags, summary, body, status };
+  const data = { title, category, read_min: readMin, tags, summary, body, status, topic_seed: topicSeed };
   $('btn-save').disabled = true;
   try {
     if (_editingId) {
@@ -344,13 +346,14 @@ $('btn-seed').addEventListener('click', async () => {
   for (const a of articles) {
     try {
       await db.createDocument(DB_ID, COL_ID, a.id, {
-        title:    a.title,
-        category: a.category,
-        tags:     a.tags || [],
-        read_min: a.read_min,
-        summary:  a.summary,
-        body:     a.body || [],
-        status:   'published',
+        title:      a.title,
+        category:   a.category,
+        tags:       a.tags || [],
+        read_min:   a.read_min,
+        summary:    a.summary,
+        body:       a.body || [],
+        status:     'published',
+        topic_seed: a.title,
       }, _docPermissions());
       created++;
       seedLog.textContent += `✓ ${a.id}\n`;

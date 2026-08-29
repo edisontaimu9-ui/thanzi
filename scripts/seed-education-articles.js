@@ -81,14 +81,19 @@ async function main() {
 
   for (const a of articles) {
     try {
+      // `topic_seed` is a required attribute the weekly RAG generator
+      // uses to track the prompt each article came from. These static
+      // articles were hand-written, not generated, so we just reuse the
+      // title — it satisfies the schema without implying a fake prompt.
       await databases.createDocument(DB_ID, COL_ID, a.id, {
-        title:    a.title,
-        category: a.category,
-        tags:     a.tags || [],
-        read_min: a.read_min,
-        summary:  a.summary,
-        body:     a.body || [],
-        status:   'published',
+        title:      a.title,
+        category:   a.category,
+        tags:       a.tags || [],
+        read_min:   a.read_min,
+        summary:    a.summary,
+        body:       a.body || [],
+        status:     'published',
+        topic_seed: a.title,
       });
       created++;
       console.log(`  \u2713 ${a.id}`);

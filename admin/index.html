@@ -98,6 +98,12 @@
     </div>
 
     <div class="field">
+      <label>Topic seed</label>
+      <input type="text" id="f-topic-seed" placeholder="Defaults to the title if left blank">
+      <div class="help">Required by the collection schema (the weekly RAG generator uses this to track the prompt behind each article). For hand-written articles, the title works fine here.</div>
+    </div>
+
+    <div class="field">
       <label>Status</label>
       <div class="status-toggle">
         <button type="button" data-val="draft" id="f-status-draft">Draft</button>

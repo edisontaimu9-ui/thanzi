@@ -22,6 +22,12 @@ panel. Do this once:
    | `summary`  | String  | 300                  | Yes      |
    | `body`     | String  | 2000, **array**      | Yes      |
    | `status`   | String  | 20 (values: `draft`, `published`) | Yes |
+   | `topic_seed` | String | 300                | Yes      |
+
+   `topic_seed` was added by the weekly RAG generator (a separate repo)
+   to track the prompt behind each generated article — Appwrite treats
+   it as required for every document, so the CMS and seed script both
+   fill it with the article's title for hand-written entries.
 
 3. **Permissions** — this is the actual security boundary; the
    preference check in `admin.js` is UI-only (a user can edit their own
